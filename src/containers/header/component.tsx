@@ -574,6 +574,7 @@ class Header extends React.Component<HeaderProps, HeaderState> {
       if (this.props.mode === "home") {
         this.props.history.push("/manager/home");
         if (
+          this.props.isAuthed &&
           ConfigService.getReaderConfig("isFirstSync") !== "no" &&
           ConfigService.getReaderConfig("isEnableKoodoSync") !== "yes"
         ) {

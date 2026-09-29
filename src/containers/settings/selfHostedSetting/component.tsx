@@ -16,6 +16,7 @@ const FEATURE_LABELS: { feature: SelfHostedFeature; label: string }[] = [
   { feature: "tts", label: "AI voices" },
   { feature: "ocr", label: "AI OCR" },
   { feature: "metadata", label: "Book metadata" },
+  { feature: "vault", label: "Sync to your own storage" },
 ];
 
 class SelfHostedSetting extends React.Component<

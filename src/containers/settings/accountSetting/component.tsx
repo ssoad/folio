@@ -31,6 +31,7 @@ import copyTextToClipboard from "copy-text-to-clipboard";
 import { resetReaderRequest } from "../../../utils/request/reader";
 import { resetThirdpartyRequest } from "../../../utils/request/thirdparty";
 import TokenService from "../../../utils/storage/tokenService";
+import { isSelfHostedConnected } from "../../../utils/request/selfHosted";
 declare var window: any;
 class AccountSetting extends React.Component<
   SettingInfoProps,
@@ -625,7 +626,34 @@ class AccountSetting extends React.Component<
             </div>
           </div>
         )}
-        {!this.props.isAuthed && !this.state.showLoginOptions && (
+        {/* With a self-hosted server Pro comes from the server; a Koodo
+            account is only needed for the drives that sign in through it */}
+        {!this.props.isAuthed &&
+          !this.state.showLoginOptions &&
+          isSelfHostedConnected() && (
+            <div className="setting-dialog-new-title">
+              <span className="koodo-account-optional">
+                <Trans>Koodo account (optional)</Trans>
+                <span className="setting-option-subtitle">
+                  <Trans>
+                    Only needed for Google Drive, OneDrive, Dropbox and the other
+                    cloud drives that sign in through Koodo
+                  </Trans>
+                </span>
+              </span>
+              <span
+                className="change-location-button"
+                onClick={() => {
+                  this.setState({ showLoginOptions: true });
+                }}
+              >
+                <Trans>Log in</Trans>
+              </span>
+            </div>
+          )}
+        {!this.props.isAuthed &&
+          !this.state.showLoginOptions &&
+          !isSelfHostedConnected() && (
           <div className="pro-banner-container">
             <div className="pro-banner">
               <div className="pro-banner-overlay"></div>
@@ -694,7 +722,7 @@ class AccountSetting extends React.Component<
               </div>
             </div>
           </div>
-        )}
+          )}
         {(this.props.isAuthed || this.state.showLoginOptions) && (
           <div className="setting-dialog-new-title">
             <div>
@@ -1064,6 +1092,7 @@ class AccountSetting extends React.Component<
           </div>
         )}
 
+        {(this.props.isAuthed || !isSelfHostedConnected()) && (
         <div
           style={{
             position: "absolute",
@@ -1143,6 +1172,7 @@ class AccountSetting extends React.Component<
             <Trans>{"Redeem with code"}</Trans>
           </div>
         </div>
+        )}
       </>
     );
   }

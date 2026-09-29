@@ -89,6 +89,7 @@ func setupPro(t *testing.T) *httptest.Server {
 	proOCRModel = "vision-model"
 	proTTS = proUpstream{BaseURL: upstream.URL, APIKey: "upstream-key", Model: "kokoro"}
 	proTTSVoice = "af_heart"
+	initProVault()
 	srv := httptest.NewServer(http.HandlerFunc(handler))
 	t.Cleanup(srv.Close)
 	return srv
@@ -264,4 +265,47 @@ func mustDecodeDataURI(t *testing.T, uri string) []byte {
 		t.Fatal(err)
 	}
 	return data
+}
+
+func TestProTokenVaultRoundTrip(t *testing.T) {
+	srv := setupPro(t)
+	secret := `{"url":"https://dav.example.com","username":"me","password":"p@ss"}`
+	body, _ := json.Marshal(map[string]string{"token": secret})
+	_, env, raw := call(t, srv, http.MethodPost, "/pro/v1/token/encrypt", string(body), testProToken)
+	var enc struct {
+		EncryptedToken string `json:"encrypted_token"`
+	}
+	if env.Code != 200 || json.Unmarshal(env.Data, &enc) != nil {
+		t.Fatalf("encrypt: %s", raw)
+	}
+	if !strings.HasPrefix(enc.EncryptedToken, proVaultPrefix) || strings.Contains(enc.EncryptedToken, "p@ss") {
+		t.Fatalf("unexpected encrypted token %q", enc.EncryptedToken)
+	}
+
+	body, _ = json.Marshal(map[string]string{"encrypted_token": enc.EncryptedToken})
+	_, env, raw = call(t, srv, http.MethodPost, "/pro/v1/token/decrypt", string(body), testProToken)
+	var dec struct {
+		Token string `json:"token"`
+	}
+	if env.Code != 200 || json.Unmarshal(env.Data, &dec) != nil || dec.Token != secret {
+		t.Fatalf("decrypt: %s", raw)
+	}
+}
+
+func TestProTokenVaultRejectsForeignTokens(t *testing.T) {
+	srv := setupPro(t)
+	enc, err := proEncryptToken("secret")
+	if err != nil {
+		t.Fatal(err)
+	}
+	// A different key (e.g. a changed PRO_TOKEN_KEY) can't open it
+	t.Setenv("PRO_TOKEN_KEY", "another-key")
+	initProVault()
+	for _, token := range []string{enc, "official-service-token"} {
+		body, _ := json.Marshal(map[string]string{"encrypted_token": token})
+		status, env, _ := call(t, srv, http.MethodPost, "/pro/v1/token/decrypt", string(body), testProToken)
+		if status != http.StatusBadRequest || env.Code != 400 {
+			t.Fatalf("token %q: got HTTP %d code %d", token, status, env.Code)
+		}
+	}
 }

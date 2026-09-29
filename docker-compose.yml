@@ -15,6 +15,7 @@ services:
       # Self-hosted Pro services on port 8080 (see httpserver/README.md)
       - ENABLE_PRO_SERVER=${ENABLE_PRO_SERVER:-false}
       - PRO_ACCESS_TOKEN=${PRO_ACCESS_TOKEN:-}
+      - PRO_TOKEN_KEY=${PRO_TOKEN_KEY:-}
       - PRO_AI_BASE_URL=${PRO_AI_BASE_URL:-}
       - PRO_AI_API_KEY=${PRO_AI_API_KEY:-}
       - PRO_AI_MODEL=${PRO_AI_MODEL:-}

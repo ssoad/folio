@@ -82,6 +82,15 @@ export const uploadFile = async (url: string, file: any) => {
   });
 };
 export const handleExitApp = async () => {
+  // Without a Koodo login there is no session to end: a 401 comes from a
+  // feature that needs the official service, and clearing the tokens here
+  // would also wipe the data sources set up with a self-hosted server
+  if ((await TokenService.getToken("is_authed")) !== "yes") {
+    toast.error(i18n.t("This feature needs a Koodo account"), {
+      id: "koodo-account-required",
+    });
+    return;
+  }
   toast.error(i18n.t("Authorization failed, please login again"));
   await handleClearToken();
   //路由到login页面

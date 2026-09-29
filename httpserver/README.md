@@ -21,7 +21,7 @@ unlock without a Koodo account:
 | AI voices | `PRO_TTS_*` |
 | AI OCR for scanned PDFs | `PRO_AI_*` with a vision-capable model (or `PRO_OCR_MODEL`) |
 | Book metadata search | nothing, uses Open Library |
-| Sync to WebDAV, S3, FTP, SFTP, SMB, MEGA, a local folder or this server's file server | nothing |
+| Sync to WebDAV, S3, FTP, SFTP, SMB, MEGA, a local folder or this server's file server | nothing; the server encrypts the data-source credentials |
 
 Google Drive, OneDrive, Dropbox and the other OAuth data sources, Koodo Sync
 and word definitions still need a Koodo Pro account: they depend on the
@@ -41,6 +41,7 @@ official token and analysis services.
 | `PRO_TTS_API_KEY` | Key for the speech API, if it needs one |
 | `PRO_TTS_MODEL` | Speech model, default `kokoro` |
 | `PRO_TTS_VOICE` | Voice used when the app asks for one the TTS server doesn't have, default `af_heart` |
+| `PRO_TOKEN_KEY` | Secret the data-source credentials are encrypted with. Defaults to `PRO_ACCESS_TOKEN`; set it so you can change the access token without adding the data sources again. A Docker secret named by `PRO_TOKEN_KEY_FILE` (default `pro_token_key`) takes precedence. Changing it makes saved credentials unreadable. |
 | `ALLOWED_ORIGINS` | Comma-separated origins allowed to call the server from a browser (shared with the file server) |
 
 Generate a token with `openssl rand -hex 32`. Put the server behind HTTPS
@@ -75,5 +76,7 @@ envelope, `{"code": 200, "msg": "success", "data": ...}`.
 | `GET /pro/v1/metadata/search?name=&author=` | Open Library results |
 | `POST /pro/v1/tts` | `{text, voice, speed}` → `{audio_base64}` (data URI) |
 | `POST /pro/v1/ocr` | `{image_base64}` → `{text}` |
+| `POST /pro/v1/token/encrypt` | `{token}` → `{encrypted_token}` (AES-256-GCM) |
+| `POST /pro/v1/token/decrypt` | `{encrypted_token}` → `{token}` |
 
 Tests: `go test ./...`

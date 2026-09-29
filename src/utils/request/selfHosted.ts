@@ -7,7 +7,8 @@ import TokenService from "../storage/tokenService";
 // (httpserver/pro.go). Responses use the official API's {code, msg, data}
 // envelope, so callers treat both the same way.
 
-export type SelfHostedFeature = "ai" | "tts" | "ocr" | "metadata";
+// vault: the server encrypts data-source credentials (older servers lack it)
+export type SelfHostedFeature = "ai" | "tts" | "ocr" | "metadata" | "vault";
 
 export interface SelfHostedConfig {
   url: string;
@@ -261,6 +262,24 @@ export const selfHostedTTS = (
   call<{ audio_base64: string }>("/pro/v1/tts", {
     method: "POST",
     body: { text, language, voice, speed },
+  });
+
+// Data-source credentials: same request and response fields as the official
+// token service. Tokens the server encrypted carry this prefix.
+const VAULT_PREFIX = "fv1:";
+export const isSelfHostedToken = (encryptedToken: string) =>
+  encryptedToken.startsWith(VAULT_PREFIX);
+
+export const selfHostedEncryptToken = (token: string) =>
+  call<{ encrypted_token: string }>("/pro/v1/token/encrypt", {
+    method: "POST",
+    body: { token },
+  });
+
+export const selfHostedDecryptToken = (encryptedToken: string) =>
+  call<{ token: string }>("/pro/v1/token/decrypt", {
+    method: "POST",
+    body: { encrypted_token: encryptedToken },
   });
 
 // Same contract as system OCR (parseWithSystemOCR): page image in, text out

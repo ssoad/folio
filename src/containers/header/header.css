@@ -248,3 +248,10 @@
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
   transform: scale(1.05) translateY(-3px);
 }
+
+/* Too narrow for the status chips next to the toolbar icons */
+@media screen and (max-width: 860px) {
+  .header-report-container {
+    display: none;
+  }
+}

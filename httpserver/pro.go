@@ -83,6 +83,7 @@ func initPro() {
 		Model:   getEnv("PRO_TTS_MODEL", "kokoro"),
 	}
 	proTTSVoice = getEnv("PRO_TTS_VOICE", "af_heart")
+	initProVault()
 
 	log.Printf("[pro] Self-hosted Pro services enabled (AI: %t, OCR: %t, TTS: %t, metadata: true)",
 		proAI.configured(), proAI.configured() && proOCRModel != "", proTTS.configured())
@@ -117,6 +118,10 @@ func proHandler(w http.ResponseWriter, r *http.Request) {
 		proHandleTTS(w, r)
 	case r.Method == http.MethodPost && path == "/pro/v1/ocr":
 		proHandleOCR(w, r)
+	case r.Method == http.MethodPost && path == "/pro/v1/token/encrypt":
+		proHandleEncryptToken(w, r)
+	case r.Method == http.MethodPost && path == "/pro/v1/token/decrypt":
+		proHandleDecryptToken(w, r)
 	default:
 		proFail(w, http.StatusNotFound, 404, "Not Found")
 	}
@@ -156,6 +161,8 @@ func proHandleStatus(w http.ResponseWriter, _ *http.Request) {
 			"ocr":      proAI.configured() && proOCRModel != "",
 			"tts":      proTTS.configured(),
 			"metadata": true,
+			// Encrypts data-source credentials in place of the official service
+			"vault": true,
 		},
 	})
 }

@@ -9,6 +9,12 @@ import i18n from "../../i18n";
 import { handleExitApp } from "./common";
 import { getServerRegion } from "../common";
 import TokenService from "../storage/tokenService";
+import {
+  hasSelfHostedFeature,
+  isSelfHostedToken,
+  selfHostedDecryptToken,
+  selfHostedEncryptToken,
+} from "./selfHosted";
 let thirdpartyRequest: ThirdpartyRequest | undefined;
 export const getThirdpartyRequest = async () => {
   if (thirdpartyRequest) {
@@ -85,12 +91,20 @@ export const onSyncCallback = async (service: string, authCode: string) => {
   }
   return res;
 };
+// Without a Koodo login the self-hosted server encrypts the credentials; a
+// Koodo login keeps using the official service, which Koodo Sync relies on
+const useSelfHostedVault = async () =>
+  (await TokenService.getToken("is_authed")) !== "yes" &&
+  hasSelfHostedFeature("vault");
 export const encryptToken = async (service: string, config: any) => {
   let syncToken = JSON.stringify(config);
-  let thirdpartyRequest = await getThirdpartyRequest();
-  let response = await thirdpartyRequest.encryptToken({
-    token: syncToken,
-  });
+  let response = (await useSelfHostedVault())
+    ? await selfHostedEncryptToken(syncToken)
+    : await (
+        await getThirdpartyRequest()
+      ).encryptToken({
+        token: syncToken,
+      });
   if (response.code === 200) {
     await TokenService.setToken(
       service + "_token",
@@ -111,14 +125,18 @@ export const encryptToken = async (service: string, config: any) => {
   }
 };
 export const decryptToken = async (service: string) => {
-  let thirdpartyRequest = await getThirdpartyRequest();
   let encryptedToken = await TokenService.getToken(service + "_token");
   if (!encryptedToken || encryptedToken === "{}") {
     return {};
   }
-  let response = await thirdpartyRequest.decryptToken({
-    encrypted_token: encryptedToken,
-  });
+  // Ask whichever service encrypted it
+  let response = isSelfHostedToken(encryptedToken)
+    ? await selfHostedDecryptToken(encryptedToken)
+    : await (
+        await getThirdpartyRequest()
+      ).decryptToken({
+        encrypted_token: encryptedToken,
+      });
   if (response.code === 200) {
     return response;
   } else if (response.code === 401) {

@@ -25,6 +25,7 @@ import DictUtil from "../../utils/file/dictUtil";
 import TokenService from "../../utils/storage/tokenService";
 import { resolveStoredPlugin } from "../../utils/plugins/records";
 import { migrateAIModelSecrets } from "../../utils/ai";
+import { hasSelfHostedFeature } from "../../utils/request/selfHosted";
 
 export function handleBooks(books: BookModel[]) {
   return { type: "HANDLE_BOOKS", payload: books };
@@ -456,6 +457,9 @@ export function handleFetchPlugins() {
           pluginList.push(sumPlugin);
         }
         const isAuthed = (await TokenService.getToken("is_authed")) === "yes";
+        // Without a Koodo login the voices come from the self-hosted TTS
+        // server, which runs Kokoro; Azure voices need the official service
+        const isSelfHostedVoice = !isAuthed && hasSelfHostedFeature("tts");
         if (ConfigService.getReaderConfig("isDisableAI") !== "yes") {
           // 官方 AI 语音始终展示（不依赖登录），选择时再判断是否升级
           let sortedVoiceList = [
@@ -478,25 +482,27 @@ export function handleFetchPlugins() {
                     : i18n.t("Male voice")),
               };
             }),
-            ...KookitConfig.AzureTTSVoiceList.map((item) => {
-              return {
-                ...item,
-                label:
-                  "Azure" +
-                  " - " +
-                  (KookitConfig.SelfHostedVoiceList.includes(item.name) &&
-                  isAuthed
-                    ? i18n.t("Limited free") + " - "
-                    : "") +
-                  item.displayName +
-                  " - " +
-                  langToName(item.locale) +
-                  " - " +
-                  (item.gender === "female"
-                    ? i18n.t("Female voice")
-                    : i18n.t("Male voice")),
-              };
-            }),
+            ...(isSelfHostedVoice ? [] : KookitConfig.AzureTTSVoiceList).map(
+              (item) => {
+                return {
+                  ...item,
+                  label:
+                    "Azure" +
+                    " - " +
+                    (KookitConfig.SelfHostedVoiceList.includes(item.name) &&
+                    isAuthed
+                      ? i18n.t("Limited free") + " - "
+                      : "") +
+                    item.displayName +
+                    " - " +
+                    langToName(item.locale) +
+                    " - " +
+                    (item.gender === "female"
+                      ? i18n.t("Female voice")
+                      : i18n.t("Male voice")),
+                };
+              }
+            ),
           ];
           let voicePlugin = new PluginModel(
             "official-ai-voice-plugin",

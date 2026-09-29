@@ -2,7 +2,9 @@
 let discordRPCClient = null;
 let discordRPCReady = false;
 let discordRPCConnecting = false;
-const DISCORD_CLIENT_ID = "1490863275074781305"; // Koodo Reader Discord App ID
+// Koodo Reader's Discord app: Discord shows its name and logo until Folio
+// registers its own app and the ID here is replaced
+const DISCORD_CLIENT_ID = "1490863275074781305";
 
 const initDiscordRPC = () => {
   if (discordRPCConnecting || discordRPCReady) return Promise.resolve();
@@ -65,13 +67,13 @@ const setDiscordActivity = async ({ bookTitle, author, percentage } = {}) => {
       details: bookTitle,
       state: `${progressBar} ${percentage}%  |  by ${author}`,
       largeImageKey: "koodo_reader_logo",
-      largeImageText: "Koodo Reader",
+      largeImageText: "Folio",
       startTimestamp: Date.now(),
       instance: false,
       buttons: [
         {
-          label: "Get Koodo Reader",
-          url: "https://koodoreader.com",
+          label: "Get Folio",
+          url: "https://github.com/ssoad/folio",
         },
       ],
     });

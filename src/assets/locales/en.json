@@ -1408,5 +1408,9 @@
   "The server rejected the access token": "The server rejected the access token",
   "Self-hosted server error": "Self-hosted server error",
   "Self-hosted server OCR": "Self-hosted server OCR",
-  "This data source needs a Koodo Pro account, use one on your own storage such as WebDAV, S3 or FTP instead": "This data source needs a Koodo Pro account, use one on your own storage such as WebDAV, S3 or FTP instead"
+  "This data source needs a Koodo Pro account, use one on your own storage such as WebDAV, S3 or FTP instead": "This data source needs a Koodo Pro account, use one on your own storage such as WebDAV, S3 or FTP instead",
+  "This feature needs a Koodo account": "This feature needs a Koodo account",
+  "Koodo account (optional)": "Koodo account (optional)",
+  "Only needed for Google Drive, OneDrive, Dropbox and the other cloud drives that sign in through Koodo": "Only needed for Google Drive, OneDrive, Dropbox and the other cloud drives that sign in through Koodo",
+  "Sync to your own storage": "Sync to your own storage"
 }
