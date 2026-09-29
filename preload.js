@@ -26,6 +26,8 @@ const INVOKE_CHANNELS = new Set([
   "select-import-file",
   "encrypt-data",
   "decrypt-data",
+  "ai-secret-encrypt",
+  "ai-secret-decrypt",
   "check-cloud-url",
   "get-proxy-config",
   "set-proxy-config",

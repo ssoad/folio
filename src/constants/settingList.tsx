@@ -738,4 +738,19 @@ export const sampleQuestion = [
     emoji: "🗞️",
     question: "Explain Stoicism and its principles to me",
   },
+  {
+    mode: "book",
+    emoji: "🧭",
+    question: "Recap the story so far",
+  },
+  {
+    mode: "book",
+    emoji: "👥",
+    question: "Who are the main characters so far",
+  },
+  {
+    mode: "book",
+    emoji: "🔖",
+    question: "Remind me what happened in the previous chapter",
+  },
 ];

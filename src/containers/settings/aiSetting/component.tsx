@@ -3,11 +3,19 @@ import { SettingInfoProps, SettingInfoState, AIModelConfig } from "./interface";
 import { Trans } from "react-i18next";
 import toast from "react-hot-toast";
 import { handleContextMenu, vexTextareaAsync } from "../../../utils/common";
-import { aiRequest } from "../../../utils/request/common";
+import {
+  decryptSecret,
+  encryptSecret,
+  listModels,
+  testConnection,
+} from "../../../utils/ai";
 import {
   ConfigService,
   KookitConfig,
 } from "../../../assets/lib/kookit-extra-browser.min";
+
+// How much book text the book assistant may send per question
+const BOOK_CONTEXT_OPTIONS = [16000, 32000, 64000, 128000, 200000, 1000000];
 
 class AISetting extends React.Component<SettingInfoProps, SettingInfoState> {
   constructor(props: SettingInfoProps) {
@@ -35,6 +43,10 @@ class AISetting extends React.Component<SettingInfoProps, SettingInfoState> {
       aiDictPrompt: ConfigService.getReaderConfig("aiDictPrompt") || "",
       aiAssistancePrompt:
         ConfigService.getReaderConfig("aiAssistancePrompt") || "",
+      aiBookContextTokens:
+        ConfigService.getReaderConfig("aiBookContextTokens") || "",
+      isAiChapterSummaries:
+        ConfigService.getReaderConfig("isAiChapterSummaries") || "yes",
     };
   }
 
@@ -135,17 +147,16 @@ class AISetting extends React.Component<SettingInfoProps, SettingInfoState> {
     }
     this.setState({ isFetchingModels: true });
     try {
-      const headers: Record<string, string> = {};
-      if (this.state.apiKey) {
-        headers["Authorization"] = `Bearer ${this.state.apiKey}`;
-      }
-      const response = await aiRequest(provider.modelsEndpoint, "GET", headers);
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`);
-      }
-      const data = JSON.parse(response.body);
-      const rawModels = data.data || data.models || data.results || data || [];
-      if (rawModels.length === 0) {
+      const models = await listModels(
+        {
+          endpoint: this.state.endpoint,
+          providerId: this.state.selectedProvider,
+          apiKey: this.state.apiKey,
+          modelId: "",
+        },
+        provider.modelsEndpoint
+      );
+      if (models.length === 0) {
         toast.error(this.props.t("No models found"));
         toast.error(
           this.props.t(
@@ -154,10 +165,6 @@ class AISetting extends React.Component<SettingInfoProps, SettingInfoState> {
         );
         return;
       }
-      const models = rawModels.map((m: any) => ({
-        id: m.id || m.model || m.name,
-        name: m.id || m.display_name || m.name || m.model,
-      }));
       models.sort((a: { name: string }, b: { name: string }) =>
         a.name.localeCompare(b.name)
       );
@@ -184,33 +191,12 @@ class AISetting extends React.Component<SettingInfoProps, SettingInfoState> {
     }
     this.setState({ isTesting: true, testResult: "" });
     try {
-      const chatEndpoint = endpoint.endsWith("/")
-        ? endpoint + "chat/completions"
-        : endpoint + "/chat/completions";
-      const response = await aiRequest(
-        chatEndpoint,
-        "POST",
-        {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${apiKey}`,
-        },
-        JSON.stringify({
-          model: modelId,
-          messages: [
-            { role: "user", content: "Hi, just testing. Reply with OK." },
-          ],
-          max_tokens: 10,
-        })
-      );
-      if (!response.ok) {
-        throw new Error(
-          `HTTP ${response.status}: ${response.body.substring(0, 200)}`
-        );
-      }
-      const data = JSON.parse(response.body);
-      const reply =
-        data.choices?.[0]?.message?.content ||
-        JSON.stringify(data).substring(0, 100);
+      const reply = await testConnection({
+        endpoint,
+        providerId: this.state.selectedProvider,
+        apiKey,
+        modelId,
+      });
       this.setState({ testResult: "success" });
       toast.success(this.props.t("Test successful") + ": " + reply);
     } catch (e: any) {
@@ -242,7 +228,7 @@ class AISetting extends React.Component<SettingInfoProps, SettingInfoState> {
       endpoint,
       modelName,
       modelId,
-      apiKey,
+      apiKey: await encryptSecret(apiKey),
       providerId: selectedProvider || "custom",
       providerName: provider ? provider.name : "Custom",
     };
@@ -288,7 +274,7 @@ class AISetting extends React.Component<SettingInfoProps, SettingInfoState> {
     this.props.handleFetchPlugins();
   };
 
-  handleEdit = (plugin: any) => {
+  handleEdit = async (plugin: any) => {
     const entry = ConfigService.getObjectConfig(
       plugin.key,
       "aiModelConfig",
@@ -301,6 +287,12 @@ class AISetting extends React.Component<SettingInfoProps, SettingInfoState> {
       toast.error(this.props.t("Failed to parse model configuration"));
       return;
     }
+    let apiKey = "";
+    try {
+      apiKey = await decryptSecret(config.apiKey || "");
+    } catch (e: any) {
+      toast.error(e.message);
+    }
     this.setState({
       isAddNew: true,
       isEditing: true,
@@ -310,7 +302,7 @@ class AISetting extends React.Component<SettingInfoProps, SettingInfoState> {
       endpoint: config.endpoint || "",
       modelName: config.modelName || plugin.displayName || "",
       modelId: config.modelId || "",
-      apiKey: config.apiKey || "",
+      apiKey,
       testResult: "",
       fetchedModels: [],
     });
@@ -730,6 +722,56 @@ class AISetting extends React.Component<SettingInfoProps, SettingInfoState> {
                 {item.displayName}
               </option>
             ))}
+          </select>
+        </div>
+
+        <div className="setting-dialog-new-title">
+          <Trans>Book assistant context size</Trans>
+          <select
+            className="lang-setting-dropdown"
+            value={this.state.aiBookContextTokens}
+            onChange={(e) => {
+              const val = e.target.value;
+              this.setState({ aiBookContextTokens: val });
+              ConfigService.setReaderConfig("aiBookContextTokens", val);
+              toast.success(this.props.t("Change successful"));
+            }}
+          >
+            <option value="" className="lang-setting-option">
+              {this.props.t("Auto")}
+            </option>
+            {BOOK_CONTEXT_OPTIONS.map((tokens) => (
+              <option
+                key={tokens}
+                value={String(tokens)}
+                className="lang-setting-option"
+              >
+                {(tokens >= 1000000
+                  ? `${tokens / 1000000}M `
+                  : `${tokens / 1000}K `) + this.props.t("tokens")}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="setting-dialog-new-title">
+          <Trans>Chapter summaries for long books</Trans>
+          <select
+            className="lang-setting-dropdown"
+            value={this.state.isAiChapterSummaries}
+            onChange={(e) => {
+              const val = e.target.value;
+              this.setState({ isAiChapterSummaries: val });
+              ConfigService.setReaderConfig("isAiChapterSummaries", val);
+              toast.success(this.props.t("Change successful"));
+            }}
+          >
+            <option value="yes" className="lang-setting-option">
+              {this.props.t("On")}
+            </option>
+            <option value="no" className="lang-setting-option">
+              {this.props.t("Off")}
+            </option>
           </select>
         </div>
 

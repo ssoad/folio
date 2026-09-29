@@ -36,6 +36,7 @@ import {
 class PopupDict extends React.Component<PopupDictProps, PopupDictState> {
   private aiTextAccumulator: string = "";
   private updateInterval: ReturnType<typeof setInterval> | null = null;
+  private abortController: AbortController | null = null;
 
   constructor(props: PopupDictProps) {
     super(props);
@@ -62,6 +63,14 @@ class PopupDict extends React.Component<PopupDictProps, PopupDictState> {
         this.setState({ aiAnswer: this.aiTextAccumulator });
       }
     }, 150);
+  }
+
+  componentWillUnmount() {
+    this.abortController?.abort();
+    if (this.updateInterval) {
+      clearInterval(this.updateInterval);
+      this.updateInterval = null;
+    }
   }
 
   private stopUpdateInterval() {
@@ -164,6 +173,7 @@ class PopupDict extends React.Component<PopupDictProps, PopupDictState> {
         this.aiTextAccumulator = "";
         this.setState({ aiAnswer: "", isAiWaiting: true });
         this.startUpdateInterval();
+        this.abortController = new AbortController();
         await chatStream(
           config.endpoint,
           config.providerId,
@@ -181,7 +191,8 @@ class PopupDict extends React.Component<PopupDictProps, PopupDictState> {
               }
               this.aiTextAccumulator += result.text;
             }
-          }
+          },
+          this.abortController.signal
         );
         this.stopUpdateInterval();
         this.aiTextAccumulator = "";

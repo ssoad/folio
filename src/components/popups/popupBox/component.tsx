@@ -17,6 +17,21 @@ const POPUP_SIZE_KEY = "popupBoxSize";
 const POPUP_POS_KEY = "popupBoxPosition";
 const DEFAULT_WIDTH = 500;
 const POPUP_MODES = ["note", "trans", "dict", "assistant"];
+// Gap kept between the popup and the window edges
+const VIEWPORT_MARGIN = 8;
+// Room above the popup for the close / pin / move controls drawn at top: -30px
+const CONTROLS_SPACE = 40;
+const MIN_WIDTH = 300;
+const MIN_HEIGHT = 200;
+// At or below this width the popup becomes a full-width sheet at the bottom
+const PHONE_MAX_WIDTH = 576;
+// Largest share of the screen height the phone sheet can be dragged to
+const PHONE_MAX_HEIGHT_RATIO = 0.9;
+
+const clamp = (value: number, min: number, max: number) =>
+  Math.min(Math.max(value, min), Math.max(min, max));
+
+const isPhoneWidth = () => window.innerWidth <= PHONE_MAX_WIDTH;
 
 function getDefaultHeight(menuMode: string) {
   if (menuMode === "assistant") return 400;
@@ -43,6 +58,7 @@ class PopupBox extends React.Component<PopupBoxProps, PopupBoxStates> {
   dragStartLeft: number = 0;
   dragStartBottom: number = 0;
   wasDocked: boolean = false;
+  resizeFrame: number | null = null;
 
   constructor(props: PopupBoxProps) {
     super(props);
@@ -152,46 +168,127 @@ class PopupBox extends React.Component<PopupBoxProps, PopupBoxStates> {
       });
       this.setState({ isShowUrl });
     }
-    document.addEventListener("mousemove", this.handleResizeMove);
-    document.addEventListener("mousemove", this.handleDragMove);
-    document.addEventListener("mouseup", this.handleResizeEnd);
-    document.addEventListener("mouseup", this.handleDragEnd);
+    // Pointer events cover mouse, touch and pen with one code path
+    document.addEventListener("pointermove", this.handleResizeMove);
+    document.addEventListener("pointermove", this.handleDragMove);
+    document.addEventListener("pointerup", this.handleResizeEnd);
+    document.addEventListener("pointerup", this.handleDragEnd);
+    document.addEventListener("pointercancel", this.handleResizeEnd);
+    document.addEventListener("pointercancel", this.handleDragEnd);
+    window.addEventListener("resize", this.handleWindowResize);
   }
 
   componentWillUnmount(): void {
-    document.removeEventListener("mousemove", this.handleResizeMove);
-    document.removeEventListener("mousemove", this.handleDragMove);
-    document.removeEventListener("mouseup", this.handleResizeEnd);
-    document.removeEventListener("mouseup", this.handleDragEnd);
+    document.removeEventListener("pointermove", this.handleResizeMove);
+    document.removeEventListener("pointermove", this.handleDragMove);
+    document.removeEventListener("pointerup", this.handleResizeEnd);
+    document.removeEventListener("pointerup", this.handleDragEnd);
+    document.removeEventListener("pointercancel", this.handleResizeEnd);
+    document.removeEventListener("pointercancel", this.handleDragEnd);
+    window.removeEventListener("resize", this.handleWindowResize);
+    if (this.resizeFrame !== null) {
+      cancelAnimationFrame(this.resizeFrame);
+    }
   }
 
-  handleResizeStart = (e: React.MouseEvent) => {
+  // Size and position are stored as the user left them; they are fitted to the
+  // window at render time, so re-render when the window changes size
+  handleWindowResize = () => {
+    if (this.resizeFrame !== null) return;
+    this.resizeFrame = requestAnimationFrame(() => {
+      this.resizeFrame = null;
+      this.forceUpdate();
+    });
+  };
+
+  getNavOffset() {
+    if (this.props.isNavLocked && !this.props.isSettingLocked) return 150;
+    if (!this.props.isNavLocked && this.props.isSettingLocked) return -150;
+    return 0;
+  }
+
+  // Fits the saved size and position into the current window
+  getFloatingGeometry() {
+    const { popupWidth, popupHeight, popupLeft, popupBottom } = this.state;
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+    if (isPhoneWidth()) {
+      return {
+        width: viewportWidth,
+        height: clamp(
+          popupHeight,
+          MIN_HEIGHT,
+          Math.round(viewportHeight * PHONE_MAX_HEIGHT_RATIO)
+        ),
+        centerX: viewportWidth / 2,
+        bottom: 0,
+      };
+    }
+    const width = Math.min(popupWidth, viewportWidth - VIEWPORT_MARGIN * 2);
+    const height = Math.min(
+      popupHeight,
+      viewportHeight - CONTROLS_SPACE - VIEWPORT_MARGIN
+    );
+    const centerX = clamp(
+      (popupLeft / 100) * viewportWidth + this.getNavOffset(),
+      width / 2 + VIEWPORT_MARGIN,
+      viewportWidth - width / 2 - VIEWPORT_MARGIN
+    );
+    const bottom = clamp(
+      (popupBottom / 100) * viewportHeight,
+      0,
+      viewportHeight - height - CONTROLS_SPACE
+    );
+    return { width, height, centerX, bottom };
+  }
+
+  handleResizeStart = (e: React.PointerEvent) => {
     e.preventDefault();
     e.stopPropagation();
     this.isResizing = true;
     this.resizeStartX = e.clientX;
     this.resizeStartY = e.clientY;
-    this.resizeStartWidth = this.state.popupWidth;
-    this.resizeStartHeight = this.state.popupHeight;
+    const geometry = this.getFloatingGeometry();
+    this.resizeStartWidth = geometry.width;
+    this.resizeStartHeight = geometry.height;
   };
 
-  handleResizeMove = (e: MouseEvent) => {
+  handleResizeMove = (e: PointerEvent) => {
     if (!this.isResizing) return;
     // Dragging top-right corner: right edge extends right (+dx), top edge moves up (-dy means bigger height)
     const dx = e.clientX - this.resizeStartX;
     const dy = e.clientY - this.resizeStartY;
-    const newWidth = Math.max(300, this.resizeStartWidth + dx);
-    const newHeight = Math.max(200, this.resizeStartHeight - dy);
+    if (isPhoneWidth()) {
+      // The phone sheet is always full width, its grabber only changes the height
+      this.setState({
+        popupHeight: clamp(
+          this.resizeStartHeight - dy,
+          MIN_HEIGHT,
+          Math.round(window.innerHeight * PHONE_MAX_HEIGHT_RATIO)
+        ),
+      });
+      return;
+    }
+    const newWidth = clamp(
+      this.resizeStartWidth + dx,
+      MIN_WIDTH,
+      window.innerWidth - VIEWPORT_MARGIN * 2
+    );
+    const newHeight = clamp(
+      this.resizeStartHeight - dy,
+      MIN_HEIGHT,
+      window.innerHeight - CONTROLS_SPACE - VIEWPORT_MARGIN
+    );
     this.setState({ popupWidth: newWidth, popupHeight: newHeight });
   };
 
-  handleResizeEnd = (_e: MouseEvent) => {
+  handleResizeEnd = (_e: PointerEvent) => {
     if (!this.isResizing) return;
     this.isResizing = false;
     this.saveSizeToConfig(this.state.popupWidth, this.state.popupHeight);
   };
 
-  handleDragStart = (e: React.MouseEvent) => {
+  handleDragStart = (e: React.PointerEvent) => {
     e.preventDefault();
     e.stopPropagation();
     if (this.state.isDockedRight) {
@@ -225,15 +322,19 @@ class PopupBox extends React.Component<PopupBoxProps, PopupBoxStates> {
       this.syncDockedToRedux(false);
       return;
     }
+    // Start from where the popup is shown, which may differ from the saved
+    // position after it was fitted into a smaller window
+    const geometry = this.getFloatingGeometry();
     this.isDragging = true;
     this.wasDocked = false;
     this.dragStartX = e.clientX;
     this.dragStartY = e.clientY;
-    this.dragStartLeft = this.state.popupLeft;
-    this.dragStartBottom = this.state.popupBottom;
+    this.dragStartLeft =
+      ((geometry.centerX - this.getNavOffset()) / window.innerWidth) * 100;
+    this.dragStartBottom = (geometry.bottom / window.innerHeight) * 100;
   };
 
-  handleDragMove = (e: MouseEvent) => {
+  handleDragMove = (e: PointerEvent) => {
     if (!this.isDragging) return;
     const dx = e.clientX - this.dragStartX;
     const dy = e.clientY - this.dragStartY;
@@ -262,7 +363,7 @@ class PopupBox extends React.Component<PopupBoxProps, PopupBoxStates> {
     });
   };
 
-  handleDragEnd = (_e: MouseEvent) => {
+  handleDragEnd = (_e: PointerEvent) => {
     if (!this.isDragging) return;
     this.isDragging = false;
     let { popupLeft, popupBottom, popupWidth } = this.state;
@@ -333,21 +434,16 @@ class PopupBox extends React.Component<PopupBoxProps, PopupBoxStates> {
     }
   }
   render() {
-    const {
-      popupWidth,
-      popupHeight,
-      popupLeft,
-      popupBottom,
-      isNearRight,
-      isDockedRight,
-    } = this.state;
+    const { isNearRight, isDockedRight } = this.state;
+    const isPhone = isPhoneWidth();
     const menuMode = isDockedRight ? this.mode : this.props.menuMode;
     const PopupProps = {
       chapterDocIndex: this.props.chapterDocIndex,
       chapter: this.props.chapter,
       isDockedRight,
     };
-    const isAtBottom = popupBottom === 0;
+    const geometry = this.getFloatingGeometry();
+    const isAtBottom = geometry.bottom === 0;
 
     const containerStyle: React.CSSProperties = isDockedRight
       ? {
@@ -356,7 +452,7 @@ class PopupBox extends React.Component<PopupBoxProps, PopupBoxStates> {
           top: 0,
           left: "auto",
           bottom: 0,
-          width: SETTING_PANEL_WIDTH,
+          width: Math.min(SETTING_PANEL_WIDTH, window.innerWidth),
           height: "100%",
           transform: "none",
           borderRadius: "10px 0 0 10px",
@@ -364,16 +460,10 @@ class PopupBox extends React.Component<PopupBoxProps, PopupBoxStates> {
           transition: "none",
         }
       : {
-          marginLeft:
-            this.props.isNavLocked && !this.props.isSettingLocked
-              ? 150
-              : !this.props.isNavLocked && this.props.isSettingLocked
-                ? -150
-                : 0,
-          width: popupWidth,
-          height: popupHeight,
-          left: `${popupLeft}%`,
-          bottom: `${popupBottom}%`,
+          width: geometry.width,
+          height: geometry.height,
+          left: geometry.centerX,
+          bottom: geometry.bottom,
           transform: "translateX(-50%)",
           borderBottomLeftRadius: isAtBottom ? 0 : 10,
           borderBottomRightRadius: isAtBottom ? 0 : 10,
@@ -393,6 +483,13 @@ class PopupBox extends React.Component<PopupBoxProps, PopupBoxStates> {
         }}
       >
         <div className={`popup-box-container`} style={containerStyle}>
+          {isPhone && !isDockedRight && (
+            <div
+              className="popup-sheet-grabber"
+              onPointerDown={this.handleResizeStart}
+              title={this.props.t("Resize")}
+            />
+          )}
           {menuMode === "note" ? (
             <PopupNote {...(PopupProps as any)} />
           ) : menuMode === "trans" ? (
@@ -413,41 +510,47 @@ class PopupBox extends React.Component<PopupBoxProps, PopupBoxStates> {
                 : { top: "-30px", left: "calc(50% - 10px)" }),
             }}
           ></span>
-          <span
-            className={`icon-sidebar popup-pin-handle ${isDockedRight ? "" : "popup-close"}`}
-            onClick={this.handleToggleDock}
-            title={this.props.t(isDockedRight ? "Unpin" : "Pin to right")}
-            style={
-              isDockedRight
-                ? {
-                    right: "40px",
-                  }
-                : {
-                    top: "-30px",
-                    right: "40px",
-                  }
-            }
-          ></span>
-          <span
-            className={`icon-menu popup-drag-handle ${isDockedRight ? "" : "popup-close"}`}
-            onMouseDown={this.handleDragStart}
-            title={this.props.t("Move")}
-            style={
-              isDockedRight
-                ? {
-                    right: "10px",
-                  }
-                : {
-                    top: "-30px",
-                    right: "10px",
-                  }
-            }
-          ></span>
+          {/* On phones the popup is a fixed bottom sheet: no moving, resizing or
+              docking, only undocking a panel docked on a wider window */}
+          {(!isPhone || isDockedRight) && (
+            <span
+              className={`icon-sidebar popup-pin-handle ${isDockedRight ? "" : "popup-close"}`}
+              onClick={this.handleToggleDock}
+              title={this.props.t(isDockedRight ? "Unpin" : "Pin to right")}
+              style={
+                isDockedRight
+                  ? {
+                      right: "40px",
+                    }
+                  : {
+                      top: "-30px",
+                      right: "40px",
+                    }
+              }
+            ></span>
+          )}
+          {!isPhone && (
+            <span
+              className={`icon-menu popup-drag-handle ${isDockedRight ? "" : "popup-close"}`}
+              onPointerDown={this.handleDragStart}
+              title={this.props.t("Move")}
+              style={
+                isDockedRight
+                  ? {
+                      right: "10px",
+                    }
+                  : {
+                      top: "-30px",
+                      right: "10px",
+                    }
+              }
+            ></span>
+          )}
 
-          {!isDockedRight && (
+          {!isDockedRight && !isPhone && (
             <div
               className="popup-resize-handle"
-              onMouseDown={this.handleResizeStart}
+              onPointerDown={this.handleResizeStart}
               title={this.props.t("Resize")}
             />
           )}

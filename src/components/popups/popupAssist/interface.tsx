@@ -4,6 +4,7 @@ export type AiChatMessage = {
   role: "user" | "assistant";
   content: string;
 };
+export type AssistMode = "ask" | "chat" | "book";
 export interface PopupAssistProps {
   currentBook: BookModel;
   originalText: string;
@@ -27,7 +28,11 @@ export interface PopupAssistState {
   question: string;
   askHistory: AiChatMessage[];
   chatHistory: AiChatMessage[];
+  bookHistory: AiChatMessage[];
   answer: string;
-  mode: string;
+  mode: AssistMode;
   inputQuestion: string;
+  isStreaming: boolean;
+  isSpoilerFree: boolean;
+  summaryProgress: string;
 }

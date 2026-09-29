@@ -1,6 +1,7 @@
 import { ConfigService } from "../../assets/lib/kookit-extra-browser.min";
 import { isElectron } from "react-device-detect";
 import localforage from "localforage";
+import { deleteChapterSummaries } from "../ai/chapterSummaries";
 import BookModel from "../../models/Book";
 import toast from "react-hot-toast";
 import { getStorageLocation, showDownloadProgress } from "../common";
@@ -88,6 +89,7 @@ class BookUtil {
     }
   }
   static async deleteBook(key: string, format: string) {
+    await deleteChapterSummaries(key).catch(() => {});
     try {
       if (isElectron) {
         const fs = window.electronAPI.fs;

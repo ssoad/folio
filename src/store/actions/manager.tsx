@@ -24,6 +24,7 @@ import { resetThirdpartyRequest } from "../../utils/request/thirdparty";
 import DictUtil from "../../utils/file/dictUtil";
 import TokenService from "../../utils/storage/tokenService";
 import { resolveStoredPlugin } from "../../utils/plugins/records";
+import { migrateAIModelSecrets } from "../../utils/ai";
 
 export function handleBooks(books: BookModel[]) {
   return { type: "HANDLE_BOOKS", payload: books };
@@ -301,6 +302,7 @@ export function handleFetchPlugins() {
           await DatabaseService.deleteRecord(p.key, "plugins");
         }
         pluginList = pluginList.filter((p: PluginModel) => p.type !== "ai");
+        await migrateAIModelSecrets();
 
         const resolvedPlugins = await Promise.all(
           pluginList.map((plugin) => resolveStoredPlugin(plugin))

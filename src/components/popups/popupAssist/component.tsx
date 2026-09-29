@@ -1,25 +1,43 @@
 import React from "react";
 import "./popupAssist.css";
-import { PopupAssistProps, PopupAssistState, AiChatMessage } from "./interface";
+import {
+  PopupAssistProps,
+  PopupAssistState,
+  AiChatMessage,
+  AssistMode,
+} from "./interface";
 import {
   ConfigService,
   KookitConfig,
 } from "../../../assets/lib/kookit-extra-browser.min";
-import Parser from "html-react-parser";
+import Parser, { DOMNode, Element } from "html-react-parser";
 import DOMPurify from "dompurify";
 import { Trans } from "react-i18next";
 import { handleContextMenu } from "../../../utils/common";
 import toast from "react-hot-toast";
 import { saveAs } from "file-saver";
 import { getAnswerStream } from "../../../utils/request/reader";
-import { chatStream } from "../../../utils/request/common";
+import { streamChat } from "../../../utils/ai";
+import {
+  isSpoilerProtectionOn,
+  jumpToPassage,
+  prepareBookQuestion,
+} from "../../../utils/ai/bookAssistant";
+import { CITATION_REGEX } from "../../../utils/ai/bookContext";
 import { marked } from "marked";
 import { sampleQuestion } from "../../../constants/settingList";
+const ASSIST_TABS: { mode: AssistMode; icon: string; label: string }[] = [
+  { mode: "ask", icon: "icon-bookmark", label: "Reading Assistant" },
+  { mode: "chat", icon: "icon-idea", label: "Chat Assistant" },
+  { mode: "book", icon: "icon-bookshelf-line", label: "Book Assistant" },
+];
+
 class PopupAssist extends React.Component<PopupAssistProps, PopupAssistState> {
   chatBoxRef: React.RefObject<HTMLDivElement>;
   textareaRef: React.RefObject<HTMLTextAreaElement>;
   answerTextAccumulator: string = "";
   updateInterval: ReturnType<typeof setInterval> | null = null;
+  abortController: AbortController | null = null;
   isHydrating = false;
 
   constructor(props: PopupAssistProps) {
@@ -32,24 +50,67 @@ class PopupAssist extends React.Component<PopupAssistProps, PopupAssistState> {
       question: "",
       chatHistory: [],
       askHistory: [],
+      bookHistory: [],
+      isSpoilerFree: isSpoilerProtectionOn(),
+      summaryProgress: "",
       mode: "ask",
       inputQuestion: "",
+      isStreaming: false,
     };
     this.chatBoxRef = React.createRef();
     this.textareaRef = React.createRef();
   }
 
   MAX_HISTORY_LENGTH = 50;
+  // Number of recent messages sent to the model as conversation context
+  MAX_CONTEXT_MESSAGES = 20;
 
   AI_ASK_HISTORY_KEY = "aiAskHistory";
   AI_CHAT_HISTORY_KEY = "aiChatHistory";
+  AI_BOOK_HISTORY_KEY = "aiBookHistory";
 
-  HISTORY_KEY_BY_MODE: Record<string, string> = {
+  MODES: AssistMode[] = ["ask", "chat", "book"];
+
+  HISTORY_KEY_BY_MODE: Record<AssistMode, string> = {
     ask: this.AI_ASK_HISTORY_KEY,
     chat: this.AI_CHAT_HISTORY_KEY,
+    book: this.AI_BOOK_HISTORY_KEY,
   };
 
-  loadHistory = (bookKey: string, mode: "ask" | "chat"): AiChatMessage[] => {
+  HISTORY_FIELD_BY_MODE: Record<
+    AssistMode,
+    "askHistory" | "chatHistory" | "bookHistory"
+  > = {
+    ask: "askHistory",
+    chat: "chatHistory",
+    book: "bookHistory",
+  };
+
+  getHistory = (mode: AssistMode = this.state.mode): AiChatMessage[] =>
+    this.state[this.HISTORY_FIELD_BY_MODE[mode]];
+
+  // Replaces the current mode's history together with other state updates
+  setHistory = (
+    messages: AiChatMessage[],
+    extra: Partial<PopupAssistState> = {},
+    callback?: () => void
+  ) => {
+    const field = this.HISTORY_FIELD_BY_MODE[this.state.mode];
+    this.setState(
+      { ...extra, [field]: messages } as PopupAssistState,
+      callback
+    );
+  };
+
+  appendHistory = (
+    messages: AiChatMessage[],
+    extra: Partial<PopupAssistState> = {},
+    callback?: () => void
+  ) => {
+    this.setHistory([...this.getHistory(), ...messages], extra, callback);
+  };
+
+  loadHistory = (bookKey: string, mode: AssistMode): AiChatMessage[] => {
     if (!bookKey) {
       return [];
     }
@@ -57,7 +118,7 @@ class PopupAssist extends React.Component<PopupAssistProps, PopupAssistState> {
     return ConfigService.getObjectConfig(bookKey, key, []);
   };
 
-  clearHistory = (bookKey: string, mode: "ask" | "chat"): void => {
+  clearHistory = (bookKey: string, mode: AssistMode): void => {
     if (!bookKey) {
       return;
     }
@@ -67,7 +128,7 @@ class PopupAssist extends React.Component<PopupAssistProps, PopupAssistState> {
 
   saveHistory = (
     bookKey: string,
-    mode: "ask" | "chat",
+    mode: AssistMode,
     messages: AiChatMessage[]
   ): void => {
     if (!bookKey) {
@@ -114,6 +175,7 @@ class PopupAssist extends React.Component<PopupAssistProps, PopupAssistState> {
       {
         askHistory: this.loadHistory(bookKey, "ask"),
         chatHistory: this.loadHistory(bookKey, "chat"),
+        bookHistory: this.loadHistory(bookKey, "book"),
       },
       () => {
         this.isHydrating = false;
@@ -128,8 +190,9 @@ class PopupAssist extends React.Component<PopupAssistProps, PopupAssistState> {
     if (!bookKey || this.isHydrating) {
       return;
     }
-    this.saveHistory(bookKey, "ask", this.state.askHistory);
-    this.saveHistory(bookKey, "chat", this.state.chatHistory);
+    for (const mode of this.MODES) {
+      this.saveHistory(bookKey, mode, this.getHistory(mode));
+    }
   }
   componentDidMount(): void {
     this.loadChatHistory();
@@ -183,14 +246,15 @@ class PopupAssist extends React.Component<PopupAssistProps, PopupAssistState> {
     if (!bookKey) {
       return;
     }
-    if (prevState.askHistory !== this.state.askHistory) {
-      this.saveHistory(bookKey, "ask", this.state.askHistory);
-    }
-    if (prevState.chatHistory !== this.state.chatHistory) {
-      this.saveHistory(bookKey, "chat", this.state.chatHistory);
+    for (const mode of this.MODES) {
+      const field = this.HISTORY_FIELD_BY_MODE[mode];
+      if (prevState[field] !== this.state[field]) {
+        this.saveHistory(bookKey, mode, this.state[field]);
+      }
     }
   }
   componentWillUnmount(): void {
+    this.abortController?.abort();
     this.saveChatHistory();
     if (this.updateInterval) {
       clearInterval(this.updateInterval);
@@ -275,62 +339,81 @@ class PopupAssist extends React.Component<PopupAssistProps, PopupAssistState> {
           systemPrompt = systemPrompt.replace("{text}", "");
         }
         let config: any = plugin.config || {};
-        let chatHistory =
-          this.state.mode === "ask"
-            ? this.state.askHistory
-            : this.state.chatHistory;
-        // Build messages: system prompt as first user message, then history, then current question
-        const historyMessages = chatHistory.slice(0, -1); // exclude the latest user message we just added
-        const currentQuestion =
-          chatHistory[chatHistory.length - 1]?.content || this.state.question;
-        if (!currentQuestion) {
+        let chatHistory = this.getHistory();
+        // The latest entry is the question the user just asked
+        const question = chatHistory[chatHistory.length - 1]?.content;
+        if (!question) {
           return;
         }
+        const providerConfig = {
+          endpoint: config.endpoint,
+          providerId: config.providerId,
+          apiKey: config.apiKey,
+          modelId: config.modelId,
+        };
+        const messages = chatHistory
+          .slice(-this.MAX_CONTEXT_MESSAGES)
+          .filter((item) => item.content);
         this.answerTextAccumulator = "";
         this.startUpdateInterval();
-        await chatStream(
-          config.endpoint,
-          config.providerId,
-          config.apiKey,
-          config.modelId,
-          systemPrompt + "\n\nUser question: " + currentQuestion,
-          historyMessages,
-          (result) => {
-            if (result && result.done) {
+        this.abortController = new AbortController();
+        const signal = this.abortController.signal;
+        this.setState({ isStreaming: true });
+        try {
+          if (this.state.mode === "book") {
+            const prepared = await prepareBookQuestion({
+              book: this.props.currentBook,
+              rendition: this.props.htmlBook?.rendition,
+              question,
+              config: providerConfig,
+              signal,
+              onSummaryProgress: (done, total) => {
+                this.setState({
+                  summaryProgress:
+                    this.props.t(
+                      "Summarizing chapters, only needed once for this book"
+                    ) + ` (${done}/${total})`,
+                });
+              },
+            });
+            this.setState({ summaryProgress: "" });
+            // Stopped while summarizing
+            if (!prepared) {
               return;
             }
-            if (result && result.text) {
-              if (!this.answerTextAccumulator) {
-                this.setState({ isWaiting: false });
-              }
-              this.answerTextAccumulator += result.text;
-            }
+            systemPrompt = prepared.system;
           }
-        );
-        this.stopUpdateInterval(this.answerTextAccumulator);
-        const finalAnswer = this.answerTextAccumulator;
-        this.answerTextAccumulator = "";
-        if (this.state.mode === "ask") {
+          await streamChat(
+            providerConfig,
+            { system: systemPrompt, messages, signal },
+            (result) => {
+              if (result && result.text) {
+                if (!this.answerTextAccumulator) {
+                  this.setState({ isWaiting: false });
+                }
+                this.answerTextAccumulator += result.text;
+              }
+            }
+          );
+        } finally {
+          this.abortController = null;
+          this.stopUpdateInterval(this.answerTextAccumulator);
           this.setState({
-            askHistory: [
-              ...this.state.askHistory,
-              { role: "assistant", content: finalAnswer },
-            ],
-            answer: "",
-            question: "",
+            isStreaming: false,
             isWaiting: false,
-          });
-        } else {
-          this.setState({
-            chatHistory: [
-              ...this.state.chatHistory,
-              { role: "assistant", content: finalAnswer },
-            ],
-            answer: "",
-            question: "",
-            isWaiting: false,
+            summaryProgress: "",
           });
         }
+        const finalAnswer = this.answerTextAccumulator;
+        this.answerTextAccumulator = "";
+        const reply: AiChatMessage[] = finalAnswer
+          ? [{ role: "assistant", content: finalAnswer }]
+          : [];
+        this.appendHistory(reply, {
+          answer: "",
+          question: "",
+          isWaiting: false,
+        });
         if (ConfigService.getReaderConfig("isManualScroll") !== "yes") {
           this.scrollToBottom();
         }
@@ -350,9 +433,7 @@ class PopupAssist extends React.Component<PopupAssistProps, PopupAssistState> {
         let res = await getAnswerStream(
           text,
           this.state.question,
-          this.state.mode === "ask"
-            ? this.state.askHistory
-            : this.state.chatHistory,
+          this.getHistory(),
           this.state.mode,
           (result) => {
             if (result && result.text) {
@@ -367,33 +448,11 @@ class PopupAssist extends React.Component<PopupAssistProps, PopupAssistState> {
         const finalAnswer = this.answerTextAccumulator;
         this.answerTextAccumulator = "";
         if (res.data && res.done) {
-          if (this.state.mode === "ask") {
-            this.setState({
-              askHistory: [
-                ...this.state.askHistory,
-                {
-                  role: "assistant",
-                  content: finalAnswer,
-                },
-              ],
-              answer: "",
-              question: "",
-              isWaiting: false,
-            });
-          } else {
-            this.setState({
-              chatHistory: [
-                ...this.state.chatHistory,
-                {
-                  role: "assistant",
-                  content: finalAnswer,
-                },
-              ],
-              answer: "",
-              question: "",
-              isWaiting: false,
-            });
-          }
+          this.appendHistory([{ role: "assistant", content: finalAnswer }], {
+            answer: "",
+            question: "",
+            isWaiting: false,
+          });
         }
         if (ConfigService.getReaderConfig("isManualScroll") !== "yes") {
           this.scrollToBottom();
@@ -442,6 +501,80 @@ class PopupAssist extends React.Component<PopupAssistProps, PopupAssistState> {
       toast.success(this.props.t("Copied"));
     });
   };
+  isUsingOwnModel = () =>
+    ConfigService.getReaderConfig("aiService") ===
+      "custom-ai-assistant-plugin" &&
+    this.props.plugins.some(
+      (item) => item.key === "custom-ai-assistant-plugin"
+    );
+
+  isBookModeUnavailable = () =>
+    this.state.mode === "book" && !this.isUsingOwnModel();
+
+  handleToggleSpoilerFree = () => {
+    const isSpoilerFree = !this.state.isSpoilerFree;
+    ConfigService.setReaderConfig("isAiSpoilerFree", isSpoilerFree ? "yes" : "no");
+    this.setState({ isSpoilerFree });
+  };
+
+  handleCitationClick = async (id: string) => {
+    try {
+      await jumpToPassage(
+        this.props.currentBook,
+        this.props.htmlBook?.rendition,
+        id
+      );
+    } catch (error) {
+      console.error(error);
+      toast.error(this.props.t("Failed to jump to the passage"));
+    }
+  };
+
+  // Turns [p3-12] markers into footnote-style numbers, one per distinct passage
+  linkCitations = (html: string) => {
+    const numbers = new Map<string, number>();
+    return html.replace(CITATION_REGEX, (_match, ids: string) =>
+      ids
+        .split(/[\s,;]+/)
+        .filter(Boolean)
+        .map((id) => {
+          if (!numbers.has(id)) {
+            numbers.set(id, numbers.size + 1);
+          }
+          return `<sup data-passage="${id}" data-label="${numbers.get(id)}"></sup>`;
+        })
+        .join("")
+    );
+  };
+
+  renderMarkdown = (content: string) => {
+    let html = marked.parse(content || "", { async: false }) as string;
+    if (this.state.mode === "book") {
+      html = this.linkCitations(html);
+    }
+    return Parser(DOMPurify.sanitize(html + "<address></address>") || " ", {
+      replace: (domNode: DOMNode) => {
+        if (
+          domNode instanceof Element &&
+          domNode.name === "sup" &&
+          domNode.attribs["data-passage"]
+        ) {
+          const id = domNode.attribs["data-passage"];
+          return (
+            <sup
+              className="popup-assist-citation"
+              data-tooltip-id="my-tooltip"
+              data-tooltip-content={this.props.t("Go to passage")}
+              onClick={() => this.handleCitationClick(id)}
+            >
+              {domNode.attribs["data-label"]}
+            </sup>
+          );
+        }
+      },
+    });
+  };
+
   handleRenderHistoryMessage = (message: any[]) => {
     return message.map((item, index) => {
       return (
@@ -453,14 +586,7 @@ class PopupAssist extends React.Component<PopupAssistProps, PopupAssistState> {
               : "popup-message-user"
           }
         >
-          {Parser(
-            DOMPurify.sanitize(
-              marked.parse(item.content) + "<address></address>"
-            ) || " ",
-            {
-              replace: (_domNode) => {},
-            }
-          )}
+          {this.renderMarkdown(item.content)}
           {item.role === "assistant" && (
             <div
               className="popup-assist-copy-button"
@@ -474,10 +600,7 @@ class PopupAssist extends React.Component<PopupAssistProps, PopupAssistState> {
     });
   };
   handleExportChatHistory = () => {
-    const messages =
-      this.state.mode === "ask"
-        ? this.state.askHistory
-        : this.state.chatHistory;
+    const messages = this.getHistory();
     if (messages.length === 0) {
       toast(this.props.t("Nothing to export"));
       return;
@@ -489,7 +612,9 @@ class PopupAssist extends React.Component<PopupAssistProps, PopupAssistState> {
     const dateStr = `${year}-${month <= 9 ? "0" + month : month}-${
       day <= 9 ? "0" + day : day
     }`;
-    const modeLabel = this.state.mode === "ask" ? "Reading" : "Chat";
+    const modeLabel = { ask: "Reading", chat: "Chat", book: "Book" }[
+      this.state.mode
+    ];
     const bookName = this.props.currentBook?.name || "Unknown";
     const exportData = {
       bookName,
@@ -506,118 +631,99 @@ class PopupAssist extends React.Component<PopupAssistProps, PopupAssistState> {
     toast.success(this.props.t("Export successful"), { id: "exporting" });
   };
   handleDeleteChatHistory = () => {
-    this.clearHistory(
-      this.props.currentBook?.key || "",
-      this.state.mode as "ask" | "chat"
-    );
+    this.clearHistory(this.props.currentBook?.key || "", this.state.mode);
     toast.success(this.props.t("Deletion successful"));
-    if (this.state.mode === "ask") {
-      this.setState({ askHistory: [] });
-    } else {
-      this.setState({ chatHistory: [] });
-    }
+    this.setHistory([]);
   };
   handleNewQuestion = (question: string) => {
-    if (this.state.mode === "ask") {
-      this.setState(
-        {
-          askHistory: [
-            ...this.state.askHistory,
-            {
-              role: "user",
-              content: this.props.t(question),
-            },
-          ],
-          question: this.props.t(question),
-          answer: "",
-          isWaiting: true,
-        },
-        () => {
-          this.handleAnswer();
-        }
-      );
-    } else {
-      this.setState(
-        {
-          chatHistory: [
-            ...this.state.chatHistory,
-            {
-              role: "user",
-              content: this.props.t(question),
-            },
-          ],
-          question: this.props.t(question),
-          answer: this.props.t(""),
-          isWaiting: true,
-        },
-        () => {
-          this.handleAnswer();
-        }
-      );
+    if (this.state.mode === "book" && !this.isUsingOwnModel()) {
+      return;
     }
+    this.appendHistory(
+      [{ role: "user", content: this.props.t(question) }],
+      {
+        question: this.props.t(question),
+        answer: "",
+        isWaiting: true,
+      },
+      () => {
+        this.handleAnswer();
+      }
+    );
     setTimeout(() => {
       if (ConfigService.getReaderConfig("isManualScroll") !== "yes") {
         this.scrollToBottom();
       }
     }, 100);
   };
+  openAISettings = () => {
+    this.props.handleOpenMenu(false);
+    this.props.handleMenuMode("");
+    this.props.handleSetting(true);
+    this.props.handleSettingMode("ai");
+  };
+
+  handleSend = () => {
+    if (this.state.isStreaming) {
+      this.abortController?.abort();
+      return;
+    }
+    if (this.state.answer || this.state.isWaiting) {
+      return;
+    }
+    this.handleNewQuestion(this.state.inputQuestion);
+    this.setState({ inputQuestion: "" }, () => {
+      const el = this.textareaRef.current;
+      if (el) {
+        el.style.height = "40px";
+        el.style.overflowY = "hidden";
+      }
+    });
+  };
+
+  renderGreeting = () => {
+    if (this.state.mode === "ask") {
+      return this.props.t(
+        "Hi there! What questions do you have about this chapter?"
+      );
+    }
+    if (this.state.mode === "book") {
+      return this.props.t(
+        "Hi there! Ask me anything about this book. I'll point you to the passages my answers come from."
+      );
+    }
+    return this.props.t(
+      "Hi there! I'm happy to help with any questions about reading or learning"
+    );
+  };
+
   render() {
     return (
-      <div className="dict-container">
-        <div
-          className="dict-service-container"
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            width: "calc(100% - 50px)",
-            top: "20px",
-            flexWrap: this.props.isDockedRight ? "wrap" : "nowrap",
-          }}
-        >
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "flex-start",
-              flexShrink: 0,
-            }}
-          >
-            <div
-              className={
-                this.state.mode === "ask"
-                  ? "trans-service-selector"
-                  : "trans-service-selector-inactive"
-              }
-              onClick={() => {
-                this.setState({ isAddNew: false, mode: "ask" });
-              }}
-            >
-              <span className={`icon-bookmark trans-icon`}></span>
-              {this.props.t("Reading Assistant")}
-            </div>
-            <div
-              className={
-                this.state.mode === "chat"
-                  ? "trans-service-selector"
-                  : "trans-service-selector-inactive"
-              }
-              onClick={() => {
-                this.setState({ isAddNew: false, mode: "chat" });
-              }}
-            >
-              <span className={`icon-idea trans-icon`}></span>
-              {this.props.t("Chat Assistant")}
-            </div>
+      <div className="dict-container popup-assist-container">
+        <div className="popup-assist-header">
+          <div className="popup-assist-tabs">
+            {ASSIST_TABS.map((tab) => (
+              <div
+                key={tab.mode}
+                className={
+                  (this.state.mode === tab.mode
+                    ? "trans-service-selector"
+                    : "trans-service-selector-inactive") + " popup-assist-tab"
+                }
+                title={this.props.t(tab.label)}
+                onClick={() => {
+                  this.setState({ isAddNew: false, mode: tab.mode });
+                }}
+              >
+                <span className={`${tab.icon} trans-icon`}></span>
+                <span className="popup-assist-tab-label">
+                  {this.props.t(tab.label)}
+                </span>
+              </div>
+            ))}
           </div>
 
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "8px",
-            }}
-          >
+          <div className="popup-assist-actions">
             <div
               className="popup-assist-export-button"
               style={{ fontSize: 18 }}
@@ -642,15 +748,11 @@ class PopupAssist extends React.Component<PopupAssistProps, PopupAssistState> {
               </span>
             </div>
             <select
-              className="dict-service-selector"
-              style={{ margin: 0, color: "#f16464" }}
+              className="dict-service-selector popup-assist-model-selector"
               value={this.state.aiService}
               onChange={(event: React.ChangeEvent<HTMLSelectElement>) => {
                 if (event.target.value === "add-new") {
-                  this.props.handleOpenMenu(false);
-                  this.props.handleMenuMode("");
-                  this.props.handleSetting(true);
-                  this.props.handleSettingMode("ai");
+                  this.openAISettings();
                   return;
                 }
                 this.handleChangeAiService(event.target.value);
@@ -665,23 +767,18 @@ class PopupAssist extends React.Component<PopupAssistProps, PopupAssistState> {
               </option>
               {this.props.plugins
                 .filter((item) => item.type === "assistant")
-                .map((item) => {
-                  return (
-                    <option
-                      value={item.key}
-                      key={item.key}
-                      className="add-dialog-shelf-list-option"
-                    >
-                      {this.props.t(item.displayName)}
-                      {item.key === "official-ai-assistant-plugin" && (
-                        <span style={{ fontSize: "13px", color: "#f16464" }}>
-                          {" "}
-                          (Pro)
-                        </span>
-                      )}
-                    </option>
-                  );
-                })}
+                .map((item) => (
+                  <option
+                    value={item.key}
+                    key={item.key}
+                    className="add-dialog-shelf-list-option"
+                  >
+                    {this.props.t(item.displayName) +
+                      (item.key === "official-ai-assistant-plugin"
+                        ? " (Pro)"
+                        : "")}
+                  </option>
+                ))}
               <option
                 value={"add-new"}
                 key={"add-new"}
@@ -694,185 +791,113 @@ class PopupAssist extends React.Component<PopupAssistProps, PopupAssistState> {
         </div>
 
         {this.state.isAddNew && (
-          <div
-            style={{
-              marginTop: "150px",
-              textAlign: "center",
-              fontSize: "17px",
-              color: "#f16464",
-            }}
-          >
+          <div className="popup-assist-empty">
             <span
-              style={{
-                textDecoration: "underline",
-                cursor: "pointer",
-                textAlign: "center",
-              }}
-              onClick={() => {
-                this.props.handleOpenMenu(false);
-                this.props.handleMenuMode("");
-                this.props.handleSetting(true);
-                this.props.handleSettingMode("ai");
-              }}
+              className="popup-assist-book-notice-link"
+              onClick={this.openAISettings}
             >
               <Trans>Add new plugin</Trans>
             </span>
           </div>
         )}
-        {!this.state.isAddNew && (
+        {!this.state.isAddNew && this.isBookModeUnavailable() && (
+          <div className="popup-assist-empty popup-assist-book-notice">
+            <p>
+              {this.props.t(
+                "The book assistant sends parts of this book to an AI model you configure yourself. Add a model in the AI settings and select it here to use it."
+              )}
+            </p>
+            <span
+              className="popup-assist-book-notice-link"
+              onClick={this.openAISettings}
+            >
+              <Trans>Add new model</Trans>
+            </span>
+          </div>
+        )}
+        {!this.state.isAddNew && !this.isBookModeUnavailable() && (
           <>
             <div
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                height: "100%",
-                paddingTop: this.props.isDockedRight ? "100px" : "60px",
-                paddingBottom: "20px",
-                boxSizing: "border-box",
-              }}
+              className="dict-text-box popup-assist-messages"
+              ref={this.chatBoxRef}
             >
-              <div
-                className="dict-text-box"
-                style={{
-                  flex: 1,
-                  marginTop: "0px",
-                  width: "calc(100% + 20px)",
-                  height: undefined,
-                  paddingBottom: "0px",
-                  paddingLeft: "0px",
-                  paddingRight: "20px",
-                }}
-                ref={this.chatBoxRef}
-              >
-                {this.handleRenderHistoryMessage(
-                  this.state.mode === "ask"
-                    ? this.state.askHistory
-                    : this.state.chatHistory
-                )}
-                {this.state.isWaiting ? (
-                  <div
-                    className="popup-message-assistant"
-                    style={{ float: "left" }}
-                  >
-                    <span
-                      className="icon-loading popup-assistant-loading"
-                      style={{
-                        marginRight: "10px",
-                        marginTop: "5px",
-                      }}
-                    ></span>
-                    <span>{this.props.t("Thinking, please wait...")}</span>
-                  </div>
-                ) : (this.state.mode === "ask"
-                    ? this.state.askHistory
-                    : this.state.chatHistory
-                  ).length > 0 ? (
-                  <div className="popup-message-assistant">
-                    {Parser(
-                      DOMPurify.sanitize(
-                        marked.parse(
-                          this.state.answer ? this.state.answer : ""
-                        ) + "<address></address>"
-                      ) || " ",
-                      {
-                        replace: (_domNode) => {},
-                      }
-                    )}
-                  </div>
-                ) : (
-                  <div className="popup-message-assistant">
-                    {this.state.mode === "ask"
-                      ? this.props.t(
-                          "Hi there! What questions do you have about this chapter?"
-                        )
-                      : this.props.t(
-                          "Hi there! I'm happy to help with any questions about reading or learning"
-                        )}
-                  </div>
-                )}
-              </div>
-              <div
-                style={{
-                  marginLeft: "-25px",
-                  marginRight: "-25px",
-                  marginBottom: "0px",
-                  padding: "0px 25px",
-                }}
-              >
-                <div className="popup-assist-shortcut-container">
-                  {sampleQuestion
-                    .filter((item) => item.mode === this.state.mode)
-                    .map((item) => {
-                      return (
-                        <div
-                          className="popup-assist-shortcut"
-                          onClick={() => {
-                            this.handleNewQuestion(item.question);
-                          }}
-                        >
-                          {item.emoji + " " + this.props.t(item.question)}
-                        </div>
-                      );
-                    })}
+              {this.handleRenderHistoryMessage(this.getHistory())}
+              {this.state.isWaiting ? (
+                <div className="popup-message-assistant">
+                  <span className="icon-loading popup-assistant-loading"></span>
+                  <span>
+                    {this.state.summaryProgress ||
+                      this.props.t("Thinking, please wait...")}
+                  </span>
                 </div>
-
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "flex-end",
-                    justifyContent: "space-between",
-                  }}
-                >
-                  <textarea
-                    ref={this.textareaRef}
-                    name="url"
-                    placeholder={this.props.t(
-                      this.state.mode === "ask"
-                        ? "Ask anything about this chapter"
-                        : "Ask anything about reading or learning"
-                    )}
-                    id="trans-add-content-box"
-                    className="trans-add-content-box"
-                    style={{
-                      height: "40px",
-                      resize: "none",
-                      overflowY: "hidden",
-                      marginRight: "10px",
-                      marginBottom: "0px",
-                    }}
-                    onContextMenu={() => {
-                      handleContextMenu("trans-add-content-box");
-                    }}
-                    value={this.state.inputQuestion}
-                    onChange={(
-                      event: React.ChangeEvent<HTMLTextAreaElement>
-                    ) => {
-                      this.setState(
-                        { inputQuestion: event.target.value },
-                        () => {
-                          this.autoResizeTextarea();
-                        }
-                      );
-                    }}
+              ) : this.getHistory().length > 0 ? (
+                <div className="popup-message-assistant">
+                  {this.renderMarkdown(this.state.answer)}
+                </div>
+              ) : (
+                <div className="popup-message-assistant">
+                  {this.renderGreeting()}
+                </div>
+              )}
+            </div>
+            <div className="popup-assist-footer">
+              {this.state.mode === "book" && (
+                <label className="popup-assist-spoiler-toggle">
+                  <input
+                    type="checkbox"
+                    checked={this.state.isSpoilerFree}
+                    onChange={this.handleToggleSpoilerFree}
                   />
-                  <div
-                    className="popup-assistant-send-button"
-                    onClick={() => {
-                      if (this.state.answer || this.state.isWaiting) {
-                        return;
-                      }
-                      this.handleNewQuestion(this.state.inputQuestion);
-                      this.setState({ inputQuestion: "" }, () => {
-                        const el = this.textareaRef.current;
-                        if (el) {
-                          el.style.height = "40px";
-                          el.style.overflowY = "hidden";
-                        }
-                      });
-                    }}
-                  >
-                    {this.props.t("Send")}
-                  </div>
+                  {this.props.t(
+                    "Spoiler-free: only use the book up to the current chapter"
+                  )}
+                </label>
+              )}
+              <div className="popup-assist-shortcut-container">
+                {sampleQuestion
+                  .filter((item) => item.mode === this.state.mode)
+                  .map((item) => (
+                    <div
+                      key={item.question}
+                      className="popup-assist-shortcut"
+                      onClick={() => {
+                        this.handleNewQuestion(item.question);
+                      }}
+                    >
+                      {item.emoji + " " + this.props.t(item.question)}
+                    </div>
+                  ))}
+              </div>
+              <div className="popup-assist-input-row">
+                <textarea
+                  ref={this.textareaRef}
+                  name="url"
+                  placeholder={this.props.t(
+                    this.state.mode === "ask"
+                      ? "Ask anything about this chapter"
+                      : this.state.mode === "book"
+                        ? "Ask anything about this book"
+                        : "Ask anything about reading or learning"
+                  )}
+                  id="trans-add-content-box"
+                  className="trans-add-content-box"
+                  onContextMenu={() => {
+                    handleContextMenu("trans-add-content-box");
+                  }}
+                  value={this.state.inputQuestion}
+                  onChange={(event: React.ChangeEvent<HTMLTextAreaElement>) => {
+                    this.setState({ inputQuestion: event.target.value }, () => {
+                      this.autoResizeTextarea();
+                    });
+                  }}
+                />
+                <div
+                  className="popup-assistant-send-button"
+                  onClick={this.handleSend}
+                >
+                  {this.state.isStreaming
+                    ? this.props.t("Stop")
+                    : this.props.t("Send")}
                 </div>
               </div>
             </div>

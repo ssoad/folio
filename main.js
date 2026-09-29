@@ -59,6 +59,11 @@ const {
   getBiometricCapability,
   promptBiometricAuth,
 } = require("./src/utils/main/biometric-util");
+const {
+  AI_SECRET_PREFIX,
+  AI_SECRET_MAX_LENGTH,
+  isAiSecretStorageAvailable,
+} = require("./src/utils/main/ai-secret-util");
 const { getVoicePlugin } = require("./src/utils/plugins/main/registry");
 const configDir = app.getPath("userData");
 const dirPath = path.join(configDir, "uploads");
@@ -1152,6 +1157,43 @@ const createMainWin = () => {
         console.error("Decryption failed:", error);
         return "{}";
       }
+    }
+  });
+  ipcMain.handle("ai-secret-encrypt", async (event, config) => {
+    const value = config && config.value;
+    if (
+      typeof value !== "string" ||
+      value.length > AI_SECRET_MAX_LENGTH ||
+      value.startsWith(AI_SECRET_PREFIX) ||
+      !isAiSecretStorageAvailable()
+    ) {
+      return value;
+    }
+    const { safeStorage } = require("electron");
+    return (
+      AI_SECRET_PREFIX + safeStorage.encryptString(value).toString("base64")
+    );
+  });
+  ipcMain.handle("ai-secret-decrypt", async (event, config) => {
+    const value = config && config.value;
+    if (
+      typeof value !== "string" ||
+      value.length > AI_SECRET_MAX_LENGTH * 2 ||
+      !value.startsWith(AI_SECRET_PREFIX) ||
+      !isAiSecretStorageAvailable()
+    ) {
+      return { ok: false };
+    }
+    try {
+      const { safeStorage } = require("electron");
+      const decrypted = safeStorage.decryptString(
+        Buffer.from(value.slice(AI_SECRET_PREFIX.length), "base64")
+      );
+      return { ok: true, value: decrypted };
+    } catch (error) {
+      // Typically a key encrypted on another device or by a different OS user
+      console.error("AI secret decryption failed");
+      return { ok: false };
     }
   });
   ipcMain.handle("check-cloud-url", async (event, config) => {

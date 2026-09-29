@@ -34,4 +34,6 @@ export interface SettingInfoState {
   aiTranslatePrompt: string;
   aiDictPrompt: string;
   aiAssistancePrompt: string;
+  aiBookContextTokens: string;
+  isAiChapterSummaries: string;
 }

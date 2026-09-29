@@ -21,6 +21,7 @@ import {
 class PopupTrans extends React.Component<PopupTransProps, PopupTransState> {
   private textAccumulator: string = "";
   private updateInterval: ReturnType<typeof setInterval> | null = null;
+  private abortController: AbortController | null = null;
 
   constructor(props: PopupTransProps) {
     super(props);
@@ -45,6 +46,14 @@ class PopupTrans extends React.Component<PopupTransProps, PopupTransState> {
         this.setState({ translatedText: this.textAccumulator });
       }
     }, 150);
+  }
+
+  componentWillUnmount() {
+    this.abortController?.abort();
+    if (this.updateInterval) {
+      clearInterval(this.updateInterval);
+      this.updateInterval = null;
+    }
   }
 
   private stopUpdateInterval() {
@@ -179,6 +188,7 @@ class PopupTrans extends React.Component<PopupTransProps, PopupTransState> {
       this.textAccumulator = "";
       this.setState({ isAiWaiting: true });
       this.startUpdateInterval();
+      this.abortController = new AbortController();
       await chatStream(
         config.endpoint,
         config.providerId,
@@ -196,7 +206,8 @@ class PopupTrans extends React.Component<PopupTransProps, PopupTransState> {
             }
             this.textAccumulator += result.text;
           }
-        }
+        },
+        this.abortController.signal
       );
       this.stopUpdateInterval();
       this.textAccumulator = "";
