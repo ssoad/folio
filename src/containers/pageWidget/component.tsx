@@ -14,6 +14,7 @@ import { isElectron } from "react-device-detect";
 import DatabaseService from "../../utils/storage/databaseService";
 import Note from "../../models/Note";
 import ConfigUtil from "../../utils/file/configUtil";
+import { canUseProFeature } from "../../utils/request/selfHosted";
 declare var window: any;
 
 type TransCache = Record<string, Record<string, string>>;
@@ -206,7 +207,7 @@ class PageWidget extends React.Component<PageWidgetProps, PageWidgetState> {
           this.props.currentBook.key
         ) ||
         ConfigService.getReaderConfig("fullTranslationMode") === "no" ||
-        !this.props.isAuthed
+        !canUseProFeature(this.props.isAuthed, "ai")
       ) {
         return;
       }

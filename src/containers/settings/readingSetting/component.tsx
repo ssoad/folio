@@ -5,6 +5,7 @@ import { isElectron } from "react-device-detect";
 import toast from "react-hot-toast";
 import { ConfigService } from "../../../assets/lib/kookit-extra-browser.min";
 import { readingSettingList } from "../../../constants/settingList";
+import { canUseProFeature } from "../../../utils/request/selfHosted";
 declare var window: any;
 
 class ReadingSetting extends React.Component<
@@ -52,7 +53,10 @@ class ReadingSetting extends React.Component<
   };
 
   handleSetting = (stateName: string) => {
-    if (stateName === "isLemmatizeWord" && !this.props.isAuthed) {
+    if (
+      stateName === "isLemmatizeWord" &&
+      !canUseProFeature(this.props.isAuthed)
+    ) {
       toast.error(this.props.t("Please upgrade to Pro to use this feature"));
       this.props.handleSetting(true);
       this.props.handleSettingMode("account");

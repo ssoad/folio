@@ -12,6 +12,7 @@ import {
 } from "../../../assets/lib/kookit-extra-browser.min";
 import FontUtil from "../../../utils/file/fontUtil";
 import toast from "react-hot-toast";
+import { canUseProFeature } from "../../../utils/request/selfHosted";
 declare var window: any;
 class DropdownList extends React.Component<
   DropdownListProps,
@@ -168,7 +169,7 @@ class DropdownList extends React.Component<
             "fullTranslationBooks"
           );
         } else {
-          if (!this.props.isAuthed) {
+          if (!canUseProFeature(this.props.isAuthed, "ai")) {
             this.setState({
               fullTranslationModeValue: "no",
             });

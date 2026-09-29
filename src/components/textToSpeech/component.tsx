@@ -24,6 +24,7 @@ import "./textToSpeech.css";
 import { fetchUserInfo } from "../../utils/request/user";
 import { getSplitSentence } from "../../utils/request/reader";
 import { Howl } from "howler";
+import { canUseProFeature } from "../../utils/request/selfHosted";
 declare var window: any;
 class TextToSpeech extends React.Component<
   TextToSpeechProps,
@@ -226,7 +227,7 @@ class TextToSpeech extends React.Component<
   };
   handleMultiRoleToggle = (enabled: boolean) => {
     if (enabled) {
-      if (!this.props.isAuthed) {
+      if (!canUseProFeature(this.props.isAuthed, "ai")) {
         toast(this.props.t("Please upgrade to Pro to use this feature"));
         this.props.handleSetting(true);
         this.props.handleSettingMode("account");
@@ -302,11 +303,13 @@ class TextToSpeech extends React.Component<
     }
 
     if (engine === "official-ai-voice-plugin") {
-      if (!this.props.isAuthed) {
+      if (!canUseProFeature(this.props.isAuthed, "tts")) {
         toast(this.props.t("Please upgrade to Pro to use this feature"));
         return;
       }
-      await fetchUserInfo();
+      if (this.props.isAuthed) {
+        await fetchUserInfo();
+      }
     }
 
     const plugin = this.props.plugins.find((item) => item.key === engine);
@@ -489,7 +492,10 @@ class TextToSpeech extends React.Component<
     const currentIndex = this.state.currentIndex;
 
     // 鉴权检查（AI 语音）
-    if (newVoiceEngine === "official-ai-voice-plugin" && !this.props.isAuthed) {
+    if (
+      newVoiceEngine === "official-ai-voice-plugin" &&
+      !canUseProFeature(this.props.isAuthed, "tts")
+    ) {
       toast(this.props.t("Please upgrade to Pro to use this feature"));
       return;
     }

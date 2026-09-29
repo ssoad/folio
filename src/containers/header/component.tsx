@@ -46,6 +46,11 @@ import { getTempToken, updateUserConfig } from "../../utils/request/user";
 import i18n from "../../i18n";
 import { getNotification } from "../../utils/request/common";
 import TokenService from "../../utils/storage/tokenService";
+import {
+  canUseProFeature,
+  isSelfHostedConnected,
+  refreshSelfHostedStatus,
+} from "../../utils/request/selfHosted";
 declare var window: any;
 
 class Header extends React.Component<HeaderProps, HeaderState> {
@@ -190,7 +195,23 @@ class Header extends React.Component<HeaderProps, HeaderState> {
       this.autoScanFoldersOnStart();
     }
     this.startScheduledSync();
+    this.handleSelfHostedStartup(!!willAutoSync);
   }
+  // With a self-hosted server but no Koodo login, run the startup sync that
+  // otherwise starts once the login is confirmed
+  handleSelfHostedStartup = async (willAutoSync: boolean) => {
+    if (!isSelfHostedConnected()) {
+      return;
+    }
+    await refreshSelfHostedStatus();
+    if ((await TokenService.getToken("is_authed")) === "yes" || !willAutoSync) {
+      return;
+    }
+    this.setState({ isSync: true });
+    await this.handleCloudSync(null);
+    await this.handleOpenLastReadBook();
+    await this.autoScanFoldersOnStart();
+  };
   componentWillUnmount() {
     if (this.scheduledSyncTimer) {
       clearInterval(this.scheduledSyncTimer);
@@ -757,7 +778,7 @@ class Header extends React.Component<HeaderProps, HeaderState> {
           <div
             className="setting-icon-container"
             onClick={async () => {
-              if (this.props.isAuthed) {
+              if (canUseProFeature(this.props.isAuthed)) {
                 if (!ConfigService.getItem("defaultSyncOption")) {
                   toast(
                     this.props.t(

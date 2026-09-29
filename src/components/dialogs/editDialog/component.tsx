@@ -12,6 +12,7 @@ import MetadataDialog from "../metadataDialog";
 import { MetadataResult } from "../metadataDialog/interface";
 import { trimSpecialCharacters } from "../../../utils/common";
 import { analyzeBookTitle } from "../../../utils/request/reader";
+import { canUseProFeature } from "../../../utils/request/selfHosted";
 declare var window: any;
 
 class EditDialog extends React.Component<EditDialogProps, EditDialogState> {
@@ -86,7 +87,7 @@ class EditDialog extends React.Component<EditDialogProps, EditDialogState> {
   };
 
   handleAnalyzeTitle = async () => {
-    if (!this.props.isAuthed) {
+    if (!canUseProFeature(this.props.isAuthed, "ai")) {
       toast(this.props.t("Please upgrade to Pro to use this feature"));
       this.props.handleSetting(true);
       this.props.handleSettingMode("account");
@@ -212,7 +213,7 @@ class EditDialog extends React.Component<EditDialogProps, EditDialogState> {
               opacity: 0.8,
             }}
             onClick={() => {
-              if (!this.props.isAuthed) {
+              if (!canUseProFeature(this.props.isAuthed, "metadata")) {
                 toast(
                   this.props.t("Please upgrade to Pro to use this feature")
                 );

@@ -469,6 +469,16 @@ func handler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Pro services authenticate with their own bearer token
+	if proEnabled && strings.HasPrefix(r.URL.Path, "/pro/") {
+		proHandler(w, r)
+		return
+	}
+	if !serverEnabled {
+		writePlain(w, http.StatusNotFound, "Not Found")
+		return
+	}
+
 	// Basic Auth
 	if !authenticate(r) {
 		w.Header().Set("WWW-Authenticate", `Basic realm="Secure File Server"`)
@@ -498,11 +508,13 @@ func handler(w http.ResponseWriter, r *http.Request) {
 func main() {
 	// Initialise KOReader sync server (reads env, opens DB if enabled).
 	initKoreader()
+	initPro()
 
-	if !serverEnabled && !koreaderEnabled {
+	if !serverEnabled && !koreaderEnabled && !proEnabled {
 		log.Println("All servers are disabled.")
 		log.Println("  Set ENABLE_HTTP_SERVER=true  to enable the file server.")
 		log.Println("  Set ENABLE_KOREADER_SERVER=true to enable the KOReader sync server.")
+		log.Println("  Set ENABLE_PRO_SERVER=true to enable the self-hosted Pro services.")
 		log.Println("  Set ENABLE_OPDS=true to enable the OPDS catalog (requires ENABLE_HTTP_SERVER=true).")
 		os.Exit(0)
 	}
@@ -520,13 +532,18 @@ func main() {
 		go startKoreaderServer()
 	}
 
-	// Start the main file server if enabled.
-	if serverEnabled {
+	// The file server and the Pro services share one listener.
+	if serverEnabled || proEnabled {
 		addr := ":" + port
-		log.Printf("Secure File Server running at http://localhost%s", addr)
-		log.Printf("Username: %s", credentials.username)
-		log.Println("Password: [HIDDEN FOR SECURITY]")
-		if opdsEnabled {
+		if serverEnabled {
+			log.Printf("Secure File Server running at http://localhost%s", addr)
+			log.Printf("Username: %s", credentials.username)
+			log.Println("Password: [HIDDEN FOR SECURITY]")
+		}
+		if proEnabled {
+			log.Printf("Self-hosted Pro services available at http://localhost%s/pro/v1", addr)
+		}
+		if opdsEnabled && serverEnabled {
 			log.Printf("OPDS catalog available at http://localhost%s/opds", addr)
 		}
 

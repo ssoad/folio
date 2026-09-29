@@ -225,6 +225,11 @@ export function handleFetchBooks() {
 }
 export function handleFetchUserInfo() {
   return async (dispatch: Dispatch) => {
+    // Without a Koodo login (e.g. only a self-hosted server) the request would
+    // fail with 401, which logs out and clears the sync configuration
+    if ((await TokenService.getToken("is_authed")) !== "yes") {
+      return null;
+    }
     let response = await fetchUserInfo();
     let userInfo: any = null;
     if (response.code === 200) {

@@ -11,7 +11,7 @@ import {
 } from "../../assets/lib/kookit-extra-browser.min";
 import { getCloudConfig } from "./common";
 import { LocalFileManager } from "./localFile";
-import TokenService from "../storage/tokenService";
+import { canSyncCloudFiles } from "../request/selfHosted";
 declare var window: any;
 class AsyncQueue {
   private queue: (() => Promise<void>)[] = [];
@@ -357,8 +357,7 @@ class CoverUtil {
     }
   }
   static async uploadCover(cover: string) {
-    let isAuthed = await TokenService.getToken("is_authed");
-    if (isAuthed !== "yes") {
+    if (!(await canSyncCloudFiles())) {
       return;
     }
     if (isElectron) {
@@ -460,8 +459,7 @@ class CoverUtil {
     }
   }
   static async deleteCloudCover(key: string) {
-    let isAuthed = await TokenService.getToken("is_authed");
-    if (isAuthed !== "yes") {
+    if (!(await canSyncCloudFiles())) {
       return;
     }
     let coverList = await this.getCloudCoverList();

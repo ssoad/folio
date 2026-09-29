@@ -1965,7 +1965,7 @@ export const getOcrLangList = (engine: string) => {
         lang: "accurate",
       },
     ];
-  } else if (engine === "system-ocr") {
+  } else if (engine === "system-ocr" || engine === "selfhosted-ocr") {
     list = [
       {
         label: "Auto",
@@ -1993,7 +1993,7 @@ export const getDefaultOcrLang = (engine: string, currentBook: any) => {
     );
   } else if (engine === "official-ai-ocr") {
     return "general";
-  } else if (engine === "system-ocr") {
+  } else if (engine === "system-ocr" || engine === "selfhosted-ocr") {
     return "auto";
   } else if (engine === "paddle") {
     return "standard_v5_mobile";

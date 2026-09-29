@@ -13,6 +13,7 @@ import {
 } from "../../../constants/dropdownList";
 import toast from "react-hot-toast";
 import { getDefaultOcrEngine, getOcrLangList } from "../../../utils/common";
+import { hasSelfHostedFeature } from "../../../utils/request/selfHosted";
 
 class ConvertDialog extends React.Component<
   ConvertDialogProps,
@@ -204,6 +205,9 @@ class ConvertDialog extends React.Component<
               >
                 {ocrEngineList
                   .filter((item) => {
+                    if (item.isSelfHosted && !hasSelfHostedFeature("ocr")) {
+                      return false;
+                    }
                     if (
                       !isElectron &&
                       this.props.currentBook.description.indexOf("scanned") !==

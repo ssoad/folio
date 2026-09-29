@@ -45,6 +45,7 @@ import DatabaseService from "../../utils/storage/databaseService";
 import { getOcrResult, getOcrResultV2 } from "../../utils/request/reader";
 import { BookHelper } from "../../assets/lib/kookit.min";
 import { parseWithSystemOCR } from "../../utils/request/common";
+import { selfHostedOcr } from "../../utils/request/selfHosted";
 import { isElectron } from "react-device-detect";
 declare var window: any;
 let lock = false; //prevent from clicking too fasts
@@ -345,11 +346,18 @@ class Viewer extends React.Component<ViewerProps, ViewerState> {
           recognize:
             getDefaultOcrEngine(this.props.currentBook) === "system-ocr"
               ? parseWithSystemOCR
-              : ConfigService.getReaderConfig(ocrLangKey) === "accurate"
-                ? getOcrResultV2
-                : getOcrResult,
+              : getDefaultOcrEngine(this.props.currentBook) === "selfhosted-ocr"
+                ? selfHostedOcr
+                : ConfigService.getReaderConfig(ocrLangKey) === "accurate"
+                  ? getOcrResultV2
+                  : getOcrResult,
         },
-        ocrEngine: getDefaultOcrEngine(this.props.currentBook),
+        // Self-hosted OCR returns plain text like system OCR, so the engine
+        // handles it through the same path
+        ocrEngine:
+          getDefaultOcrEngine(this.props.currentBook) === "selfhosted-ocr"
+            ? "system-ocr"
+            : getDefaultOcrEngine(this.props.currentBook),
         serverRegion:
           getServerRegion() === "china" && this.props.isAuthed
             ? "china"

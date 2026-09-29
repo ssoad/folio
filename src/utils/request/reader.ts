@@ -14,7 +14,23 @@ import {
 } from "../common";
 import { getTempToken } from "./user";
 import TokenService from "../storage/tokenService";
+import {
+  hasSelfHostedFeature,
+  selfHostedAnalyzeTitle,
+  selfHostedBatchTrans,
+  selfHostedBookMetadata,
+  selfHostedSplitSentence,
+  selfHostedTTS,
+  SelfHostedResponse,
+} from "./selfHosted";
 let readerRequest: ReaderRequest | undefined;
+// Features the connected self-hosted server provides are served by it instead of the official API
+const fromSelfHosted = <T>(response: SelfHostedResponse<T>) => {
+  if (response.code !== 200) {
+    toast.error(i18n.t("Self-hosted server error") + ": " + response.msg);
+  }
+  return response;
+};
 let isShowingQuotaAlert = false;
 let quotaAlertDismissTime = 0;
 export const getTransStream = async (
@@ -185,6 +201,9 @@ export const getTTSAudio = async (
   pitch: number,
   isFirst: boolean
 ) => {
+  if (hasSelfHostedFeature("tts")) {
+    return fromSelfHosted(await selfHostedTTS(text, language, voice, speed));
+  }
   let readerRequest = await getReaderRequest();
   let response = await readerRequest.getTTSAudio({
     text,
@@ -280,6 +299,9 @@ export const getBatchTrans = async (
   from: string,
   to: string
 ) => {
+  if (hasSelfHostedFeature("ai")) {
+    return fromSelfHosted(await selfHostedBatchTrans(texts, from, to));
+  }
   let readerRequest = await getReaderRequest();
   let response = await readerRequest.getBatchTrans({ texts, from, to });
   if (response.code === 200) {
@@ -310,6 +332,9 @@ export const getWordDefinitions = async (
   return response;
 };
 export const getBookMetadata = async (name: string, author: string) => {
+  if (hasSelfHostedFeature("metadata")) {
+    return fromSelfHosted(await selfHostedBookMetadata(name, author));
+  }
   let readerRequest = await getReaderRequest();
   let response = await readerRequest.getBookMetadata({ name, author });
   if (response.code === 200) {
@@ -323,6 +348,9 @@ export const getBookMetadata = async (name: string, author: string) => {
   return response;
 };
 export const analyzeBookTitle = async (title: string) => {
+  if (hasSelfHostedFeature("ai")) {
+    return fromSelfHosted(await selfHostedAnalyzeTitle(title));
+  }
   let readerRequest = await getReaderRequest();
   let response = await readerRequest.analyzeBookTitle({ title });
   if (response.code === 200) {
@@ -338,6 +366,9 @@ export const analyzeBookTitle = async (title: string) => {
 export const getSplitSentence = async (
   texts: { text: string; index: number }[]
 ) => {
+  if (hasSelfHostedFeature("ai")) {
+    return fromSelfHosted(await selfHostedSplitSentence(texts));
+  }
   let readerRequest = await getReaderRequest();
   let response = await readerRequest.getSplitSentence({ texts });
   if (response.code === 200) {

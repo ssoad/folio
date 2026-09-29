@@ -21,6 +21,7 @@ import {
   SyncUtil,
 } from "../../../assets/lib/kookit-extra-browser.min";
 import { GooglePickerUtil } from "../../../utils/file/googlePicker";
+import { canUseDrive } from "../../../utils/request/selfHosted";
 declare var window: any;
 type FileInfo = {
   name: string;
@@ -65,7 +66,7 @@ class ImportDialog extends React.Component<
     }
     if (
       driveList.find((item) => item.value === event.target.value)?.isPro &&
-      !this.props.isAuthed
+      !canUseDrive(this.props.isAuthed, event.target.value)
     ) {
       toast(this.props.t("Please upgrade to Pro to use this feature"));
       this.props.handleSetting(true);
@@ -400,7 +401,10 @@ class ImportDialog extends React.Component<
                     key={item.value}
                     className={`cloud-drive-item `}
                     onClick={() => {
-                      if (item.isPro && !this.props.isAuthed) {
+                      if (
+                        item.isPro &&
+                        !canUseDrive(this.props.isAuthed, item.value)
+                      ) {
                         toast(
                           this.props.t(
                             "Please upgrade to Pro to use this feature"
@@ -456,7 +460,11 @@ class ImportDialog extends React.Component<
                     }}
                   >
                     <span className="cloud-drive-label">
-                      {this.props.t(item.label) + (item.isPro ? " (Pro)" : "")}
+                      {this.props.t(item.label) +
+                        (item.isPro &&
+                        !canUseDrive(this.props.isAuthed, item.value)
+                          ? " (Pro)"
+                          : "")}
                     </span>
                     <span className="icon-dropdown import-dialog-more-file"></span>
                   </div>

@@ -38,6 +38,11 @@ import {
   encryptToken,
   onSyncCallback,
 } from "../../../utils/request/thirdparty";
+import {
+  canUseDrive,
+  canUseProFeature,
+  isSelfHostedConnected,
+} from "../../../utils/request/selfHosted";
 import SyncService from "../../../utils/storage/syncService";
 import { updateUserConfig } from "../../../utils/request/user";
 import BookUtil from "../../../utils/file/bookUtil";
@@ -86,6 +91,22 @@ class SyncSetting extends React.Component<SettingInfoProps, SettingInfoState> {
       this.setState({ showDefaultSyncAddGrid: false });
     }
   };
+  // Drives on the user's own storage work with a self-hosted server; OAuth
+  // drives need the official token service and so a Koodo Pro account
+  showDriveUpgradeHint = (drive: string) => {
+    if (isSelfHostedConnected()) {
+      toast(
+        this.props.t(
+          "This data source needs a Koodo Pro account, use one on your own storage such as WebDAV, S3 or FTP instead"
+        ) +
+          ` (${this.props.t(driveList.find((item) => item.value === drive)?.label || drive)})`
+      );
+      return;
+    }
+    toast(this.props.t("Please upgrade to Pro to use this feature"));
+    this.props.handleSetting(true);
+    this.props.handleSettingMode("account");
+  };
   handleAddDataSource = async (event: any) => {
     let targetDrive = event.target.value;
     if (!targetDrive) {
@@ -104,10 +125,8 @@ class SyncSetting extends React.Component<SettingInfoProps, SettingInfoState> {
       );
       return;
     }
-    if (!this.props.isAuthed) {
-      toast(this.props.t("Please upgrade to Pro to use this feature"));
-      this.props.handleSetting(true);
-      this.props.handleSettingMode("account");
+    if (!canUseDrive(this.props.isAuthed, targetDrive)) {
+      this.showDriveUpgradeHint(targetDrive);
       return;
     }
     if (
@@ -117,15 +136,6 @@ class SyncSetting extends React.Component<SettingInfoProps, SettingInfoState> {
       if (!(await confirmBrowserExtensionAsync())) {
         return;
       }
-    }
-    if (
-      driveList.find((item) => item.value === targetDrive)?.isPro &&
-      !this.props.isAuthed
-    ) {
-      toast(this.props.t("Please upgrade to Pro to use this feature"));
-      this.props.handleSetting(true);
-      this.props.handleSettingMode("account");
-      return;
     }
     this.props.handleSettingDrive(targetDrive);
     let settingDrive = targetDrive;
@@ -176,7 +186,7 @@ class SyncSetting extends React.Component<SettingInfoProps, SettingInfoState> {
       ConfigService.setListConfig(settingDrive, "dataSourceList");
       toast.success(i18n.t("Binding successful"), { id: "adding-sync-id" });
       if (
-        this.props.isAuthed &&
+        canUseProFeature(this.props.isAuthed) &&
         !ConfigService.getItem("defaultSyncOption") &&
         settingDrive !== "microsoft_exp"
       ) {
@@ -245,10 +255,8 @@ class SyncSetting extends React.Component<SettingInfoProps, SettingInfoState> {
     if (!newValue) {
       return;
     }
-    if (!this.props.isAuthed) {
-      toast(this.props.t("Please upgrade to Pro to use this feature"));
-      this.props.handleSetting(true);
-      this.props.handleSettingMode("account");
+    if (!canUseDrive(this.props.isAuthed, newValue)) {
+      this.showDriveUpgradeHint(newValue);
       return;
     }
 
@@ -304,11 +312,9 @@ class SyncSetting extends React.Component<SettingInfoProps, SettingInfoState> {
     }
     if (
       driveList.find((item) => item.value === targetDrive)?.isPro &&
-      !this.props.isAuthed
+      !canUseDrive(this.props.isAuthed, targetDrive)
     ) {
-      toast(this.props.t("Please upgrade to Pro to use this feature"));
-      this.props.handleSetting(true);
-      this.props.handleSettingMode("account");
+      this.showDriveUpgradeHint(targetDrive);
       return;
     }
     this.setState({
@@ -497,7 +503,7 @@ class SyncSetting extends React.Component<SettingInfoProps, SettingInfoState> {
       });
     }
     if (
-      this.props.isAuthed &&
+      canUseProFeature(this.props.isAuthed) &&
       !ConfigService.getItem("defaultSyncOption") &&
       this.props.settingDrive !== "microsoft_exp"
     ) {
@@ -691,7 +697,11 @@ class SyncSetting extends React.Component<SettingInfoProps, SettingInfoState> {
                   }}
                 >
                   <span className="account-login-option-label">
-                    {this.props.t(item.label) + (item.isPro ? " (Pro)" : "")}
+                    {this.props.t(item.label) +
+                      (item.isPro &&
+                      !canUseDrive(this.props.isAuthed, item.value)
+                        ? " (Pro)"
+                        : "")}
                   </span>
                 </div>
               ))}
@@ -1062,7 +1072,10 @@ class SyncSetting extends React.Component<SettingInfoProps, SettingInfoState> {
                   key={item.value}
                   className="lang-setting-option"
                 >
-                  {this.props.t(item.label) + (item.isPro ? " (Pro)" : "")}
+                  {this.props.t(item.label) +
+                    (item.isPro && !canUseDrive(this.props.isAuthed, item.value)
+                      ? " (Pro)"
+                      : "")}
                 </option>
               ))}
           </select>
@@ -1086,7 +1099,10 @@ class SyncSetting extends React.Component<SettingInfoProps, SettingInfoState> {
                   key={item.value}
                   className="lang-setting-option"
                 >
-                  {this.props.t(item.label) + (item.isPro ? " (Pro)" : "")}
+                  {this.props.t(item.label) +
+                    (item.isPro && !canUseDrive(this.props.isAuthed, item.value)
+                      ? " (Pro)"
+                      : "")}
                 </option>
               ))}
           </select>
@@ -1121,7 +1137,10 @@ class SyncSetting extends React.Component<SettingInfoProps, SettingInfoState> {
                   key={item.value}
                   className="lang-setting-option"
                 >
-                  {this.props.t(item.label) + (item.isPro ? " (Pro)" : "")}
+                  {this.props.t(item.label) +
+                    (item.isPro && !canUseDrive(this.props.isAuthed, item.value)
+                      ? " (Pro)"
+                      : "")}
                 </option>
               ))}
           </select>
@@ -1156,14 +1175,25 @@ class SyncSetting extends React.Component<SettingInfoProps, SettingInfoState> {
                   key={item.value}
                   className="lang-setting-option"
                 >
-                  {this.props.t(item.label) + (item.isPro ? " (Pro)" : "")}
+                  {this.props.t(item.label) +
+                    (item.isPro && !canUseDrive(this.props.isAuthed, item.value)
+                      ? " (Pro)"
+                      : "")}
                 </option>
               ))}
           </select>
         </div>
 
-        {this.props.isAuthed && this.renderSwitchOption(syncSettingList)}
-        {this.props.isAuthed && (
+        {canUseProFeature(this.props.isAuthed) &&
+          this.renderSwitchOption(
+            // Koodo Sync is the official service, it needs the account
+            this.props.isAuthed
+              ? syncSettingList
+              : syncSettingList.filter(
+                  (item) => item.propName !== "isEnableKoodoSync"
+                )
+          )}
+        {canUseProFeature(this.props.isAuthed) && (
           <>
             <div className="setting-dialog-new-title">
               <Trans>Scheduled sync interval</Trans>

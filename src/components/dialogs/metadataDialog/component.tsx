@@ -12,6 +12,7 @@ import {
 import toast from "react-hot-toast";
 import copy from "copy-text-to-clipboard";
 import { getBookMetadata } from "../../../utils/request/reader";
+import { canUseProFeature } from "../../../utils/request/selfHosted";
 
 class MetadataDialog extends React.Component<
   MetadataDialogProps,
@@ -42,7 +43,7 @@ class MetadataDialog extends React.Component<
       return;
     }
 
-    if (!this.props.isAuthed) {
+    if (!canUseProFeature(this.props.isAuthed, "metadata")) {
       toast(this.props.t("Please upgrade to Pro to use this feature"));
       this.props.handleSetting(true);
       this.props.handleSettingMode("account");

@@ -34,6 +34,8 @@ ENV SERVER_PASSWORD_FILE=my_secret
 ENV ENABLE_KOREADER_SERVER=false
 ENV ENABLE_KOREADER_REGISTRATION=true
 ENV ENABLE_OPDS=false
+# Self-hosted Pro services, see httpserver/README.md
+ENV ENABLE_PRO_SERVER=false
 
 # Define volume for uploads directory
 VOLUME ["/app/uploads"]

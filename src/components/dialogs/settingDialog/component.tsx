@@ -5,6 +5,7 @@ import { Trans } from "react-i18next";
 import GeneralSetting from "../../../containers/settings/generalSetting";
 import SyncSetting from "../../../containers/settings/syncSetting";
 import AccountSetting from "../../../containers/settings/accountSetting";
+import SelfHostedSetting from "../../../containers/settings/selfHostedSetting";
 import PluginSetting from "../../../containers/settings/pluginSetting";
 import ReadingSetting from "../../../containers/settings/readingSetting";
 import AppearanceSetting from "../../../containers/settings/appearanceSetting";
@@ -217,7 +218,10 @@ class SettingDialog extends React.Component<
             ) : this.props.settingMode === "sync" ? (
               <SyncSetting />
             ) : this.props.settingMode === "account" ? (
-              <AccountSetting />
+              <>
+                <SelfHostedSetting />
+                <AccountSetting />
+              </>
             ) : this.props.settingMode === "data" ? (
               <DataSetting />
             ) : this.props.settingMode === "about" ? (

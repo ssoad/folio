@@ -424,6 +424,12 @@ export const ocrEngineList = [
     lang: "auto",
   },
   {
+    label: "Self-hosted server OCR",
+    value: "selfhosted-ocr",
+    lang: "auto",
+    isSelfHosted: true,
+  },
+  {
     label: "Paddle OCR",
     value: "paddle",
     lang: "standard_v5_mobile",
