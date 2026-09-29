@@ -402,7 +402,13 @@ class PopupDict extends React.Component<PopupDictProps, PopupDictState> {
                 {this.props.t("Please select")}
               </option>
               {this.props.plugins
-                .filter((item) => item.type === "dictionary")
+                .filter(
+                  (item) =>
+                    item.type === "dictionary" &&
+                    // Needs a Koodo account, self-hosted users look up words with the server's model
+                    (item.key !== "official-ai-dict-plugin" ||
+                      this.props.isAuthed)
+                )
                 .map((item) => {
                   return (
                     <option
@@ -412,7 +418,7 @@ class PopupDict extends React.Component<PopupDictProps, PopupDictState> {
                     >
                       {this.props.t(item.displayName)}
                       {item.key === "official-ai-dict-plugin" && (
-                        <span style={{ fontSize: "13px", color: "#f16464" }}>
+                        <span style={{ fontSize: "13px", color: "var(--accent)" }}>
                           {" "}
                           (Pro)
                         </span>

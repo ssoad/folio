@@ -680,8 +680,7 @@ class Header extends React.Component<HeaderProps, HeaderState> {
   render() {
     return (
       <div
-        className="header"
-        style={this.props.isCollapsed ? { marginLeft: "40px" } : {}}
+        className={"header" + (this.props.isCollapsed ? " header-collapsed" : "")}
       >
         {this.props.isAuthed && (
           <div
@@ -725,16 +724,10 @@ class Header extends React.Component<HeaderProps, HeaderState> {
             )}
           </div>
         )}
-        <div
-          className="header-search-container"
-          style={this.props.isCollapsed ? { width: "369px" } : {}}
-        >
+        <div className="header-search-container">
           <SearchBox />
         </div>
-        <div
-          className="setting-icon-parrent"
-          style={this.props.isCollapsed ? { marginLeft: "430px" } : {}}
-        >
+        <div className="setting-icon-parrent">
           <div
             className="setting-icon-container"
             onClick={() => {
@@ -828,22 +821,14 @@ class Header extends React.Component<HeaderProps, HeaderState> {
           </div>
         </div>
 
-        {!this.props.isAuthed &&
-        !this.state.isHidePro &&
-        window.location.hostname !== "web.koodoreader.cn" ? (
+        {!canUseProFeature(this.props.isAuthed) && !this.state.isHidePro ? (
           <div className="header-report-container">
             <span
               style={{ textDecoration: "underline" }}
               onClick={() => {
-                if (
-                  window.location.hostname !== "web.koodoreader.com" &&
-                  !isElectron
-                ) {
-                  this.props.handleSetting(true);
-                  this.props.handleSettingMode("account");
-                  return;
-                }
-                this.props.history.push("/login");
+                // Pro features come from a self-hosted server, set up under Account
+                this.props.handleSetting(true);
+                this.props.handleSettingMode("account");
               }}
             >
               <Trans>Pro version</Trans>

@@ -224,7 +224,7 @@ class PopupRefer extends React.Component<PopupReferProps, PopupReferStates> {
                     }
                   }}
                   style={{
-                    color: this.state.isJump ? "rgba(231, 69, 69, 0.8)" : "",
+                    color: this.state.isJump ? "var(--accent)" : "",
                   }}
                 >
                   {this.props.t(this.state.isJump ? "Return" : "Go to")}

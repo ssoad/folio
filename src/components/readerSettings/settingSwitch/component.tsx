@@ -318,156 +318,161 @@ class SettingSwitch extends React.Component<
             ></span>
           </span>
         </div>
-        <div className="single-control-switch-container" key="isWordDefinition">
-          <span className="single-control-switch-title">
-            <Trans>Enable word definitions</Trans>
-            <span style={{ fontSize: "13px", color: "#f16464" }}> (Pro)</span>
-          </span>
-          <span
-            className="single-control-switch"
-            onClick={async () => {
-              const next = !this.state.isWordDefinition;
-              if (next) {
-                if (!this.props.isAuthed) {
-                  toast(
-                    this.props.t("Please upgrade to Pro to use this feature")
-                  );
-                  this.props.handleSetting(true);
-                  this.props.handleSettingMode("account");
-                  ConfigService.setReaderConfig("fullTranslationMode", "no");
-                  return;
-                }
-                if (this.state.isBionic) {
-                  toast.error(
-                    this.props.t(
-                      "Word definitions and fast reading mode cannot be enabled at the same time"
-                    )
-                  );
-                  return;
-                }
-                let lang = "";
-                if (this.props.htmlBook?.rendition) {
-                  try {
-                    const text =
-                      await this.props.htmlBook.rendition.audioText();
-                    if (text && text.length > 0) {
-                      lang = detectLocalLanguage(text.slice(0, 500).join(" "));
+        {/* Word definitions come from the official Koodo API only */}
+        {this.props.isAuthed && (
+          <>
+            <div className="single-control-switch-container" key="isWordDefinition">
+              <span className="single-control-switch-title">
+                <Trans>Enable word definitions</Trans>
+                <span style={{ fontSize: "13px", color: "var(--accent)" }}> (Pro)</span>
+              </span>
+              <span
+                className="single-control-switch"
+                onClick={async () => {
+                  const next = !this.state.isWordDefinition;
+                  if (next) {
+                    if (!this.props.isAuthed) {
+                      toast(
+                        this.props.t("Please upgrade to Pro to use this feature")
+                      );
+                      this.props.handleSetting(true);
+                      this.props.handleSettingMode("account");
+                      ConfigService.setReaderConfig("fullTranslationMode", "no");
+                      return;
                     }
-                  } catch (e) {
-                    console.error(e);
+                    if (this.state.isBionic) {
+                      toast.error(
+                        this.props.t(
+                          "Word definitions and fast reading mode cannot be enabled at the same time"
+                        )
+                      );
+                      return;
+                    }
+                    let lang = "";
+                    if (this.props.htmlBook?.rendition) {
+                      try {
+                        const text =
+                          await this.props.htmlBook.rendition.audioText();
+                        if (text && text.length > 0) {
+                          lang = detectLocalLanguage(text.slice(0, 500).join(" "));
+                        }
+                      } catch (e) {
+                        console.error(e);
+                      }
+                    }
+                    if (lang === "ko") {
+                      toast.error(
+                        this.props.t(
+                          "Unsupported language for word definition, currently only Chinese, Japanese and English are supported"
+                        )
+                      );
+                      return;
+                    }
+                    ConfigService.setListConfig(
+                      this.props.currentBook.key,
+                      "wordDefinitionBooks"
+                    );
+
+                    this.setState({
+                      isWordDefinition: true,
+                      wordDefinitionLang: lang,
+                    });
+                  } else {
+                    ConfigService.deleteListConfig(
+                      this.props.currentBook.key,
+                      "wordDefinitionBooks"
+                    );
+                    this.setState({
+                      isWordDefinition: false,
+                      wordDefinitionLang: "",
+                    });
                   }
-                }
-                if (lang === "ko") {
-                  toast.error(
-                    this.props.t(
-                      "Unsupported language for word definition, currently only Chinese, Japanese and English are supported"
-                    )
-                  );
-                  return;
-                }
-                ConfigService.setListConfig(
-                  this.props.currentBook.key,
-                  "wordDefinitionBooks"
-                );
-
-                this.setState({
-                  isWordDefinition: true,
-                  wordDefinitionLang: lang,
-                });
-              } else {
-                ConfigService.deleteListConfig(
-                  this.props.currentBook.key,
-                  "wordDefinitionBooks"
-                );
-                this.setState({
-                  isWordDefinition: false,
-                  wordDefinitionLang: "",
-                });
-              }
-              toast(this.props.t("Change successful"));
-              setTimeout(async () => {
-                this.props.renderBookFunc();
-              }, 500);
-            }}
-            style={this.state.isWordDefinition ? {} : { opacity: 0.6 }}
-          >
-            <span
-              className="single-control-button"
-              style={
-                !this.state.isWordDefinition
-                  ? {
-                      transform: "translateX(0px)",
-                      transition: "transform 0.5s ease",
-                    }
-                  : {
-                      transform: "translateX(20px)",
-                      transition: "transform 0.5s ease",
-                    }
-              }
-            ></span>
-          </span>
-        </div>
-        <p
-          className="setting-option-subtitle"
-          style={{ marginLeft: "20px", marginRight: "20px" }}
-        >
-          <Trans>
-            {"Add definition next to the English, Chinese, Japanese words"}
-          </Trans>
-        </p>
-        {this.state.isWordDefinition &&
-          (this.state.wordDefinitionLang === "zh" ||
-            this.state.wordDefinitionLang === "ja" ||
-            this.state.wordDefinitionLang === "en") &&
-          (() => {
-            const langKey =
-              this.state.wordDefinitionLang === "zh"
-                ? "currentChineseLevel"
-                : this.state.wordDefinitionLang === "ja"
-                  ? "currentJapaneseLevel"
-                  : "currentEnglishLevel";
-            const levelItem = wordFrequencyList.find(
-              (item) => item.value === langKey
-            );
-            if (!levelItem) return null;
-            const stateKey = langKey as
-              | "currentChineseLevel"
-              | "currentJapaneseLevel"
-              | "currentEnglishLevel";
-            return (
-              <li
-                className="paragraph-character-container"
-                key={langKey}
-                style={{ margin: "0 20px" }}
-              >
-                <p className="general-setting-title">
-                  <Trans>{levelItem.title}</Trans>
-                </p>
-                <select
-                  className="general-setting-dropdown"
-                  value={this.state[stateKey]}
-                  onChange={(e) => {
-                    const val = e.target.value;
-                    this.setState({ [stateKey]: val } as any);
-                    ConfigService.setReaderConfig(langKey, val);
-                    toast(this.props.t("Change successful"));
-
+                  toast(this.props.t("Change successful"));
+                  setTimeout(async () => {
                     this.props.renderBookFunc();
-                  }}
-                >
-                  {levelItem.option.map((opt, idx) => (
-                    <option
-                      key={idx}
-                      value={opt.value}
-                      className="general-setting-option"
+                  }, 500);
+                }}
+                style={this.state.isWordDefinition ? {} : { opacity: 0.6 }}
+              >
+                <span
+                  className="single-control-button"
+                  style={
+                    !this.state.isWordDefinition
+                      ? {
+                          transform: "translateX(0px)",
+                          transition: "transform 0.5s ease",
+                        }
+                      : {
+                          transform: "translateX(20px)",
+                          transition: "transform 0.5s ease",
+                        }
+                  }
+                ></span>
+              </span>
+            </div>
+            <p
+              className="setting-option-subtitle"
+              style={{ marginLeft: "20px", marginRight: "20px" }}
+            >
+              <Trans>
+                {"Add definition next to the English, Chinese, Japanese words"}
+              </Trans>
+            </p>
+            {this.state.isWordDefinition &&
+              (this.state.wordDefinitionLang === "zh" ||
+                this.state.wordDefinitionLang === "ja" ||
+                this.state.wordDefinitionLang === "en") &&
+              (() => {
+                const langKey =
+                  this.state.wordDefinitionLang === "zh"
+                    ? "currentChineseLevel"
+                    : this.state.wordDefinitionLang === "ja"
+                      ? "currentJapaneseLevel"
+                      : "currentEnglishLevel";
+                const levelItem = wordFrequencyList.find(
+                  (item) => item.value === langKey
+                );
+                if (!levelItem) return null;
+                const stateKey = langKey as
+                  | "currentChineseLevel"
+                  | "currentJapaneseLevel"
+                  | "currentEnglishLevel";
+                return (
+                  <li
+                    className="paragraph-character-container"
+                    key={langKey}
+                    style={{ margin: "0 20px" }}
+                  >
+                    <p className="general-setting-title">
+                      <Trans>{levelItem.title}</Trans>
+                    </p>
+                    <select
+                      className="general-setting-dropdown"
+                      value={this.state[stateKey]}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        this.setState({ [stateKey]: val } as any);
+                        ConfigService.setReaderConfig(langKey, val);
+                        toast(this.props.t("Change successful"));
+
+                        this.props.renderBookFunc();
+                      }}
                     >
-                      {this.props.t(opt.label)}
-                    </option>
-                  ))}
-                </select>
-              </li>
-            );
-          })()}
+                      {levelItem.option.map((opt, idx) => (
+                        <option
+                          key={idx}
+                          value={opt.value}
+                          className="general-setting-option"
+                        >
+                          {this.props.t(opt.label)}
+                        </option>
+                      ))}
+                    </select>
+                  </li>
+                );
+              })()}
+          </>
+        )}
         <div className="single-control-switch-container" key="isReadingRuler">
           <span className="single-control-switch-title">
             <Trans>Enable reading ruler</Trans>

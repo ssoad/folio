@@ -305,7 +305,13 @@ class PopupTrans extends React.Component<PopupTransProps, PopupTransState> {
               <Trans>Add</Trans>
             </div>
             {this.props.plugins
-              .filter((item) => item.type === "translation")
+              .filter(
+                (item) =>
+                  item.type === "translation" &&
+                  // Needs a Koodo account, self-hosted users translate with the server's model
+                  (item.key !== "official-ai-trans-plugin" ||
+                    this.props.isAuthed)
+              )
               .map((item) => {
                 return (
                   <div
@@ -322,7 +328,7 @@ class PopupTrans extends React.Component<PopupTransProps, PopupTransState> {
                     <span className={`icon-${item.icon} trans-icon`}></span>
                     {this.props.t(item.displayName)}
                     {item.key === "official-ai-trans-plugin" && (
-                      <span style={{ fontSize: "13px", color: "#f16464" }}>
+                      <span style={{ fontSize: "13px", color: "var(--accent)" }}>
                         {" "}
                         (Pro)
                       </span>
@@ -337,7 +343,7 @@ class PopupTrans extends React.Component<PopupTransProps, PopupTransState> {
                 marginTop: "50px",
                 textAlign: "center",
                 fontSize: "17px",
-                color: "#f16464",
+                color: "var(--accent)",
               }}
             >
               <span
@@ -506,7 +512,7 @@ class PopupTrans extends React.Component<PopupTransProps, PopupTransState> {
                       this.state.isFinishOutput && (
                         <p
                           className="dict-learn-more"
-                          style={{ color: "#f16464" }}
+                          style={{ color: "var(--accent)" }}
                         >
                           {this.props.t("Generated with AI")}
                         </p>

@@ -4,7 +4,6 @@ import { Trans } from "react-i18next";
 import { LocalFileDialogProps, LocalFileDialogState } from "./interface";
 import Lottie from "lottie-react";
 import animationSuccess from "../../../assets/lotties/success.json";
-import animationSafe from "../../../assets/lotties/safe.json";
 import _ from "underscore";
 import toast from "react-hot-toast";
 import { isElectron } from "react-device-detect";
@@ -103,11 +102,23 @@ class LocalFileDialog extends React.Component<
             style={{ bottom: "0px", top: "0px" }}
           >
             <div className="backup-page-finish">
-              <Lottie
-                animationData={animationSafe}
-                loop={false}
-                style={{ height: 120, width: "100%" }}
-              />
+              <div className="local-file-dialog-icon" aria-hidden="true">
+                <svg width="36" height="36" viewBox="0 0 24 24" fill="none">
+                  <path
+                    d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"
+                    stroke="currentColor"
+                    strokeWidth="1.5"
+                    strokeLinejoin="round"
+                  />
+                  <path
+                    d="m9 13 2 2 4-4"
+                    stroke="currentColor"
+                    strokeWidth="1.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+              </div>
               <div className="backup-page-warning-text">
                 {this.state.status.needsReauthorization ? (
                   this.props.t("Need to reauthorize the access to directory") +

@@ -3,23 +3,71 @@ import toast from "react-hot-toast";
 import i18n from "../../i18n";
 import { ConfigService } from "../../assets/lib/kookit-extra-browser.min";
 import { AIChatMessage, streamChat } from "../ai";
-import { getServerRegion, reloadManager } from "../common";
+import { reloadManager } from "../common";
 import { resetReaderRequest } from "./reader";
 import { resetUserRequest } from "./user";
 import { resetThirdpartyRequest } from "./thirdparty";
 import { isElectron } from "react-device-detect";
 import TokenService from "../storage/tokenService";
-const PUBLIC_URL = "https://api.koodoreader.com";
-const CN_PUBLIC_URL = "https://api.koodoreader.cn";
-export const getPublicUrl = () => {
-  return getServerRegion() === "china" ? CN_PUBLIC_URL : PUBLIC_URL;
+// Folio releases are published on GitHub; pre-releases are the developer channel
+const RELEASES_API = "https://api.github.com/repos/ssoad/folio/releases";
+export interface UpdateLog {
+  version: string;
+  stable: "yes" | "no";
+  stable_version: string;
+  skippable: "yes";
+  url: string;
+  new: string[];
+  fix: string[];
+}
+interface GithubRelease {
+  tag_name: string;
+  html_url: string;
+  body: string | null;
+  draft: boolean;
+  prerelease: boolean;
+}
+const releaseNotes = (body: string | null) =>
+  (body || "")
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter((line) => /^[-*] /.test(line))
+    .map((line) => line.slice(2).trim())
+    .slice(0, 20);
+// Resolves to null when GitHub can't be reached or nothing has been released
+const checkUpdate = async (
+  includePrerelease: boolean
+): Promise<UpdateLog | null> => {
+  try {
+    const res = await axios.get<GithubRelease[]>(RELEASES_API, {
+      params: { per_page: 20 },
+      headers: { Accept: "application/vnd.github+json" },
+    });
+    const releases = res.data.filter((release) => !release.draft);
+    const latest = releases.find(
+      (release) => includePrerelease || !release.prerelease
+    );
+    if (!latest) {
+      return null;
+    }
+    const stable = releases.find((release) => !release.prerelease);
+    const toVersion = (tag: string) => tag.replace(/^v/i, "");
+    return {
+      version: toVersion(latest.tag_name),
+      stable: latest.prerelease ? "no" : "yes",
+      stable_version: stable ? toVersion(stable.tag_name) : "1.0.0",
+      skippable: "yes",
+      url: latest.html_url,
+      new: releaseNotes(latest.body),
+      fix: [],
+    };
+  } catch (error) {
+    console.warn("Update check failed:", error);
+    return null;
+  }
 };
-export const checkDeveloperUpdate = async () => {
-  let res = await axios.get(
-    getPublicUrl() + `/api/update_dev?name=${navigator.language}`
-  );
-  return res.data.log;
-};
+export const checkDeveloperUpdate = () => checkUpdate(true);
+export const checkStableUpdate = () => checkUpdate(false);
 export const uploadFile = async (url: string, file: any) => {
   return new Promise<boolean>((resolve) => {
     axios
@@ -32,12 +80,6 @@ export const uploadFile = async (url: string, file: any) => {
         resolve(false);
       });
   });
-};
-export const checkStableUpdate = async () => {
-  let res = await axios.get(
-    getPublicUrl() + `/api/update?name=${navigator.language}`
-  );
-  return res.data.log;
 };
 export const handleExitApp = async () => {
   toast.error(i18n.t("Authorization failed, please login again"));

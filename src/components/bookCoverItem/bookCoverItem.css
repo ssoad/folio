@@ -24,7 +24,7 @@
   font-size: 14px;
   font-weight: bold;
   opacity: 0.8;
-  color: rgb(231, 69, 69);
+  color: var(--danger);
 }
 .book-cover-status-actions .book-top-action {
   font-size: 14px;

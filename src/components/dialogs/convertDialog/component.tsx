@@ -208,6 +208,10 @@ class ConvertDialog extends React.Component<
                     if (item.isSelfHosted && !hasSelfHostedFeature("ocr")) {
                       return false;
                     }
+                    // Official AI OCR needs a Koodo account
+                    if (item.isPro && !this.props.isAuthed) {
+                      return false;
+                    }
                     if (
                       !isElectron &&
                       this.props.currentBook.description.indexOf("scanned") !==

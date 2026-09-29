@@ -1,10 +1,12 @@
 import React from "react";
 import "./sidebar.css";
+import FolioLogo from "../../components/folioLogo";
+import { canUseProFeature } from "../../utils/request/selfHosted";
 import { sideMenu } from "../../constants/sideMenu";
 import { SidebarProps, SidebarState } from "./interface";
 import { withRouter } from "react-router-dom";
 import { ConfigService } from "../../assets/lib/kookit-extra-browser.min";
-import { getWebsiteUrl, openInBrowser } from "../../utils/common";
+import { FOLIO_URL, openInBrowser } from "../../utils/common";
 import { Trans } from "react-i18next";
 import toast from "react-hot-toast";
 import {
@@ -240,7 +242,6 @@ class Sidebar extends React.Component<SidebarProps, SidebarState> {
             >
               <div
                 className="side-menu-icon"
-                style={this.props.isCollapsed ? {} : { marginLeft: "38px" }}
               >
                 <span
                   className={
@@ -329,7 +330,6 @@ class Sidebar extends React.Component<SidebarProps, SidebarState> {
               >
                 <div
                   className="side-menu-icon"
-                  style={this.props.isCollapsed ? {} : { marginLeft: "38px" }}
                 >
                   <span
                     data-tooltip-id="my-tooltip"
@@ -375,7 +375,11 @@ class Sidebar extends React.Component<SidebarProps, SidebarState> {
     };
     return (
       <>
-        <div className="sidebar">
+        <div
+          className={
+            "sidebar" + (this.props.isCollapsed ? " sidebar-collapsed" : "")
+          }
+        >
           <div
             className="sidebar-list-icon"
             onClick={() => {
@@ -385,29 +389,16 @@ class Sidebar extends React.Component<SidebarProps, SidebarState> {
             <span className="icon-menu sidebar-list"></span>
           </div>
 
-          <img
-            src={
-              ConfigService.getReaderConfig("appSkin") === "night" ||
-              (ConfigService.getReaderConfig("appSkin") === "system" &&
-                ConfigService.getReaderConfig("isOSNight") === "yes")
-                ? require(
-                    `../../assets/images/logo-dark${
-                      this.props.isAuthed ? "-pro" : ""
-                    }.png`
-                  )
-                : require(
-                    `../../assets/images/logo-light${
-                      this.props.isAuthed ? "-pro" : ""
-                    }.png`
-                  )
-            }
-            alt=""
-            onClick={() => {
-              this.handleJump(getWebsiteUrl());
-            }}
-            style={this.state.isCollapsed ? { display: "none" } : {}}
-            className="logo"
-          />
+          {!this.state.isCollapsed && (
+            <FolioLogo
+              className="logo"
+              size={26}
+              isPro={canUseProFeature(this.props.isAuthed)}
+              onClick={() => {
+                this.handleJump(FOLIO_URL);
+              }}
+            />
+          )}
           <div
             className="side-menu-container-parent"
             style={this.state.isCollapsed ? { width: "70px" } : {}}
@@ -445,18 +436,7 @@ class Sidebar extends React.Component<SidebarProps, SidebarState> {
                 className={"side-menu-selector"}
                 style={{ cursor: "pointer" }}
               >
-                <div
-                  className="side-menu-icon"
-                  style={{
-                    borderRadius: "5px",
-                    backgroundColor: "rgba(0, 0, 0, 0.06)",
-                    padding: "4px 0px",
-                    width: "24px",
-                    height: "14px",
-                    marginLeft: "20px",
-                    marginRight: "15px",
-                  }}
-                >
+                <div className="side-menu-icon side-menu-action-icon">
                   <span
                     className={`icon-add sidebar-shelf-icon`}
                     style={{ fontSize: "11px" }}
@@ -526,18 +506,7 @@ class Sidebar extends React.Component<SidebarProps, SidebarState> {
                   this.props.handleSortShelfDialog(true);
                 }}
               >
-                <div
-                  className="side-menu-icon"
-                  style={{
-                    borderRadius: "5px",
-                    backgroundColor: "rgba(0, 0, 0, 0.06)",
-                    padding: "4px 0px",
-                    width: "24px",
-                    height: "14px",
-                    marginLeft: "20px",
-                    marginRight: "15px",
-                  }}
-                >
+                <div className="side-menu-icon side-menu-action-icon">
                   <span
                     className={`icon-edit-line sidebar-shelf-icon`}
                     style={{ fontSize: "17px" }}
@@ -568,14 +537,7 @@ class Sidebar extends React.Component<SidebarProps, SidebarState> {
                 this.props.history.push("/stats");
               }}
             >
-              <div
-                className="side-menu-icon"
-                style={
-                  this.props.isCollapsed
-                    ? {}
-                    : { marginLeft: "20px", marginRight: "15px" }
-                }
-              >
+              <div className="side-menu-icon">
                 <span
                   className="icon-chart sidebar-shelf-icon"
                   style={
@@ -589,13 +551,7 @@ class Sidebar extends React.Component<SidebarProps, SidebarState> {
                   }
                 ></span>
               </div>
-              <span
-                style={
-                  this.props.isCollapsed
-                    ? { display: "none", width: "70%" }
-                    : { width: "61%" }
-                }
-              >
+              <span className="side-menu-label">
                 {this.props.t("Reading Stats")}
               </span>
             </div>

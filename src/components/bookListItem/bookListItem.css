@@ -71,7 +71,7 @@
 }
 .book-item-list-favorite {
   font-size: 14px;
-  color: rgb(231, 69, 69);
+  color: var(--danger);
   opacity: 0.8;
 }
 .book-item-list-top {

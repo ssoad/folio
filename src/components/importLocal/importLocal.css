@@ -2,20 +2,24 @@
   position: fixed;
   right: 0px;
   top: 0px;
-  width: 138px;
-  margin-right: 25px;
-  margin-top: 23px;
-  min-width: 42px;
-  height: 42px;
+  width: 132px;
+  margin-right: 28px;
+  margin-top: 20px;
+  min-width: 40px;
+  height: 40px;
   opacity: 1;
-  border-radius: 25px;
-  line-height: 42px;
+  border-radius: var(--radius-md);
+  line-height: 40px;
   text-align: center;
   cursor: pointer;
   z-index: 5;
-  font-size: 15px;
-  transition: 0.1s;
+  font-size: 14px;
+  transition: background-color 0.15s;
   font-weight: 500;
+  box-shadow: var(--shadow-sm);
+}
+.import-from-local:hover {
+  background-color: var(--accent-hover) !important;
 }
 
 .import-book-box {

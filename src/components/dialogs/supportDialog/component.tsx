@@ -130,7 +130,7 @@ class SupportDialog extends React.Component<
                 <div
                   style={{
                     fontSize: 16,
-                    color: "rgb(231, 69, 69)",
+                    color: "var(--danger)",
                     position: "absolute",
                     left: 20,
                     bottom: 20,

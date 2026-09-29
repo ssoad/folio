@@ -832,7 +832,7 @@ class SyncSetting extends React.Component<SettingInfoProps, SettingInfoState> {
                   marginTop: "10px",
                   fontSize: "13px",
                   lineHeight: "16px",
-                  color: "rgba(231, 69, 69, 0.8)",
+                  color: "var(--danger)",
                 }}
               >
                 {this.props.t(
@@ -847,7 +847,7 @@ class SyncSetting extends React.Component<SettingInfoProps, SettingInfoState> {
                   marginTop: "10px",
                   fontSize: "13px",
                   lineHeight: "16px",
-                  color: "rgba(231, 69, 69, 0.8)",
+                  color: "var(--danger)",
                 }}
               >
                 {this.props.t(
@@ -862,7 +862,7 @@ class SyncSetting extends React.Component<SettingInfoProps, SettingInfoState> {
                   marginTop: "10px",
                   fontSize: "13px",
                   lineHeight: "16px",
-                  color: "rgba(231, 69, 69, 0.8)",
+                  color: "var(--danger)",
                 }}
               >
                 {this.props.t(

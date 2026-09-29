@@ -205,7 +205,7 @@ class EditDialog extends React.Component<EditDialogProps, EditDialogState> {
           <div
             style={{
               fontSize: 16,
-              color: "rgb(231, 69, 69)",
+              color: "var(--accent)",
               position: "absolute",
               right: 20,
               top: 23,
@@ -225,7 +225,12 @@ class EditDialog extends React.Component<EditDialogProps, EditDialogState> {
             }}
           >
             <Trans>Get metadata</Trans>
-            <span style={{ fontSize: "13px", color: "#f16464" }}> (Pro)</span>
+            {!canUseProFeature(this.props.isAuthed, "metadata") && (
+              <span style={{ fontSize: "13px", color: "var(--accent)" }}>
+                {" "}
+                (Pro)
+              </span>
+            )}
           </div>
         </div>
 

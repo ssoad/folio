@@ -19,19 +19,24 @@
   /* overflow: hidden; */
   display: flex;
   justify-content: center;
-
-  border-radius: 2px;
+  border-radius: 2px 5px 5px 2px;
+  transition: transform 0.15s ease;
+}
+.book-list-item:hover .book-item-cover {
+  transform: translateY(-2px);
 }
 .book-item-image {
-  border-radius: 2px;
+  border-radius: 2px 5px 5px 2px;
 }
 .book-item-title {
   width: 80%;
   margin-left: 10%;
   /* margin-bottom: 5px; */
-  height: 31px;
-  font-size: 12px;
-  line-height: 15px;
+  height: 34px;
+  margin-top: 4px;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 17px;
   opacity: 1;
   text-align: left;
   text-overflow: ellipsis;
@@ -70,7 +75,7 @@
   font-size: 14px;
   font-weight: bold;
   opacity: 0.8;
-  color: rgb(231, 69, 69);
+  color: var(--danger);
 }
 .book-status-actions {
   float: right;
@@ -105,6 +110,7 @@
   margin-left: 10px;
   border-radius: 50%;
   font-size: 12px;
+  color: var(--muted);
   /* line-height: 31px; */
   cursor: pointer;
 }

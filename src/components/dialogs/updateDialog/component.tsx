@@ -7,7 +7,6 @@ import Lottie from "lottie-react";
 import animationNew from "../../../assets/lotties/new.json";
 import {
   compareVersions,
-  getWebsiteUrl,
   openExternalUrl,
 } from "../../../utils/common";
 import { isElectron } from "react-device-detect";
@@ -19,17 +18,12 @@ import {
 } from "../../../utils/request/common";
 import { ConfigService } from "../../../assets/lib/kookit-extra-browser.min";
 import toast from "react-hot-toast";
-import { isWindows } from "react-device-detect";
 
 class UpdateInfo extends React.Component<UpdateInfoProps, UpdateInfoState> {
   constructor(props: UpdateInfoProps) {
     super(props);
     this.state = {
-      updateLog: "",
-      progress: 0,
-      downloadedMB: 0,
-      totalMB: 0,
-      isDownloading: false,
+      updateLog: null,
     };
   }
   async componentDidMount() {
@@ -37,11 +31,12 @@ class UpdateInfo extends React.Component<UpdateInfoProps, UpdateInfoState> {
       if (!isElectron) {
         return;
       }
-      let res;
-      if (ConfigService.getReaderConfig("updateChannel") === "stable") {
-        res = await checkStableUpdate();
-      } else {
-        res = await checkDeveloperUpdate();
+      const res =
+        ConfigService.getReaderConfig("updateChannel") === "stable"
+          ? await checkStableUpdate()
+          : await checkDeveloperUpdate();
+      if (!res) {
+        return;
       }
       const newVersion = res.version;
       const stableVersion = res.stable_version || "1.0.0";
@@ -164,110 +159,21 @@ class UpdateInfo extends React.Component<UpdateInfoProps, UpdateInfoState> {
                 <div
                   className="new-version-open"
                   onClick={() => {
-                    if (isWindows) {
-                      const ipcRenderer = window.electronAPI;
-                      if (!this.state.isDownloading) {
-                        // 先注册事件监听器，再调用下载
-                        this.setState({ isDownloading: true });
-                        ipcRenderer.on(
-                          "download-app-progress",
-                          (config: any) => {
-                            this.setState({
-                              progress: config.progress,
-                              downloadedMB: config.downloadedMB,
-                              totalMB: config.totalMB,
-                            });
-                            toast.loading(
-                              this.props.t("Downloading") +
-                                `(${config.downloadedMB} / ${config.totalMB} MB)`,
-                              {
-                                id: "download-progress",
-                                position: "bottom-center",
-                              }
-                            );
-                          }
-                        );
-                        ipcRenderer.invoke("update-win-app", {
-                          version: this.state.updateLog.version,
-                        });
-                      } else {
-                        ipcRenderer.invoke("cancel-download-app", {});
-                        this.setState({
-                          isDownloading: false,
-                          progress: 0,
-                          downloadedMB: 0,
-                          totalMB: 0,
-                        });
-                        setTimeout(() => {
-                          toast.success(
-                            this.props.t("Cancellation successful"),
-                            {
-                              id: "download-progress",
-                            }
-                          );
-                        }, 500);
-                      }
-                    } else {
-                      let lang = "en";
-                      if (
-                        ConfigService.getReaderConfig("lang") &&
-                        ConfigService.getReaderConfig("lang").startsWith("zh")
-                      ) {
-                        lang = "zh";
-                      }
-                      openExternalUrl(
-                        getWebsiteUrl() +
-                          "/" +
-                          lang +
-                          "/download" +
-                          "?version=" +
-                          (this.state.updateLog.stable === "yes"
-                            ? "stable"
-                            : "developer")
-                      );
+                    if (this.state.updateLog) {
+                      openExternalUrl(this.state.updateLog.url);
                     }
                   }}
                 >
-                  {this.state.isDownloading ? (
-                    <Trans>Cancel</Trans>
-                  ) : (
-                    <Trans>Download</Trans>
-                  )}
+                  <Trans>Download</Trans>
                 </div>
               </div>
-              {isWindows && (
-                <div
-                  className="new-version-skip"
-                  onClick={() => {
-                    let lang = "en";
-                    if (
-                      ConfigService.getReaderConfig("lang") &&
-                      ConfigService.getReaderConfig("lang").startsWith("zh")
-                    ) {
-                      lang = "zh";
-                    }
-                    openExternalUrl(
-                      getWebsiteUrl() +
-                        "/" +
-                        lang +
-                        "/download" +
-                        "?version=" +
-                        (this.state.updateLog.stable === "yes"
-                          ? "stable"
-                          : "developer")
-                    );
-                  }}
-                >
-                  <Trans>Download in Browser</Trans>
-                </div>
-              )}
               {this.state.updateLog.stable !== "yes" && (
                 <div
                   className="new-version-skip"
                   onClick={() => {
                     ConfigService.setReaderConfig(
                       "skipVersion",
-                      this.state.updateLog.version
+                      this.state.updateLog?.version || ""
                     );
                     this.handleClose();
                   }}
@@ -295,12 +201,16 @@ class UpdateInfo extends React.Component<UpdateInfoProps, UpdateInfoState> {
                   <ul className="update-dialog-new-container">
                     {this.renderList(this.state.updateLog.new)}
                   </ul>
-                  <p className="update-dialog-fix-title">
-                    <Trans>What's been fixed</Trans>
-                  </p>
-                  <ul className="update-dialog-fix-container">
-                    {this.renderList(this.state.updateLog.fix)}
-                  </ul>
+                  {this.state.updateLog.fix.length > 0 && (
+                    <>
+                      <p className="update-dialog-fix-title">
+                        <Trans>What's been fixed</Trans>
+                      </p>
+                      <ul className="update-dialog-fix-container">
+                        {this.renderList(this.state.updateLog.fix)}
+                      </ul>
+                    </>
+                  )}
                 </>
               )}
             </div>

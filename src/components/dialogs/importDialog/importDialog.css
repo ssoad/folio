@@ -70,5 +70,5 @@
   cursor: pointer;
 }
 .cloud-drive-label:hover {
-  color: #f16464;
+  color: var(--accent);
 }

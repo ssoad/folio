@@ -898,6 +898,7 @@ export const getDefaultTransTarget = (langList) => {
   );
   return langMap[langTarget || "English"];
 };
+export const FOLIO_URL = "https://github.com/ssoad/folio";
 export const WEBSITE_URL = "https://koodoreader.com";
 export const CN_WEBSITE_URL = "https://koodoreader.cn";
 export const getServerRegion = () => {

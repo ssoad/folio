@@ -149,6 +149,7 @@ const BookCoverItem: React.FC<BookCoverProps> = (props) => {
               <EmptyCover
                 {...{
                   format: props.book.format,
+                  author: props.book.author,
                   title:
                     ConfigService.getReaderConfig("isUseOriginalName") === "yes"
                       ? getFileNameWithoutExtension(

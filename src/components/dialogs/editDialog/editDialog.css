@@ -75,7 +75,7 @@
   transition: color 0.15s;
 }
 .edit-dialog-ai-button:hover {
-  color: #f16464;
+  color: var(--accent);
 }
 @keyframes edit-dialog-ai-spin {
   from {

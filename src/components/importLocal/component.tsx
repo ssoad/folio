@@ -27,7 +27,10 @@ import {
 import DatabaseService from "../../utils/storage/databaseService";
 import { BookHelper } from "../../assets/lib/kookit.min";
 import { analyzeBookTitle } from "../../utils/request/reader";
-import { canUseProFeature } from "../../utils/request/selfHosted";
+import {
+  canSyncCloudFiles,
+  canUseProFeature,
+} from "../../utils/request/selfHosted";
 
 // Convert supportedFormats to react-dropzone v14+ accept format
 // Key is MIME type, value is array of file extensions
@@ -177,7 +180,7 @@ class ImportLocal extends React.Component<ImportLocalProps, ImportLocalState> {
         if (ConfigService.getReaderConfig("isPreventAdd") === "yes") {
           //ignore
         } else if (
-          this.props.isAuthed &&
+          (await canSyncCloudFiles()) &&
           ConfigService.getItem("defaultSyncOption")
         ) {
           await BookUtil.addBook(
@@ -208,7 +211,8 @@ class ImportLocal extends React.Component<ImportLocalProps, ImportLocalState> {
       } else {
         if (
           !isImportPath ||
-          (this.props.isAuthed && ConfigService.getItem("defaultSyncOption"))
+          ((await canSyncCloudFiles()) &&
+            ConfigService.getItem("defaultSyncOption"))
         ) {
           await BookUtil.addBook(
             book.key,

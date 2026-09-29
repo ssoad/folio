@@ -118,7 +118,12 @@ class MetadataDialog extends React.Component<
       <div className="metadata-dialog-container edit-dialog-container">
         <div className="metadata-dialog-title">
           <Trans>Get metadata</Trans>
-          <span style={{ fontSize: "13px", color: "#f16464" }}> (Pro)</span>
+          {!canUseProFeature(this.props.isAuthed, "metadata") && (
+            <span style={{ fontSize: "13px", color: "var(--accent)" }}>
+              {" "}
+              (Pro)
+            </span>
+          )}
         </div>
 
         {/* Search inputs */}

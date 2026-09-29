@@ -373,6 +373,7 @@ class NavigationPanel extends React.Component<
                   <EmptyCover
                     {...{
                       format: this.props.currentBook.format,
+                      author: this.props.currentBook.author,
                       title: this.props.currentBook.name,
                       scale: 0.86,
                     }}

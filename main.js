@@ -16,6 +16,18 @@ const {
   session,
 } = require("electron");
 const path = require("path");
+// Keep using the data folder from before the Folio rename, so an existing
+// library, settings and window state carry over. Must run before anything
+// reads userData (electron-store below).
+{
+  const appData = app.getPath("appData");
+  const legacyDir = ["koodo-reader", "Koodo Reader"]
+    .map((name) => path.join(appData, name))
+    .find((dir) => require("fs").existsSync(dir));
+  if (legacyDir) {
+    app.setPath("userData", legacyDir);
+  }
+}
 const { pathToFileURL } = require("url");
 const isDev = require("electron-is-dev");
 const Store = require("electron-store");
@@ -120,7 +132,6 @@ let chatWindow;
 let dbConnection = {};
 let syncUtilCache = {};
 let pickerUtilCache = {};
-let downloadRequest = null;
 
 const RESIZE_THROTTLE_MS = 300;
 
@@ -451,7 +462,7 @@ const createTray = () => {
   tray = new Tray(trayIcon);
   const contextMenu = Menu.buildFromTemplate([
     {
-      label: "Open Koodo Reader",
+      label: "Open Folio",
       click: () => {
         if (mainWin) {
           mainWin.show();
@@ -467,7 +478,7 @@ const createTray = () => {
       },
     },
   ]);
-  tray.setToolTip("Koodo Reader");
+  tray.setToolTip("Folio");
   tray.setContextMenu(contextMenu);
   tray.on("click", () => {
     if (mainWin) {
@@ -568,7 +579,6 @@ const createMainWin = () => {
       { 0: "info", 1: "info", 2: "warn", 3: "error" }[level] || "info";
     log[lvl](`[Renderer] ${message}`);
   });
-  //cancel-download-app
   const normalizeFileData = (value) => {
     if (value instanceof Uint8Array) return Buffer.from(value);
     if (value instanceof ArrayBuffer) return Buffer.from(value);
@@ -769,86 +779,12 @@ const createMainWin = () => {
       stream.on("end", () => resolve(hash.digest("hex")));
     });
   });
-  ipcMain.handle("cancel-download-app", (event, arg) => {
-    // Implement cancellation logic here
-    // Note: In this example, we are not keeping a reference to the request,
-    // so we cannot actually abort it. This is a placeholder for demonstration.
-    if (downloadRequest) {
-      downloadRequest.abort();
-      downloadRequest = null;
-    }
-    event.returnValue = "cancelled";
-  });
   // Discord RPC handlers
   ipcMain.handle("discord-rpc-update", async (event, config) => {
     await setDiscordActivity(config);
   });
   ipcMain.handle("discord-rpc-clear", async (event) => {
     await clearDiscordActivity();
-  });
-  ipcMain.handle("update-win-app", (event, config) => {
-    let fileName = `koodo-reader-installer.exe`;
-    let supportedArchs = ["x64", "ia32", "arm64"];
-    //get system arch
-    let arch = os.arch();
-    if (!supportedArchs.includes(arch)) {
-      return;
-    }
-
-    let url = `https://dl.koodoreader.com/v${config.version}/Koodo-Reader-${config.version}-${arch}.exe`;
-    const https = require("https");
-    const { spawn } = require("child_process");
-    const file = fs.createWriteStream(path.join(app.getPath("temp"), fileName));
-    downloadRequest = https.get(url, (res) => {
-      const totalSize = parseInt(res.headers["content-length"], 10);
-      let downloadedSize = 0;
-      res.on("data", (chunk) => {
-        downloadedSize += chunk.length;
-        const progress = ((downloadedSize / totalSize) * 100).toFixed(2);
-        const downloadedMB = (downloadedSize / 1024 / 1024).toFixed(2);
-        const totalMB = (totalSize / 1024 / 1024).toFixed(2);
-        mainWin.webContents.send("download-app-progress", {
-          progress,
-          downloadedMB,
-          totalMB,
-        });
-      });
-
-      res.pipe(file);
-      file.on("finish", () => {
-        console.info("\n下载完成！");
-        file.close();
-
-        let updateExePath = path.join(app.getPath("temp"), fileName);
-        if (!fs.existsSync(updateExePath)) {
-          console.error("更新包不存在:", updateExePath);
-          return;
-        }
-        // 验证文件可执行性
-        try {
-          fs.accessSync(updateExePath, fs.constants.X_OK);
-          console.info("更新包可执行性验证通过");
-        } catch (err) {
-          console.error("更新包不可执行:", err.message);
-          return;
-        }
-        try {
-          // 先退出应用，再启动安装程序，避免文件锁定导致覆盖安装失败
-          app.once("will-quit", () => {
-            const child = spawn(updateExePath, [], {
-              stdio: "ignore",
-              detached: true,
-              shell: true,
-              windowsHide: false,
-            });
-            child.unref();
-          });
-          app.quit();
-        } catch (err) {
-          console.error(`spawn 执行异常: ${err.message}`);
-        }
-      });
-    });
   });
   ipcMain.handle("open-book", (event, config) => {
     let { url, isMergeWord, isAutoFullscreen, isAutoMaximize, isPreventSleep } =

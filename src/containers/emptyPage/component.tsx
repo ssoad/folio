@@ -3,10 +3,6 @@ import "./emptyPage.css";
 import { emptyList } from "../../constants/emptyList";
 import { Trans } from "react-i18next";
 import { EmptyPageProps, EmptyPageState } from "./interface";
-import emptyDark from "../../assets/images/empty-dark.svg";
-import emptyLight from "../../assets/images/empty-light.svg";
-
-import { ConfigService } from "../../assets/lib/kookit-extra-browser.min";
 
 class EmptyPage extends React.Component<EmptyPageProps, EmptyPageState> {
   constructor(props: EmptyPageProps) {
@@ -16,56 +12,48 @@ class EmptyPage extends React.Component<EmptyPageProps, EmptyPageState> {
     };
   }
   render() {
-    const renderEmptyList = () => {
-      return emptyList.map((item) => {
-        return (
-          <div
-            className="empty-page-info-container"
-            key={item.mode}
-            style={
-              this.props.mode === item.mode ? {} : { visibility: "hidden" }
-            }
-          >
+    const item = emptyList.find((entry) => entry.mode === this.props.mode);
+    return (
+      <div
+        className={
+          "empty-page-container" +
+          (this.props.isCollapsed ? " empty-page-collapsed" : "")
+        }
+      >
+        <div className="empty-page-icon" aria-hidden="true">
+          {/* A short stack of books; strokes follow the theme */}
+          <svg width="44" height="44" viewBox="0 0 24 24" fill="none">
+            <path
+              d="M4 19.5V5a2 2 0 0 1 2-2h3v18H6a2 2 0 0 1-2-1.5z"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              strokeLinejoin="round"
+            />
+            <path
+              d="M9 3h4v18H9"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              strokeLinejoin="round"
+            />
+            <path
+              d="m14.2 4.6 3.6-1 3.6 13.6-3.6 1z"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              strokeLinejoin="round"
+            />
+          </svg>
+        </div>
+        {item && (
+          <>
             <div className="empty-page-info-main">
               <Trans>{item.main}</Trans>
             </div>
             <div className="empty-page-info-sub">
               <Trans>{item.sub}</Trans>
             </div>
-          </div>
-        );
-      });
-    };
-    return (
-      <>
-        <div
-          className="empty-page-container"
-          style={
-            this.props.isCollapsed
-              ? { width: "calc(100vw - 100px)", left: "100px" }
-              : {}
-          }
-        >
-          <div
-            className="empty-illustration-container"
-            style={{ width: "calc(100% - 50px)" }}
-          >
-            <img
-              src={
-                ConfigService.getReaderConfig("appSkin") === "night" ||
-                (ConfigService.getReaderConfig("appSkin") === "system" &&
-                  ConfigService.getReaderConfig("isOSNight") === "yes")
-                  ? emptyDark
-                  : emptyLight
-              }
-              alt=""
-              className="empty-page-illustration"
-            />
-          </div>
-
-          {renderEmptyList()}
-        </div>
-      </>
+          </>
+        )}
+      </div>
     );
   }
 }

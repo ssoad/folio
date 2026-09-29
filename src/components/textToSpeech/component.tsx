@@ -399,7 +399,7 @@ class TextToSpeech extends React.Component<
     if (
       ConfigService.getReaderConfig("voiceEngine") ===
         "official-ai-voice-plugin" &&
-      !this.props.isAuthed
+      !canUseProFeature(this.props.isAuthed, "tts")
     ) {
       ConfigService.setReaderConfig("voiceEngine", "system");
     }
@@ -587,7 +587,10 @@ class TextToSpeech extends React.Component<
       nodeTextList = nodeTextList.slice(speechStartIndex);
     }
     this.clearSpeechStartState();
-    if (!this.state.multiRoleEnabled || !this.props.isAuthed) {
+    if (
+      !this.state.multiRoleEnabled ||
+      !canUseProFeature(this.props.isAuthed, "ai")
+    ) {
       nodeList = nodeTextList.map((text: string) => {
         return {
           text,
@@ -1177,7 +1180,7 @@ class TextToSpeech extends React.Component<
               const newEngine = voice.plugin || "system";
               if (
                 newEngine === "official-ai-voice-plugin" &&
-                !this.props.isAuthed
+                !canUseProFeature(this.props.isAuthed, "tts")
               ) {
                 toast(
                   this.props.t("Please upgrade to Pro to use this feature")
@@ -1280,7 +1283,12 @@ class TextToSpeech extends React.Component<
         >
           <span style={{ width: "calc(100% - 50px)" }}>
             <Trans>AI multi-role speech</Trans>
-            <span style={{ fontSize: "13px", color: "#f16464" }}> (Pro)</span>
+            {!canUseProFeature(this.props.isAuthed, "ai") && (
+              <span style={{ fontSize: "13px", color: "var(--accent)" }}>
+                {" "}
+                (Pro)
+              </span>
+            )}
           </span>
 
           <span

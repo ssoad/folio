@@ -566,7 +566,7 @@ class ImportDialog extends React.Component<
         </div>
         <div
           className="import-dialog-back-button"
-          style={{ left: "20px", color: "rgb(231, 69, 69)" }}
+          style={{ left: "20px", color: "var(--accent)" }}
           onClick={async () => {
             if (this.state.selectedFileList.length === 0) {
               toast.error(this.props.t("No file selected"));

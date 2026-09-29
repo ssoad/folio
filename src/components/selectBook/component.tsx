@@ -88,7 +88,7 @@ class SelectBook extends React.Component<BookListProps, BookListState> {
                 }
               }}
               className="book-manage-title"
-              style={{ color: "rgb(231, 69, 69)" }}
+              style={{ color: "var(--accent)" }}
             >
               <Trans>Cancel</Trans>
             </span>

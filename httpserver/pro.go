@@ -54,7 +54,7 @@ const (
 	// Texts per batch-translation request to the model
 	proTranslateBatchSize  = 40
 	proTranslateBatchChars = 6000
-	proUserAgent           = "KoodoReader-SelfHosted/1.0"
+	proUserAgent           = "Folio-SelfHosted/1.0"
 )
 
 func initPro() {

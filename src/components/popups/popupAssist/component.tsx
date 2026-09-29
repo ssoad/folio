@@ -766,7 +766,13 @@ class PopupAssist extends React.Component<PopupAssistProps, PopupAssistState> {
                 {this.props.t("Please select")}
               </option>
               {this.props.plugins
-                .filter((item) => item.type === "assistant")
+                .filter(
+                  (item) =>
+                    item.type === "assistant" &&
+                    // Needs a Koodo account
+                    (item.key !== "official-ai-assistant-plugin" ||
+                      this.props.isAuthed)
+                )
                 .map((item) => (
                   <option
                     value={item.key}

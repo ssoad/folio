@@ -5,7 +5,11 @@ import toast from "react-hot-toast";
 import { ConfigService } from "../../../assets/lib/kookit-extra-browser.min";
 import packageJson from "../../../../package.json";
 
-import { getWebsiteUrl, openExternalUrl } from "../../../utils/common";
+import {
+  compareVersions,
+  getWebsiteUrl,
+  openExternalUrl,
+} from "../../../utils/common";
 import copyTextToClipboard from "copy-text-to-clipboard";
 import { isElectron } from "react-device-detect";
 import { checkDeveloperUpdate } from "../../../utils/request/common";
@@ -33,42 +37,33 @@ class AboutSetting extends React.Component<SettingInfoProps, SettingInfoState> {
                   toast.loading(this.props.t("Checking for update") + "...", {
                     id: "checking_update",
                   });
-                  let res = await checkDeveloperUpdate();
-                  const newVersion = res.version;
-                  if (newVersion === packageJson.version) {
+                  const res = await checkDeveloperUpdate();
+                  if (!res) {
+                    toast.error(this.props.t("Connection failed"), {
+                      id: "checking_update",
+                    });
+                    return;
+                  }
+                  if (compareVersions(res.version, packageJson.version) <= 0) {
                     toast.success(
                       this.props.t("You are using the latest version"),
                       {
                         id: "checking_update",
                       }
                     );
-                  } else {
-                    toast.success(
-                      this.props.t("A new version is available") +
-                        ": " +
-                        newVersion,
-                      {
-                        id: "checking_update",
-                      }
-                    );
-
-                    let lang = "en";
-                    if (
-                      ConfigService.getReaderConfig("lang") &&
-                      ConfigService.getReaderConfig("lang").startsWith("zh")
-                    ) {
-                      lang = "zh";
-                    }
-                    setTimeout(() => {
-                      openExternalUrl(
-                        getWebsiteUrl() +
-                          "/" +
-                          lang +
-                          "/download" +
-                          "?version=developer"
-                      );
-                    }, 1000);
+                    return;
                   }
+                  toast.success(
+                    this.props.t("A new version is available") +
+                      ": " +
+                      res.version,
+                    {
+                      id: "checking_update",
+                    }
+                  );
+                  setTimeout(() => {
+                    openExternalUrl(res.url);
+                  }, 1000);
                 }}
               >
                 <Trans>Check for update</Trans>

@@ -1,8 +1,8 @@
 {
-  "name": "koodo-reader",
+  "name": "folio",
   "main": "main.js",
   "version": "2.4.5",
-  "description": "Koodo Reader is a cross-platform ebook reader",
+  "description": "Folio is a cross-platform ebook reader",
   "author": {
     "name": "App by Troye",
     "email": "feedback@koodoreader.com"
@@ -11,7 +11,7 @@
     "node": ">=22.12.0",
     "npm": ">=6.0.0"
   },
-  "repository": "https://github.com/koodo-reader/koodo-reader",
+  "repository": "https://github.com/ssoad/folio",
   "private": false,
   "resolutions": {
     "@types/react": "^18.3.1",
@@ -20,6 +20,8 @@
   "dependencies": {
     "@anthropic-ai/sdk": "^0.129.0",
     "@aws-sdk/client-s3": "3.564.0",
+    "@fontsource-variable/geist": "^5.3.0",
+    "@fontsource-variable/newsreader": "^5.3.0",
     "@mozilla/readability": "^0.6.0",
     "axios": "0.31.1",
     "basic-ftp": "5.3.1",
@@ -121,8 +123,8 @@
   },
   "homepage": "./",
   "build": {
-    "appId": "xyz.960960.koodo",
-    "productName": "Koodo Reader",
+    "appId": "io.github.ssoad.folio",
+    "productName": "Folio",
     "copyright": "Copyright (c) 2020-2025 ${author}",
     "files": [
       "build/**/*",
@@ -145,7 +147,7 @@
       }
     ],
     "protocols": {
-      "name": "KoodoReader",
+      "name": "Folio",
       "schemes": [
         "koodo-reader"
       ]
@@ -155,8 +157,8 @@
     },
     "publish": {
       "provider": "github",
-      "repo": "koodo-reader",
-      "owner": "koodo-reader"
+      "repo": "folio",
+      "owner": "ssoad"
     },
     "buildDependenciesFromSource": false,
     "nodeGypRebuild": false,
@@ -325,7 +327,7 @@
       "publisher": "CN=0AEAD7C6-DF4A-4D05-8FA0-D816D7DE37FF",
       "publisherDisplayName": "App by Troye",
       "artifactName": "${productName}-${version}-${arch}.${ext}",
-      "displayName": "Koodo Reader",
+      "displayName": "Folio",
       "backgroundColor": "transparent"
     },
     "nsis": {

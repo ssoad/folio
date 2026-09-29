@@ -1,58 +1,125 @@
+/*
+ * Folio design tokens. Light is the default, dark applies with
+ * <html data-theme="dark">. Components read these variables; the legacy
+ * names further down (--app-bg, --control-bg, ...) map onto them so older
+ * styles follow the palette too.
+ */
 :root {
-  --app-bg: rgba(255, 255, 255, 1);
-  --text-color: rgba(75, 75, 75, 1);
-  --text-weak: rgba(75, 75, 75, 0.8);
-  --link-color: blue;
-  --hover-bg: rgba(75, 75, 75, 0.05);
-  --input-bg: rgba(75, 75, 75, 0.1);
-  --scrollbar-bg: rgba(75, 75, 75, 0.3);
-  --control-bg: rgba(75, 75, 75, 1);
-  --on-control: rgba(255, 255, 255, 1);
-  --accent-bg: rgba(75, 75, 75, 1);
-  --filled-bg: rgba(75, 75, 75, 1);
-  --on-filled: rgba(255, 255, 255, 1);
-  --panel-bg: rgba(255, 255, 255, 1);
-  --cover-bg: rgba(255, 255, 255, 1);
-  --drag-bg: hsla(0, 0%, 0%, 0.4);
-  --sidebar-divider: rgba(0, 0, 0, 0.07);
-  --active-item-bg: rgba(75, 75, 75, 1);
-  --tab-active-bg: rgba(0, 0, 0, 0.08);
-  --float-shadow: 0px 0px 12px rgba(0, 0, 0, 0.3);
-  --header-shadow: 0px 0px 5px rgba(0, 0, 0, 0.18);
-  --soft-shadow: 0px 0px 2px rgba(0, 0, 0, 0.18);
-  --spine-border: 1px solid rgba(191, 191, 191, 1);
-  --divider: rgba(75, 75, 75, 0.1);
-  --option-border: 2px solid rgba(75, 75, 75, 1);
-  --card-border: 2px solid rgba(75, 75, 75, 0.15);
+  color-scheme: light;
+
+  /* Palette */
+  --ground: #f7f6f3;
+  --surface: #ffffff;
+  --surface-raised: #ffffff;
+  --sidebar-bg: #f1f0ec;
+  --subtle-bg: #f1f0ec;
+  --active-bg: #e7e5df;
+  --border: #e4e2dc;
+  --border-strong: #d9d7d0;
+  --text: #1c1b19;
+  --muted: #6b6a65;
+  --faint: #8a8984;
+  --accent: #4458c7;
+  --accent-hover: #3a4db0;
+  --accent-soft: #e9ecfa;
+  --on-accent: #ffffff;
+  --danger: #b3261e;
+  --danger-soft: #fbe9e7;
+  --success: #1e7a48;
+  --success-soft: #e6f4ec;
+  --highlight: #f6e7b8;
+  --paper: #fbfaf7;
+  --overlay: rgba(28, 27, 25, 0.32);
+
+  /* Type */
+  --font-ui:
+    "Geist Variable", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui,
+    sans-serif;
+  --font-display: "Newsreader Variable", Georgia, "Times New Roman", serif;
+
+  /* Shape */
+  --radius-sm: 6px;
+  --radius: 8px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 20px;
+  --shadow-sm: 0 1px 2px rgba(28, 27, 25, 0.06);
+  --shadow-md: 0 1px 2px rgba(28, 27, 25, 0.06),
+    0 8px 24px -8px rgba(28, 27, 25, 0.16);
+  --shadow-lg: 0 2px 4px rgba(28, 27, 25, 0.06),
+    0 24px 64px -16px rgba(28, 27, 25, 0.28);
+  --focus-ring: 0 0 0 3px rgba(68, 88, 199, 0.25);
+
+  /* Legacy names, mapped onto the palette */
+  --app-bg: var(--ground);
+  --text-color: var(--text);
+  --text-weak: var(--muted);
+  --link-color: var(--accent);
+  --hover-bg: rgba(28, 27, 25, 0.05);
+  --input-bg: rgba(28, 27, 25, 0.05);
+  --scrollbar-bg: rgba(28, 27, 25, 0.2);
+  --control-bg: var(--accent);
+  --on-control: var(--on-accent);
+  --accent-bg: var(--accent);
+  --filled-bg: var(--accent);
+  --on-filled: var(--on-accent);
+  --panel-bg: var(--surface);
+  --cover-bg: #edebe6;
+  --drag-bg: var(--overlay);
+  --sidebar-divider: var(--border);
+  --active-item-bg: var(--active-bg);
+  --tab-active-bg: rgba(28, 27, 25, 0.06);
+  --float-shadow: var(--shadow-md);
+  --header-shadow: var(--shadow-sm);
+  --soft-shadow: 0 0 0 1px rgba(28, 27, 25, 0.08);
+  --spine-border: 1px solid var(--border);
+  --divider: #eceae5;
+  --option-border: 1px solid var(--border-strong);
+  --card-border: 1px solid var(--border);
 }
 
 :root[data-theme="dark"] {
-  --app-bg: rgba(47, 52, 55, 1);
-  --text-color: rgba(235, 235, 235, 1);
-  --text-weak: rgba(235, 235, 235, 0.8);
-  --link-color: lightskyblue;
-  --hover-bg: rgba(235, 235, 235, 0.035);
-  --input-bg: rgba(235, 235, 235, 0.1);
-  --scrollbar-bg: rgba(235, 235, 235, 0.5);
-  --control-bg: rgba(71, 76, 80, 1);
-  --on-control: rgba(235, 235, 235, 1);
-  --accent-bg: rgba(235, 235, 235, 0.5);
-  --filled-bg: rgba(235, 235, 235, 1);
-  --on-filled: rgba(47, 52, 55, 1);
-  --panel-bg: rgba(47, 52, 55, 1);
-  --cover-bg: rgba(235, 235, 235, 0.1);
-  --drag-bg: hsla(0, 0%, 100%, 0.2);
-  --sidebar-divider: rgba(255, 255, 255, 0.07);
-  --active-item-bg: rgba(255, 255, 255, 0.1);
-  --tab-active-bg: rgba(255, 255, 255, 0.12);
-  --float-shadow: 0px 0px 12px rgba(75, 75, 75, 1);
-  --header-shadow: 0px 0px 5px rgba(30, 30, 30, 1);
-  --soft-shadow: 0px 0px 2px rgba(235, 235, 235, 0.18);
-  --spine-border: 1px solid rgba(191, 191, 191, 0.3);
-  --divider: rgba(235, 235, 235, 0.1);
-  --option-border: 1.5px solid rgba(235, 235, 235, 1);
-  --card-border: 1px solid rgba(235, 235, 235, 0.1);
+  color-scheme: dark;
+
+  --ground: #141413;
+  --surface: #1c1c1b;
+  --surface-raised: #232322;
+  --sidebar-bg: #10100f;
+  --subtle-bg: #1f1f1e;
+  --active-bg: #2a2a28;
+  --border: #2b2b29;
+  --border-strong: #3a3a37;
+  --text: #edece8;
+  --muted: #a3a29d;
+  --faint: #8a8984;
+  --accent: #8c9bff;
+  --accent-hover: #a4b0ff;
+  --accent-soft: rgba(140, 155, 255, 0.14);
+  --on-accent: #141413;
+  --danger: #f2877d;
+  --danger-soft: rgba(242, 135, 125, 0.12);
+  --success: #6cc39a;
+  --success-soft: rgba(108, 195, 154, 0.12);
+  --highlight: rgba(246, 214, 120, 0.3);
+  --paper: #161615;
+  --overlay: rgba(0, 0, 0, 0.55);
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 1px 2px rgba(0, 0, 0, 0.4), 0 8px 24px -8px rgba(0, 0, 0, 0.6);
+  --shadow-lg: 0 2px 4px rgba(0, 0, 0, 0.4),
+    0 24px 64px -16px rgba(0, 0, 0, 0.7);
+  --focus-ring: 0 0 0 3px rgba(140, 155, 255, 0.3);
+
+  --hover-bg: rgba(237, 236, 232, 0.06);
+  --input-bg: rgba(237, 236, 232, 0.06);
+  --scrollbar-bg: rgba(237, 236, 232, 0.22);
+  --cover-bg: #262624;
+  --tab-active-bg: rgba(237, 236, 232, 0.08);
+  --soft-shadow: 0 0 0 1px rgba(237, 236, 232, 0.08);
+  --divider: #262624;
 }
+
+/* ── Base ─────────────────────────────────────────────────────────────────── */
 
 body,
 .active-annotation-dialog-tab {
@@ -64,6 +131,10 @@ body,
 a {
   color: var(--link-color);
   text-decoration: none;
+}
+
+::selection {
+  background: var(--accent-soft);
 }
 
 .booklist-shelf-list,
@@ -80,6 +151,7 @@ a {
   color: var(--text-color);
 }
 
+/* Inputs and outlined controls: hairline borders instead of heavy outlines */
 .add-dialog-shelf-list-box,
 .add-dialog-new-shelf-box,
 .add-dialog-cancel,
@@ -120,6 +192,48 @@ a {
   border: var(--option-border);
 }
 
+/* Text fields */
+.add-dialog-shelf-list-box,
+.add-dialog-new-shelf-box,
+.edit-dialog-book-name-box,
+.edit-dialog-book-author-box,
+.edit-dialog-input,
+.edit-dialog-textarea,
+.token-dialog-token-box,
+.feedback-dialog-content-box,
+.voice-add-content-box,
+.token-dialog-url-box,
+.token-dialog-username-box,
+.token-dialog-password-box,
+.input-value,
+.trans-add-content-box {
+  background-color: var(--surface);
+  color: var(--text-color);
+  border-radius: var(--radius-md);
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s;
+}
+
+.add-dialog-shelf-list-box:focus,
+.add-dialog-new-shelf-box:focus,
+.edit-dialog-book-name-box:focus,
+.edit-dialog-book-author-box:focus,
+.edit-dialog-input:focus,
+.edit-dialog-textarea:focus,
+.token-dialog-token-box:focus,
+.feedback-dialog-content-box:focus,
+.voice-add-content-box:focus,
+.token-dialog-url-box:focus,
+.token-dialog-username-box:focus,
+.token-dialog-password-box:focus,
+.input-value:focus,
+.trans-add-content-box:focus,
+.header-search-box:focus {
+  border-color: var(--accent);
+  box-shadow: var(--focus-ring);
+}
+
 .header-search-box,
 .header-search-box::placeholder,
 .feedback-dialog-content-box::placeholder,
@@ -133,40 +247,74 @@ a {
   background-color: var(--scrollbar-bg);
 }
 
-.delete-digest-button,
+/* ── Buttons ──────────────────────────────────────────────────────────────── */
+
+/* Primary actions: the one filled accent button in a view */
 .add-dialog-confirm,
-.backup-page-backup-selector,
-.delete-dialog-confirm,
-.book-item-config,
-.book-cover-item-config,
-.download-desk-button,
 .edit-dialog-confirm,
-.change-location-button,
 .token-dialog-confirm,
 .voice-add-confirm,
 .new-version-open,
 .update-dialog-container-button,
 .import-from-local,
-.side-menu-selector-container,
+.download-desk-button,
+.backup-page-backup-selector,
+.biometric-auth-button,
+.font-featured-progress-bar,
+.only-local-icon {
+  background-color: var(--accent);
+  color: var(--on-accent);
+}
+
+.delete-dialog-confirm,
+.delete-digest-button {
+  background-color: var(--danger);
+  color: #ffffff;
+}
+
+/* Secondary actions: surface with a hairline border */
+.change-location-button,
+.book-bookmark-link {
+  background-color: var(--surface);
+  color: var(--text-color);
+  box-shadow: inset 0 0 0 1px var(--border-strong);
+}
+
+.change-location-button:hover,
+.book-bookmark-link:hover {
+  background-color: var(--subtle-bg);
+}
+
+/* Floating controls over the page and book cards */
 .previous-chapter-single-container,
 .next-chapter-single-container,
-.book-bookmark-link,
-.message-box-container,
-.popup-close,
-.only-local-icon,
-.biometric-auth-button,
-.font-featured-progress-bar {
-  background-color: var(--control-bg);
-  color: var(--on-control);
+.book-item-config,
+.book-cover-item-config,
+.popup-close {
+  background-color: var(--surface);
+  color: var(--text-color);
+  box-shadow: 0 0 0 1px var(--border), var(--shadow-sm);
+}
+
+/* Selected navigation item */
+.side-menu-selector-container {
+  background-color: var(--active-bg);
+  color: var(--text-color);
+}
+
+/* Toast-like messages: inverted for contrast */
+.message-box-container {
+  background-color: var(--text);
+  color: var(--ground);
 }
 
 .active-tag {
-  background-color: var(--accent-bg);
-  color: var(--on-filled);
+  background-color: var(--accent-soft);
+  color: var(--accent);
 }
 
 .single-control-switch {
-  background-color: var(--accent-bg);
+  background-color: var(--accent);
 }
 
 .pin-dot.pin-dot-filled {
@@ -222,6 +370,8 @@ a {
   background: var(--drag-bg);
 }
 
+/* ── Surfaces ─────────────────────────────────────────────────────────────── */
+
 .action-dialog-container,
 .add-dialog-container,
 .select-more-actions,
@@ -244,16 +394,19 @@ a {
 .progress-panel,
 .setting-panel-parent {
   background: var(--panel-bg);
-  box-shadow: 0px 0px 7px rgba(0, 0, 0, 0.2);
+  box-shadow:
+    0 0 0 1px var(--border),
+    var(--shadow-lg);
 }
 
 .setting-dialog-sidebar {
+  background: var(--subtle-bg);
   border-right: 1px solid var(--sidebar-divider);
 }
 
 .setting-dialog-sidebar-item.active {
   background: var(--active-item-bg);
-  color: var(--on-control);
+  color: var(--text-color);
 }
 
 .plugin-tab-bar {
@@ -271,7 +424,9 @@ a {
 .detail-cover-background-container,
 .book-cover-item-cover {
   background: var(--cover-bg);
-  box-shadow: 0px 0px 5px rgba(0, 0, 0, 0.18);
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.08),
+    0 8px 24px -12px rgba(0, 0, 0, 0.35);
 }
 
 .backup-page-backup-selector,
@@ -321,20 +476,28 @@ a {
   background: var(--panel-bg);
 }
 
+/* Icons and labels on fixed coloured or image backgrounds */
 .exit-reading-text,
 .add-bookmark-text,
 .enter-fullscreen-text,
 .image-operation,
 .add-bookmark-icon,
 .exit-reading-icon,
-.message-box-icon,
-.active-icon,
-.active-selector,
 .enter-fullscreen-icon,
 .icon-popup,
 .cover-banner,
 .book-love-icon {
-  color: var(--on-control);
+  color: #ffffff;
+}
+
+.message-box-icon {
+  color: var(--ground);
+}
+
+/* Selected sidebar item sits on the subtle active fill */
+.active-icon,
+.active-selector {
+  color: var(--text-color);
 }
 
 .book-content-name,
@@ -350,6 +513,8 @@ a {
   border: var(--card-border);
 }
 
+/* ── Theme-specific details ───────────────────────────────────────────────── */
+
 [data-theme="light"] .book-love-icon,
 [data-theme="light"] .book-loved-icon,
 [data-theme="light"] .zoom-in-icon,
@@ -357,7 +522,7 @@ a {
 [data-theme="light"] .save-icon,
 [data-theme="light"] .clockwise-icon,
 [data-theme="light"] .counterclockwise-icon {
-  text-shadow: 0px 0px 5px rgba(75, 75, 75, 0.3);
+  text-shadow: 0px 0px 5px rgba(28, 27, 25, 0.3);
 }
 
 [data-theme="light"] .add-dialog-shelf-list-option {
@@ -376,29 +541,29 @@ a {
 }
 
 [data-theme="light"] .book-item-list {
-  box-shadow: 0px 0px 5px rgba(0, 0, 0, 0.18);
+  box-shadow: 0 0 0 1px var(--border);
 }
 
-[data-theme="light"] .more-options-dropdown {
-  background: var(--cover-bg);
-  box-shadow: 0px 0px 5px rgba(0, 0, 0, 0.18);
+.more-options-dropdown {
+  background: var(--surface);
+  box-shadow:
+    0 0 0 1px var(--border),
+    var(--shadow-md);
 }
 
-[data-theme="light"] .biometric-auth-container {
+.biometric-auth-container {
   background: var(--panel-bg);
-  box-shadow: 0px 0px 7px rgba(0, 0, 0, 0.2);
+  box-shadow:
+    0 0 0 1px var(--border),
+    var(--shadow-lg);
 }
 
-[data-theme="light"] .pin-keypad-container {
+.pin-keypad-container {
   background: var(--panel-bg);
-}
-
-[data-theme="light"] .single-control-switch {
-  color: var(--on-control);
 }
 
 [data-theme="light"] .protection-overlay {
-  background: #f5f5f5;
+  background: var(--ground);
 }
 
 [data-theme="dark"] .add-source-card {
@@ -412,36 +577,18 @@ a {
 }
 
 [data-theme="dark"] .add-dialog-shelf-list-option,
-[data-theme="dark"] .voice-add-content-box,
-[data-theme="dark"] .token-dialog-username-box,
-[data-theme="dark"] .token-dialog-token-box,
-[data-theme="dark"] .backup-source-dropdown,
-[data-theme="dark"] .pin-keypad-container,
-[data-theme="dark"] .biometric-auth-container {
-  background-color: var(--control-bg);
-  color: var(--on-control);
-}
-
-[data-theme="dark"] .previous-chapter-single-container,
-[data-theme="dark"] .next-chapter-single-container {
-  opacity: 0.7;
+[data-theme="dark"] .backup-source-dropdown {
+  background-color: var(--surface-raised);
+  color: var(--text-color);
 }
 
 [data-theme="dark"] .input-value,
 [data-theme="dark"] .tag-list-item-new,
 [data-theme="dark"] .tag-list-item,
-[data-theme="dark"] .more-options-dropdown,
 [data-theme="dark"] .protection-overlay {
   background: var(--panel-bg);
-  box-shadow: 0px 0px 7px rgba(0, 0, 0, 0.2);
 }
 
-[data-theme="dark"] .add-dialog-shelf-list-box,
-[data-theme="dark"] .add-dialog-new-shelf-box,
-[data-theme="dark"] .edit-dialog-book-name-box,
-[data-theme="dark"] .edit-dialog-book-author-box,
-[data-theme="dark"] .edit-dialog-input,
-[data-theme="dark"] .edit-dialog-textarea,
 [data-theme="dark"] .booklist-shelf-list {
   background: var(--panel-bg);
 }
@@ -454,12 +601,6 @@ a {
 [data-theme="dark"] .editor-box,
 [data-theme="dark"] #jumpPage,
 [data-theme="dark"] #jumpChapter,
-[data-theme="dark"] .add-dialog-shelf-list-box,
-[data-theme="dark"] .add-dialog-new-shelf-box,
-[data-theme="dark"] .edit-dialog-book-name-box,
-[data-theme="dark"] .edit-dialog-book-author-box,
-[data-theme="dark"] .edit-dialog-input,
-[data-theme="dark"] .edit-dialog-textarea,
 [data-theme="dark"] .card-list-item-show-more,
 [data-theme="dark"] input,
 [data-theme="dark"] .input-value {
@@ -468,7 +609,7 @@ a {
 
 @-moz-document url-prefix() {
   [data-theme="dark"] .single-control-switch {
-    border: 1.5px solid rgba(235, 235, 235, 0.3);
-    background-color: rgba(71, 76, 80, 1);
+    border: 1px solid var(--border-strong);
+    background-color: var(--surface-raised);
   }
 }

@@ -3,10 +3,16 @@
   height: 80px;
   overflow: hidden;
   margin-left: 190px;
+  --header-search-width: 320px;
+}
+/* The collapsed sidebar is 120px narrower; the search box takes the space */
+.header-collapsed {
+  margin-left: 40px;
+  --header-search-width: 440px;
 }
 
 .setting-icon-container:hover {
-  border-radius: 50%;
+  color: var(--text);
 }
 .icon-pro-close {
   font-size: 12px !important;
@@ -17,8 +23,8 @@
 }
 .header-sort-icon {
   float: left;
-  margin-top: 3px;
-  font-size: 26px;
+  margin-top: 2px;
+  font-size: 20px;
 }
 .header-archive-icon {
   float: left;
@@ -31,7 +37,7 @@
 }
 .only-local-container {
   position: absolute;
-  left: 520px;
+  left: 580px;
   margin-top: 29px;
 }
 .only-local-text {
@@ -132,46 +138,61 @@
 }
 .setting-icon-parrent {
   position: absolute;
-  top: 18px;
-  margin-left: 280px;
-  height: 50px;
+  top: 20px;
+  margin-left: calc(var(--header-search-width) + 50px);
+  height: 40px;
   z-index: 1;
 }
 .header-search-container {
   position: absolute;
-  top: 23px;
-  margin-left: 40px;
-  width: 220px;
+  top: 20px;
+  margin-left: 32px;
+  width: var(--header-search-width, 320px);
 }
 .setting-icon {
   float: left;
 }
 .header-report-container {
   text-align: right;
-  height: 30px;
-  line-height: 30px;
+  height: 32px;
+  line-height: 32px;
   cursor: pointer;
-  border-radius: 5px;
-  padding-left: 10px;
-  padding-right: 10px;
+  border-radius: 16px;
+  padding: 0 12px;
   position: absolute;
-  top: 30px;
+  top: 24px;
   right: 180px;
-
-  text-underline-offset: 3px;
+  font-size: 13px;
+  color: var(--muted);
+  transition:
+    color 0.15s,
+    background-color 0.15s;
+}
+.header-report-container:hover {
+  color: var(--text);
+  background: var(--hover-bg);
+}
+.header-report-container span[style] {
+  text-decoration: none !important;
 }
 .setting-icon-container {
-  width: 50px;
-  height: 50px;
-  font-size: 25px;
-  line-height: 50px;
+  width: 40px;
+  height: 40px;
+  font-size: 18px;
+  line-height: 40px;
   cursor: pointer;
-  transition: 0.1s;
+  transition:
+    color 0.15s,
+    background-color 0.15s;
   display: flex;
   justify-content: center;
   align-items: center;
-  margin-left: 15px;
+  margin-left: 8px;
   float: left;
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  color: var(--muted);
+  box-shadow: inset 0 0 0 1px var(--border);
 }
 @keyframes rotate {
   from {

@@ -29,7 +29,7 @@
 }
 
 .opds-input:focus {
-  border-color: #f16464;
+  border-color: var(--accent);
 }
 
 /* Search bar */
@@ -100,14 +100,14 @@
   font-weight: 700;
   padding: 2px 6px;
   border-radius: 3px;
-  background-color: rgba(241, 100, 100, 0.12);
-  color: #f16464;
+  background-color: var(--accent-soft);
+  color: var(--accent);
   cursor: pointer;
   transition: background-color 0.15s;
 }
 
 .opds-format-tag:hover {
-  background-color: rgba(241, 100, 100, 0.28);
+  background-color: color-mix(in srgb, var(--accent) 25%, transparent);
 }
 
 /* Infinite scroll "loading more" indicator */
@@ -124,7 +124,7 @@
   height: 18px;
   border-radius: 50%;
   border: 2px solid rgba(128, 128, 128, 0.25);
-  border-top-color: #f16464;
+  border-top-color: var(--accent);
   animation: opds-spin 0.7s linear infinite;
 }
 
@@ -315,7 +315,7 @@
   bottom: 35px;
   padding-left: 20px;
   padding-right: 20px;
-  color: rgb(231, 69, 69);
+  color: var(--danger);
 }
 .icon-local {
   opacity: 1;

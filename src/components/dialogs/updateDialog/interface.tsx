@@ -1,4 +1,5 @@
 import BookModel from "../../../models/Book";
+import { UpdateLog } from "../../../utils/request/common";
 export interface UpdateInfoProps {
   currentBook: BookModel;
 
@@ -15,9 +16,5 @@ export interface UpdateInfoProps {
   ) => void;
 }
 export interface UpdateInfoState {
-  updateLog: any;
-  progress: number;
-  downloadedMB: number;
-  totalMB: number;
-  isDownloading: boolean;
+  updateLog: UpdateLog | null;
 }

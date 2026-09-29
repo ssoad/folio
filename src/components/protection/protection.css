@@ -63,7 +63,7 @@
 }
 
 .pin-error-msg {
-  color: rgb(231, 69, 69, 0.8);
+  color: var(--danger);
   font-size: 13px;
   margin-bottom: 10px;
   text-align: center;
