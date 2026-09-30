@@ -1,7 +1,7 @@
 import { connect } from "react-redux";
 import SelfHostedSetting from "./component";
 import { withTranslation } from "react-i18next";
-import { handleFetchPlugins } from "../../../store/actions";
+import { handleFetchAuthed, handleFetchPlugins } from "../../../store/actions";
 import { stateType } from "../../../store";
 
 const mapStateToProps = (_state: stateType) => {
@@ -9,6 +9,7 @@ const mapStateToProps = (_state: stateType) => {
 };
 const actionCreator = {
   handleFetchPlugins,
+  handleFetchAuthed,
 };
 export default connect(
   mapStateToProps,

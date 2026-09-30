@@ -12,6 +12,7 @@ import (
 	"encoding/base64"
 	"errors"
 	"net/http"
+	"strconv"
 	"strings"
 )
 
@@ -32,6 +33,14 @@ func initProVault() {
 	if secret == "" {
 		secret = proAccessToken
 	}
+	// Neither set (accounts only): a random key kept in the database
+	if secret == "" && accountsDB != nil {
+		accountsDB.QueryRow(`SELECT value FROM settings WHERE key = 'internal_vault_secret'`).Scan(&secret)
+		if secret == "" {
+			secret = randomToken(32)
+			accountsDB.Exec(`INSERT INTO settings (key, value) VALUES ('internal_vault_secret', ?)`, secret)
+		}
+	}
 	sum := sha256.Sum256([]byte("folio-token-vault:" + secret))
 	proVaultKey = sum[:]
 }
@@ -44,7 +53,16 @@ func proVaultCipher() (cipher.AEAD, error) {
 	return cipher.NewGCM(block)
 }
 
-func proEncryptToken(plain string) (string, error) {
+// Credentials are bound to the account that stored them (aad), so one user
+// can't decrypt another's; the owner token uses none
+func vaultAAD(p *principal) []byte {
+	if p == nil || p.User == nil {
+		return nil
+	}
+	return []byte("user:" + strconv.FormatInt(p.User.ID, 10))
+}
+
+func proEncryptToken(plain string, aad []byte) (string, error) {
 	gcm, err := proVaultCipher()
 	if err != nil {
 		return "", err
@@ -53,11 +71,11 @@ func proEncryptToken(plain string) (string, error) {
 	if _, err := rand.Read(nonce); err != nil {
 		return "", err
 	}
-	sealed := gcm.Seal(nonce, nonce, []byte(plain), nil)
+	sealed := gcm.Seal(nonce, nonce, []byte(plain), aad)
 	return proVaultPrefix + base64.StdEncoding.EncodeToString(sealed), nil
 }
 
-func proDecryptToken(encrypted string) (string, error) {
+func proDecryptToken(encrypted string, aad []byte) (string, error) {
 	raw, ok := strings.CutPrefix(encrypted, proVaultPrefix)
 	if !ok {
 		return "", errors.New("Token was not encrypted by this server")
@@ -73,7 +91,7 @@ func proDecryptToken(encrypted string) (string, error) {
 	if len(sealed) < gcm.NonceSize() {
 		return "", errors.New("Malformed token")
 	}
-	plain, err := gcm.Open(nil, sealed[:gcm.NonceSize()], sealed[gcm.NonceSize():], nil)
+	plain, err := gcm.Open(nil, sealed[:gcm.NonceSize()], sealed[gcm.NonceSize():], aad)
 	if err != nil {
 		return "", errors.New("Token can't be decrypted with this server's key")
 	}
@@ -89,7 +107,7 @@ func proHandleEncryptToken(w http.ResponseWriter, r *http.Request) {
 		proFail(w, http.StatusBadRequest, 400, "Expected {token}")
 		return
 	}
-	encrypted, err := proEncryptToken(in.Token)
+	encrypted, err := proEncryptToken(in.Token, vaultAAD(principalFrom(r)))
 	if err != nil {
 		proFail(w, http.StatusInternalServerError, 500, "Encryption failed")
 		return
@@ -105,7 +123,7 @@ func proHandleDecryptToken(w http.ResponseWriter, r *http.Request) {
 		proFail(w, http.StatusBadRequest, 400, "Expected {encrypted_token}")
 		return
 	}
-	plain, err := proDecryptToken(in.EncryptedToken)
+	plain, err := proDecryptToken(in.EncryptedToken, vaultAAD(principalFrom(r)))
 	if err != nil {
 		proFail(w, http.StatusBadRequest, 400, err.Error())
 		return

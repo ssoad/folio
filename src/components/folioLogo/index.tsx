@@ -3,7 +3,8 @@ import "./folioLogo.css";
 
 interface FolioLogoProps {
   size?: number;
-  // Show "Folio" next to the mark
+  // Show the page mark and/or the "Folio" wordmark
+  withMark?: boolean;
   withWordmark?: boolean;
   isPro?: boolean;
   className?: string;
@@ -33,6 +34,7 @@ export const FolioMark = ({ size = 28 }: { size?: number }) => (
 
 const FolioLogo = ({
   size = 28,
+  withMark = true,
   withWordmark = true,
   isPro = false,
   className = "",
@@ -43,10 +45,10 @@ const FolioLogo = ({
     onClick={onClick}
     role={onClick ? "link" : undefined}
   >
-    <FolioMark size={size} />
+    {withMark && <FolioMark size={size} />}
     {withWordmark && (
       <span className="folio-logo-wordmark" style={{ fontSize: size * 0.86 }}>
-        Folio
+        Folio<span className="folio-logo-dot">.</span>
       </span>
     )}
     {isPro && <span className="folio-logo-pro">Pro</span>}

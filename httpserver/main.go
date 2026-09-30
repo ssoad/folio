@@ -106,7 +106,7 @@ func getEnv(key, def string) string {
 func applyCorsHeaders(w http.ResponseWriter, r *http.Request) bool {
 	origin := r.Header.Get("Origin")
 	w.Header().Set("Vary", "Origin")
-	w.Header().Set("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS")
+	w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
 	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
 
 	if origin == "" {
@@ -469,6 +469,11 @@ func handler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// The admin panel (same origin, cookie session)
+	if proEnabled && (r.URL.Path == "/admin" || strings.HasPrefix(r.URL.Path, "/admin/")) {
+		adminHandler(w, r)
+		return
+	}
 	// Pro services authenticate with their own bearer token
 	if proEnabled && strings.HasPrefix(r.URL.Path, "/pro/") {
 		proHandler(w, r)
@@ -542,6 +547,7 @@ func main() {
 		}
 		if proEnabled {
 			log.Printf("Self-hosted Pro services available at http://localhost%s/pro/v1", addr)
+			log.Printf("Admin panel at http://localhost%s/admin", addr)
 		}
 		if opdsEnabled && serverEnabled {
 			log.Printf("OPDS catalog available at http://localhost%s/opds", addr)

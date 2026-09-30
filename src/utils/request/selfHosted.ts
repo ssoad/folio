@@ -1,4 +1,5 @@
 import { ConfigService } from "../../assets/lib/kookit-extra-browser.min";
+import { isNativeApp } from "../platform";
 import i18n from "../../i18n";
 import { decryptSecret, encryptSecret } from "../ai";
 
@@ -19,8 +20,11 @@ export type SelfHostedFeature =
 
 export interface SelfHostedConfig {
   url: string;
-  // Encrypted with safeStorage on desktop
+  // Encrypted with safeStorage on desktop; an account's device token or the
+  // server's owner token
   token: string;
+  // Set when signed in with an account rather than the owner token
+  account?: { email: string; name: string };
   features: Record<SelfHostedFeature, boolean>;
   // Cloud drives the server can sign in to
   drives?: string[];
@@ -103,17 +107,18 @@ export const normalizeServerUrl = (url: string) => {
   return trimmed;
 };
 
+// config.token "" sends no Authorization (sign-in, sign-up, plan list)
 const request = async <T>(
   config: { url: string; token: string },
   path: string,
   init: { method?: "GET" | "POST"; body?: unknown } = {}
 ): Promise<SelfHostedResponse<T>> => {
   try {
-    const token = await decryptSecret(config.token);
+    const token = config.token ? await decryptSecret(config.token) : "";
     const response = await fetch(config.url + path, {
       method: init.method || "GET",
       headers: {
-        Authorization: "Bearer " + token,
+        ...(token ? { Authorization: "Bearer " + token } : {}),
         ...(init.body !== undefined
           ? { "Content-Type": "application/json" }
           : {}),
@@ -205,12 +210,17 @@ const syncAIModel = (config: SelfHostedConfig | null) => {
   }
 };
 
-export const connectSelfHostedServer = async (url: string, token: string) => {
+export const connectSelfHostedServer = async (
+  url: string,
+  token: string,
+  account?: { email: string; name: string }
+) => {
   const normalized = normalizeServerUrl(url);
   const status = await fetchStatus(normalized, token.trim());
   const config: SelfHostedConfig = {
     url: normalized,
     token: await encryptSecret(token.trim()),
+    account,
     features: status.features,
     drives: status.drives || [],
     googlePicker: status.googlePicker,
@@ -382,6 +392,218 @@ export const fetchSelfHostedAsset = async (kind: AssetKind, path: string) => {
   return fetch(`${config.url}/pro/v1/assets/${kind}/${encodedPath}`, {
     headers: { Authorization: "Bearer " + token },
   });
+};
+
+// ── Accounts ────────────────────────────────────────────────────────────────
+
+export interface ServerInfo {
+  registration_open: boolean;
+  google_enabled: boolean;
+  email_verification: boolean;
+  password_reset: boolean;
+  owner_token: boolean;
+}
+
+export interface AccountUser {
+  id: number;
+  email: string;
+  name: string;
+  role: string;
+  has_password: boolean;
+  has_google: boolean;
+}
+
+export interface AccountPackage {
+  id: number;
+  name: string;
+  description: string;
+  price_label: string;
+  duration_days: number;
+  features: string[];
+  limits: Record<string, number>;
+}
+
+export interface AccountSubscription {
+  id: number;
+  package_name: string;
+  source: string;
+  starts_at: number;
+  ends_at: number;
+  active: boolean;
+}
+
+export interface AccountDevice {
+  id: number;
+  name: string;
+  created_at: number;
+  last_used_at: number;
+}
+
+export interface AccountSummary {
+  user: AccountUser;
+  subscription: AccountSubscription | null;
+  package: AccountPackage | null;
+  features: Record<SelfHostedFeature | "drives", boolean>;
+  usage: Record<string, number>;
+  limits: Record<string, number>;
+  period: string;
+  devices: AccountDevice[];
+  current_device: number;
+}
+
+export interface AccessRequest {
+  id: number;
+  kind: "subscription" | "special";
+  package_name: string;
+  message: string;
+  payment_reference: string;
+  status: "pending" | "approved" | "rejected";
+  admin_note: string;
+  created_at: number;
+}
+
+// Shown in the admin panel's device list
+const deviceName = () => {
+  const platform = isNativeApp()
+    ? "Android"
+    : window.electronAPI
+      ? "desktop"
+      : "web";
+  return "Folio " + platform;
+};
+
+// What the server supports; null for older servers without accounts
+export const fetchServerInfo = async (url: string) => {
+  const response = await request<ServerInfo>(
+    { url: normalizeServerUrl(url), token: "" },
+    "/pro/v1/info"
+  );
+  if (response.code === 0) {
+    throw new Error(response.msg || i18n.t("Connection failed"));
+  }
+  return response.code === 200 && response.data ? response.data : null;
+};
+
+interface AuthResult {
+  token?: string;
+  user?: AccountUser;
+  verification_required?: boolean;
+}
+
+const finishSignIn = async (url: string, response: SelfHostedResponse<AuthResult>) => {
+  if (response.code !== 200 || !response.data) {
+    throw new Error(response.msg || i18n.t("Connection failed"));
+  }
+  if (response.data.verification_required || !response.data.token) {
+    return { verificationRequired: true };
+  }
+  const user = response.data.user!;
+  await connectSelfHostedServer(url, response.data.token, {
+    email: user.email,
+    name: user.name,
+  });
+  return { verificationRequired: false };
+};
+
+export const signInWithPassword = async (
+  url: string,
+  email: string,
+  password: string
+) => {
+  const normalized = normalizeServerUrl(url);
+  return finishSignIn(
+    normalized,
+    await request<AuthResult>({ url: normalized, token: "" }, "/pro/v1/auth/login", {
+      method: "POST",
+      body: { email, password, device: deviceName() },
+    })
+  );
+};
+
+export const signUp = async (
+  url: string,
+  name: string,
+  email: string,
+  password: string
+) => {
+  const normalized = normalizeServerUrl(url);
+  return finishSignIn(
+    normalized,
+    await request<AuthResult>(
+      { url: normalized, token: "" },
+      "/pro/v1/auth/register",
+      { method: "POST", body: { name, email, password, device: deviceName() } }
+    )
+  );
+};
+
+// Opened in the browser; the server's page shows a code to paste back
+export const googleSignInUrl = (url: string) =>
+  normalizeServerUrl(url) + "/pro/v1/auth/google/authorize";
+
+export const signInWithGoogleCode = async (url: string, code: string) => {
+  const normalized = normalizeServerUrl(url);
+  return finishSignIn(
+    normalized,
+    await request<AuthResult>(
+      { url: normalized, token: "" },
+      "/pro/v1/auth/google/exchange",
+      { method: "POST", body: { code, device: deviceName() } }
+    )
+  );
+};
+
+export const requestPasswordReset = (url: string, email: string) =>
+  request({ url: normalizeServerUrl(url), token: "" }, "/pro/v1/auth/forgot", {
+    method: "POST",
+    body: { email },
+  });
+
+export const resendVerification = (url: string, email: string) =>
+  request({ url: normalizeServerUrl(url), token: "" }, "/pro/v1/auth/resend", {
+    method: "POST",
+    body: { email },
+  });
+
+export const fetchAccount = () => call<AccountSummary>("/pro/v1/account");
+
+export const fetchPlans = async () => {
+  const config = getSelfHostedConfig();
+  if (!config) return null;
+  const response = await request<{
+    packages: AccountPackage[];
+    payment_instructions: string;
+  }>({ url: config.url, token: "" }, "/pro/v1/packages");
+  return response.code === 200 ? response.data || null : null;
+};
+
+export const redeemPromoCode = (code: string) =>
+  call<AccountSubscription>("/pro/v1/account/redeem", {
+    method: "POST",
+    body: { code },
+  });
+
+export const fetchAccessRequests = () =>
+  call<AccessRequest[]>("/pro/v1/account/requests");
+
+export const createAccessRequest = (body: {
+  kind: "subscription" | "special";
+  package_id?: number;
+  message?: string;
+  payment_reference?: string;
+}) =>
+  call<AccessRequest[]>("/pro/v1/account/requests", { method: "POST", body });
+
+export const signOutDevice = (id: number) =>
+  call<AccountDevice[]>("/pro/v1/account/devices/revoke", {
+    method: "POST",
+    body: { id },
+  });
+
+// Ends this device's session on the server, then forgets the server here
+export const signOutAccount = async () => {
+  await call("/pro/v1/account/logout", { method: "POST" });
+  disconnectSelfHostedServer();
 };
 
 // Same contract as system OCR (parseWithSystemOCR): page image in, text out

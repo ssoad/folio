@@ -37,7 +37,7 @@ ENV ENABLE_OPDS=false
 # Self-hosted Pro services, see httpserver/README.md
 ENV ENABLE_PRO_SERVER=false
 
-# Define volume for uploads directory
-VOLUME ["/app/uploads"]
+# Uploaded files, and the accounts database (users, plans, settings)
+VOLUME ["/app/uploads", "/app/data"]
 
 CMD ["/start.sh"]

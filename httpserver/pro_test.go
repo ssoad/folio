@@ -297,7 +297,7 @@ func TestProTokenVaultRoundTrip(t *testing.T) {
 
 func TestProTokenVaultRejectsForeignTokens(t *testing.T) {
 	srv := setupPro(t)
-	enc, err := proEncryptToken("secret")
+	enc, err := proEncryptToken("secret", nil)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -11,8 +11,42 @@ One Go binary with three optional services:
 ## Folio services
 
 Folio has no central cloud: everything beyond reading local books comes from
-the server you run. In the app, open **Settings → Server** and enter the
-server address and access token.
+the server you run. People create an account on it from the app
+(**Settings → Server**), with email and password or Google, and their
+package decides which features they get and how much of them per month.
+You manage everything in the admin panel at `/admin`.
+
+### Accounts and the admin panel
+
+1. Start the server and open `https://your-server/admin`. Create the first
+   admin with the setup code printed in the server log, or set
+   `ADMIN_EMAIL` and `ADMIN_PASSWORD`, which create (or reset) that admin at
+   startup.
+2. **Packages**: create plans such as Free, Pro and Family. Each has
+   features (AI, voices, OCR, metadata, sync, downloads, cloud drives),
+   optional monthly limits (AI requests, voice characters, OCR pages), a
+   duration and a price label shown in the app.
+3. **Settings**: choose the default package (everyone without an active
+   subscription gets it, and ended plans fall back to it), write the payment
+   instructions shown in the app, and set up email (verification, password
+   reset) and Google sign-in.
+4. People get a package in three ways:
+   - **Promo codes** (Promo codes page): single or bulk, with uses, days of
+     access and an expiry date. Users redeem them in the app.
+   - **Buying a plan**: they pick a plan in the app, pay you outside the app
+     following your instructions, and send their payment reference. You
+     approve the request (Access requests page), choosing the days.
+   - **Special access**: a free-text request you approve with any package.
+   You can also give or cancel a package on a user's page.
+5. On a user's page you also see their usage, subscription history and
+   signed-in devices, and can sign them out, disable, promote or delete them.
+
+A feature works when the server provides it (see below) and the user's
+package includes it. The accounts database is SQLite at `PRO_DB_PATH`
+(Docker: the `/app/data` volume); back it up.
+
+`PRO_ACCESS_TOKEN` is optional: it's an owner token with every feature and no
+limits, for your own devices.
 
 | Feature | Needs |
 |---|---|
@@ -29,7 +63,9 @@ server address and access token.
 | Variable | Description |
 |---|---|
 | `ENABLE_PRO_SERVER` | `true` to enable |
-| `PRO_ACCESS_TOKEN` | Token the app sends as `Authorization: Bearer ...`, at least 16 characters. A Docker secret named by `PRO_ACCESS_TOKEN_FILE` (default `pro_access_token`) takes precedence. |
+| `PRO_ACCESS_TOKEN` | Optional owner token (every feature, no limits), at least 16 characters. A Docker secret named by `PRO_ACCESS_TOKEN_FILE` (default `pro_access_token`) takes precedence. |
+| `PRO_DB_PATH` | Accounts database, default `./data/folio.db` |
+| `ADMIN_EMAIL`, `ADMIN_PASSWORD` | Create or reset this admin at startup (otherwise use the setup code from the log) |
 | `PRO_AI_BASE_URL` | OpenAI-compatible API base, e.g. `https://api.openai.com/v1`, `https://openrouter.ai/api/v1`, `http://ollama:11434/v1` |
 | `PRO_AI_API_KEY` | Key for that API (leave empty for local servers) |
 | `PRO_AI_MODEL` | Model used for every AI feature |
@@ -38,29 +74,34 @@ server address and access token.
 | `PRO_TTS_API_KEY` | Key for the speech API, if it needs one |
 | `PRO_TTS_MODEL` | Speech model, default `kokoro` |
 | `PRO_TTS_VOICE` | Voice used when the app asks for one the TTS server doesn't have, default `af_heart` |
-| `PRO_TOKEN_KEY` | Secret the data-source credentials are encrypted with. Defaults to `PRO_ACCESS_TOKEN`; set it so you can change the access token without adding the data sources again. A Docker secret named by `PRO_TOKEN_KEY_FILE` (default `pro_token_key`) takes precedence. Changing it makes saved credentials unreadable. |
-| `PRO_PUBLIC_URL` | Address the server is reached at from the internet, e.g. `https://folio.example.com`. Cloud-drive providers send the browser back to it after sign-in. |
+| `PRO_TOKEN_KEY` | Secret the data-source credentials are encrypted with. Defaults to `PRO_ACCESS_TOKEN`, or a random key kept in the database when neither is set; set it so you can change the access token without adding the data sources again. A Docker secret named by `PRO_TOKEN_KEY_FILE` (default `pro_token_key`) takes precedence. Changing it makes saved credentials unreadable. |
+| `PRO_PUBLIC_URL` | Address the server is reached at from the internet, e.g. `https://folio.example.com`. Used for cloud-drive and Google sign-in and in emails; can also be set in the admin panel. |
 | `PRO_OAUTH_<PROVIDER>_CLIENT_ID`, `PRO_OAUTH_<PROVIDER>_CLIENT_SECRET` | OAuth app for a cloud drive, see below |
 | `PRO_OAUTH_GOOGLE_APP_ID`, `PRO_OAUTH_GOOGLE_API_KEY` | Google Cloud project number and browser API key for the Google Drive file picker used when importing books |
 | `PRO_ASSETS_DIR` | Folder with downloadable fonts, dictionaries and backgrounds, default `./assets` |
 | `ALLOWED_ORIGINS` | Comma-separated origins allowed to call the server from a browser (shared with the file server) |
 
-Generate a token with `openssl rand -hex 32`. Put the server behind HTTPS
-(Caddy, Nginx, Traefik) when it is reachable from the internet, the token
-travels in every request.
+Email (SMTP), Google sign-in, sign-up rules and payment instructions are set
+in the admin panel, not the environment.
+
+Generate secrets with `openssl rand -hex 32`. Put the server behind HTTPS
+(Caddy, Nginx, Traefik) when it is reachable from the internet: sign-in
+passwords and tokens travel in requests.
 
 Example:
 
 ```bash
 docker run -d -p 8080:8080 \
   -e ENABLE_PRO_SERVER=true \
-  -e PRO_ACCESS_TOKEN=$(openssl rand -hex 32) \
+  -e PRO_PUBLIC_URL=https://folio.example.com \
+  -e ADMIN_EMAIL=you@example.com -e ADMIN_PASSWORD='a long password' \
   -e PRO_TOKEN_KEY=$(openssl rand -hex 32) \
   -e PRO_AI_BASE_URL=https://openrouter.ai/api/v1 \
   -e PRO_AI_API_KEY=sk-or-... \
   -e PRO_AI_MODEL=anthropic/claude-opus-5 \
   -e PRO_TTS_BASE_URL=http://kokoro:8880/v1 \
   -v /opt/folio-assets:/app/assets \
+  -v /opt/folio-data:/app/data \
   ghcr.io/ssoad/folio
 ```
 
@@ -103,12 +144,31 @@ assets/
 ### API
 
 Endpoints answer with a `{"code": 200, "msg": "success", "data": ...}`
-envelope and need the bearer token, except the three pages the browser opens
-during cloud-drive sign-in.
+envelope. Services need a bearer token: an account's device token (from
+sign-in) or the owner token. Sign-in, sign-up and the plan list don't, nor
+do the pages the browser opens during sign-in.
 
 | Endpoint | Purpose |
 |---|---|
-| `GET /pro/v1/status` | Which features are configured, the cloud drives that can sign in, Google picker settings |
+| `GET /pro/v1/info` | Public. Sign-up open, Google sign-in, email verification |
+| `GET /pro/v1/packages` | Public. Plans shown in the app and payment instructions |
+| `POST /pro/v1/auth/register`, `POST /pro/v1/auth/login` | `{email, password, name?, device}` → `{token, user}` |
+| `GET /pro/v1/auth/google/authorize`, `/callback`; `POST /pro/v1/auth/google/exchange` | Google sign-in; the callback page shows a code the app exchanges for a token |
+| `POST /pro/v1/auth/forgot`, `/resend`; `GET /pro/v1/auth/verify`, `/reset` | Password reset and email verification (links in emails) |
+| `GET /pro/v1/account` | Plan, features, usage, limits, devices |
+| `POST /pro/v1/account/redeem` | `{code}`: promo code |
+| `GET`, `POST /pro/v1/account/requests` | Plan purchase (`{kind: "subscription", package_id, payment_reference}`) or special access (`{kind: "special", message}`) |
+| `POST /pro/v1/account/logout`, `/devices/revoke`, `/password` | Sessions and password |
+| `/admin/api/*` | The admin panel's API (cookie session, `X-Folio-Admin: 1` header) |
+
+A request over a package's monthly limit gets HTTP 429; a feature the
+package doesn't include gets 403.
+
+The services:
+
+| Endpoint | Purpose |
+|---|---|
+| `GET /pro/v1/status` | Features this caller can use (the server's, narrowed by their package), cloud drives, Google picker settings |
 | `POST /pro/v1/openai/chat/completions`, `GET /pro/v1/openai/models` | OpenAI-compatible proxy to `PRO_AI_*`; the app registers it as an AI model |
 | `POST /pro/v1/translate/batch` | `{texts, from, to}` → `{texts}` |
 | `POST /pro/v1/title/analyze` | `{title}` → `{name, author}` |

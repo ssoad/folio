@@ -14,8 +14,12 @@ services:
       - ENABLE_HTTP_SERVER=false
       # Self-hosted Pro services on port 8080 (see httpserver/README.md)
       - ENABLE_PRO_SERVER=${ENABLE_PRO_SERVER:-false}
+      # Optional owner token with every feature; users sign in with accounts
       - PRO_ACCESS_TOKEN=${PRO_ACCESS_TOKEN:-}
       - PRO_TOKEN_KEY=${PRO_TOKEN_KEY:-}
+      # First admin for /admin (or use the setup code printed in the log)
+      - ADMIN_EMAIL=${ADMIN_EMAIL:-}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-}
       - PRO_AI_BASE_URL=${PRO_AI_BASE_URL:-}
       - PRO_AI_API_KEY=${PRO_AI_API_KEY:-}
       - PRO_AI_MODEL=${PRO_AI_MODEL:-}
@@ -37,6 +41,8 @@ services:
       - /opt/uploads:/app/uploads
       # Fonts, dictionaries and backgrounds the app can download
       - /opt/folio-assets:/app/assets
+      # Accounts database: users, packages, promo codes, settings. Back it up.
+      - /opt/folio-data:/app/data
       # 或者使用命名卷
       # - uploads_data:/app/uploads
 # 如果使用命名卷，取消注释以下内容

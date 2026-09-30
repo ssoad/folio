@@ -17,11 +17,20 @@
 .folio-mark-ink {
   fill: var(--on-accent);
 }
+/* Wordmark: upright Newsreader at display optical size, set tight, ending
+   in an accent full stop */
 .folio-logo-wordmark {
   font-family: var(--font-display);
   font-weight: 600;
-  letter-spacing: -0.02em;
+  font-optical-sizing: auto;
+  font-variation-settings: "opsz" 72;
+  letter-spacing: -0.045em;
   line-height: 1;
+  color: var(--text);
+}
+.folio-logo-dot {
+  color: var(--accent);
+  margin-left: 0.01em;
 }
 .folio-logo-pro {
   padding: 2px 6px;

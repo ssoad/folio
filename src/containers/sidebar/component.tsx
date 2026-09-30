@@ -411,7 +411,8 @@ class Sidebar extends React.Component<SidebarProps, SidebarState> {
           {!this.props.isCollapsed && (
             <FolioLogo
               className="logo"
-              size={26}
+              size={34}
+              withMark={false}
               isPro={canUseProFeature()}
               onClick={() => {
                 this.handleJump(FOLIO_URL);

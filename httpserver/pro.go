@@ -12,7 +12,6 @@ package main
 import (
 	"bytes"
 	"context"
-	"crypto/subtle"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
@@ -67,9 +66,11 @@ func initPro() {
 	if proAccessToken == "" {
 		proAccessToken = strings.TrimSpace(os.Getenv("PRO_ACCESS_TOKEN"))
 	}
-	if len(proAccessToken) < 16 {
-		log.Fatal("[pro] ENABLE_PRO_SERVER=true requires PRO_ACCESS_TOKEN (or a pro_access_token Docker secret) of at least 16 characters")
+	// Optional with accounts: an owner token with every feature and no limits
+	if proAccessToken != "" && len(proAccessToken) < 16 {
+		log.Fatal("[pro] PRO_ACCESS_TOKEN (or the pro_access_token Docker secret) must be at least 16 characters")
 	}
+	initAccounts()
 
 	proAI = proUpstream{
 		BaseURL: strings.TrimRight(os.Getenv("PRO_AI_BASE_URL"), "/"),
@@ -113,12 +114,26 @@ func proHandler(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 	}
-	if !proAuthenticate(r) {
+	r.Body = http.MaxBytesReader(w, r.Body, proMaxBodyBytes)
+	// Sign-up, sign-in and the plan list need no token
+	if handlePublicAccounts(w, r, path) {
+		return
+	}
+	p := resolvePrincipal(r)
+	if p == nil {
 		proFail(w, http.StatusUnauthorized, 401, "Invalid access token")
 		return
 	}
-	r.Body = http.MaxBytesReader(w, r.Body, proMaxBodyBytes)
+	r = r.WithContext(context.WithValue(r.Context(), principalKey{}, p))
+	if handleAccount(w, r, p, path) {
+		return
+	}
+	withPlan(w, r, p, r.Method, path, proRoute)
+}
 
+// The services; withPlan has already checked the caller's plan
+func proRoute(w http.ResponseWriter, r *http.Request) {
+	path := strings.TrimSuffix(r.URL.Path, "/")
 	if rest, ok := strings.CutPrefix(path, "/pro/v1/assets/"); ok && r.Method == http.MethodGet && rest != "catalog" {
 		proHandleAssetFile(w, r, rest)
 		return
@@ -157,14 +172,6 @@ func proHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func proAuthenticate(r *http.Request) bool {
-	token, ok := strings.CutPrefix(r.Header.Get("Authorization"), "Bearer ")
-	if !ok {
-		return false
-	}
-	return subtle.ConstantTimeCompare([]byte(strings.TrimSpace(token)), []byte(proAccessToken)) == 1
-}
-
 func proOK(w http.ResponseWriter, data any) {
 	writeJSON(w, http.StatusOK, map[string]any{"code": 200, "msg": "success", "data": data})
 }
@@ -183,21 +190,21 @@ func proRequireAI(w http.ResponseWriter) bool {
 
 // ── Status ────────────────────────────────────────────────────────────────────
 
-func proHandleStatus(w http.ResponseWriter, _ *http.Request) {
+// What this caller can use: the server's features narrowed by their plan
+func proHandleStatus(w http.ResponseWriter, r *http.Request) {
+	p := principalFrom(r)
+	features := p.features()
+	drives := []string{}
+	if features["drives"] {
+		drives = proOAuthDrives()
+	}
 	proOK(w, map[string]any{
 		"version": 1,
-		"features": map[string]bool{
-			"ai":       proAI.configured(),
-			"ocr":      proAI.configured() && proOCRModel != "",
-			"tts":      proTTS.configured(),
-			"metadata": true,
-			// Encrypts data-source credentials in place of the official service
-			"vault": true,
-			// Fonts, dictionaries and backgrounds to download
-			"assets": true,
-		},
+		// vault: encrypts data-source credentials; assets: fonts,
+		// dictionaries and backgrounds to download
+		"features": features,
 		// Cloud drives that can sign in through the server's OAuth apps
-		"drives": proOAuthDrives(),
+		"drives": drives,
 		// Google Drive picker for importing books (desktop opens the page,
 		// the web app builds the picker itself)
 		"googlePicker": map[string]string{"appId": proGooglePickerID, "apiKey": proGoogleAPIKey},
