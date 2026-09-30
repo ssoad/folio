@@ -1,50 +1,22 @@
 import toast from "react-hot-toast";
-import {
-  ConfigService,
-  KookitConfig,
-  SyncUtil,
-  ThirdpartyRequest,
-} from "../../assets/lib/kookit-extra-browser.min";
+import { ConfigService } from "../../assets/lib/kookit-extra-browser.min";
 import i18n from "../../i18n";
-import { handleExitApp } from "./common";
-import { getServerRegion } from "../common";
 import TokenService from "../storage/tokenService";
 import {
-  hasSelfHostedFeature,
-  isSelfHostedToken,
   selfHostedDecryptToken,
   selfHostedEncryptToken,
+  selfHostedOAuthRefresh,
+  selfHostedOAuthToken,
 } from "./selfHosted";
-let thirdpartyRequest: ThirdpartyRequest | undefined;
-export const getThirdpartyRequest = async () => {
-  if (thirdpartyRequest) {
-    return thirdpartyRequest;
-  }
-  thirdpartyRequest = new ThirdpartyRequest(
-    TokenService,
-    ConfigService,
-    getServerRegion()
-  );
-  return thirdpartyRequest;
-};
-export const resetThirdpartyRequest = () => {
-  thirdpartyRequest = undefined;
-};
+
+// Data-source credentials are encrypted by the Folio server; the app keeps
+// only the encrypted token and asks the server to decrypt it when it syncs.
+// Cloud drives sign in through the server's OAuth apps.
+
 export const onSyncCallback = async (service: string, authCode: string) => {
   toast.loading(i18n.t("Adding"), { id: "adding-sync-id" });
 
-  let response = await authThirdToken(
-    service,
-    authCode,
-    getServerRegion() === "china" &&
-      (service === "microsoft" ||
-        service === "microsoft_exp" ||
-        service === "dubox" ||
-        service === "yiyiwu" ||
-        service === "adrive")
-      ? KookitConfig.ThirdpartyConfig.cnCallbackUrl
-      : KookitConfig.ThirdpartyConfig.callbackUrl
-  );
+  let response = await authThirdToken(service, authCode.trim());
   let result = response.data;
   if (!result || !result.refresh_token) {
     toast.error(i18n.t("Authorization failed"), { id: "adding-sync-id" });
@@ -83,137 +55,49 @@ export const onSyncCallback = async (service: string, authCode: string) => {
     ConfigService.setListConfig(service, "dataSourceList");
     toast.success(i18n.t("Binding successful"), { id: "adding-sync-id" });
   }
-  if (service === "yiyiwu") {
-    toast(
-      "115 网盘只推荐 115 会员使用，非会员基本上无法使用，并且由于 115 网盘严格的API限制，请务必启用 Koodo Sync，并且 1 小时内不要导入超过5本书以防止被 115 风控。如果出现了风控，请等待至少半小时再使用。",
-      { duration: 10000 }
-    );
-  }
   return res;
 };
-// Without a Koodo login the self-hosted server encrypts the credentials; a
-// Koodo login keeps using the official service, which Koodo Sync relies on
-const useSelfHostedVault = async () =>
-  (await TokenService.getToken("is_authed")) !== "yes" &&
-  hasSelfHostedFeature("vault");
 export const encryptToken = async (service: string, config: any) => {
-  let syncToken = JSON.stringify(config);
-  let response = (await useSelfHostedVault())
-    ? await selfHostedEncryptToken(syncToken)
-    : await (
-        await getThirdpartyRequest()
-      ).encryptToken({
-        token: syncToken,
-      });
-  if (response.code === 200) {
+  let response = await selfHostedEncryptToken(JSON.stringify(config));
+  if (response.code === 200 && response.data) {
     await TokenService.setToken(
       service + "_token",
       response.data.encrypted_token
     );
-    return response;
-  } else if (response.code === 401) {
-    handleExitApp();
-    return response;
   } else {
     toast.error(i18n.t("Encryption failed, error code") + ": " + response.msg);
-    if (response.code === 20004) {
-      toast(
-        i18n.t("Please login again to update your membership on this device")
-      );
-    }
-    return response;
   }
+  return response;
 };
 export const decryptToken = async (service: string) => {
   let encryptedToken = await TokenService.getToken(service + "_token");
   if (!encryptedToken || encryptedToken === "{}") {
-    return {};
+    return { code: 0, msg: "No saved credentials", data: undefined };
   }
-  // Ask whichever service encrypted it
-  let response = isSelfHostedToken(encryptedToken)
-    ? await selfHostedDecryptToken(encryptedToken)
-    : await (
-        await getThirdpartyRequest()
-      ).decryptToken({
-        encrypted_token: encryptedToken,
-      });
-  if (response.code === 200) {
-    return response;
-  } else if (response.code === 401) {
-    handleExitApp();
-    return response;
-  } else {
+  let response = await selfHostedDecryptToken(encryptedToken);
+  if (response.code !== 200) {
     toast.error(i18n.t("Decryption failed, error code") + ": " + response.msg);
-    if (response.code === 20004) {
-      toast(
-        i18n.t("Please login again to update your membership on this device")
-      );
-    }
-    return response;
   }
+  return response;
 };
-export const getCloudSyncToken = async () => {
-  let thirdpartyRequest = await getThirdpartyRequest();
-  let response = await thirdpartyRequest.getSyncToken();
-  if (response.code === 200) {
-    return response;
-  } else if (response.code === 401) {
-    handleExitApp();
-    return {};
-  } else if (response.code === 20004) {
-    return {};
-  } else {
-    toast.error(i18n.t("Fetch failed, error code") + ": " + response.msg);
-    return {};
-  }
-};
-export const authThirdToken = async (
-  provider: string,
-  code: string,
-  redirectUri: string
-) => {
-  if (provider === "microsoft_exp") {
-    provider = "microsoft";
-  }
-  let thirdpartyRequest = await getThirdpartyRequest();
-  let response = await thirdpartyRequest.authThirdToken({
-    provider: provider,
-    redirect_uri: redirectUri,
-    code,
-  });
-  if (response.code === 200) {
-    return response;
-  } else if (response.code === 401) {
-    handleExitApp();
-    return response;
-  } else {
+export const authThirdToken = async (provider: string, code: string) => {
+  let response = await selfHostedOAuthToken(provider, code);
+  if (response.code !== 200) {
     toast.error(
       i18n.t("Authorization failed, error code") + ": " + response.msg
     );
-    return response;
   }
+  return response;
 };
 export const refreshThirdToken = async (
   provider: string,
   refresh_token: string
 ) => {
-  if (provider === "microsoft_exp") {
-    provider = "microsoft";
-  }
-  let thirdpartyRequest = await getThirdpartyRequest();
-  let response = await thirdpartyRequest.refreshThirdToken({
-    provider,
-    refresh_token,
-  });
-  if (response.code === 200) {
-    return response;
-  } else if (response.code === 401) {
-    handleExitApp();
-    return response;
-  } else {
+  let response = await selfHostedOAuthRefresh(provider, refresh_token);
+  if (response.code !== 200) {
     toast.error(
       i18n.t("Authorization failed, error code") + ": " + response.msg
     );
-    return response;
   }
+  return response;
 };

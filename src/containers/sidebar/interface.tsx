@@ -21,7 +21,6 @@ export interface SidebarState {
   mode: string;
   hoverMode: string;
   hoverShelfTitle: string;
-  isCollapsed: boolean;
   isCollpaseShelf: boolean;
   shelfTitle: string;
   newShelfName: string;

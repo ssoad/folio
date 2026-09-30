@@ -55,7 +55,7 @@ class ReadingSetting extends React.Component<
   handleSetting = (stateName: string) => {
     if (
       stateName === "isLemmatizeWord" &&
-      !canUseProFeature(this.props.isAuthed)
+      !canUseProFeature()
     ) {
       toast.error(this.props.t("Please upgrade to Pro to use this feature"));
       this.props.handleSetting(true);

@@ -87,7 +87,7 @@ class EditDialog extends React.Component<EditDialogProps, EditDialogState> {
   };
 
   handleAnalyzeTitle = async () => {
-    if (!canUseProFeature(this.props.isAuthed, "ai")) {
+    if (!canUseProFeature("ai")) {
       toast(this.props.t("Please upgrade to Pro to use this feature"));
       this.props.handleSetting(true);
       this.props.handleSettingMode("account");
@@ -213,7 +213,7 @@ class EditDialog extends React.Component<EditDialogProps, EditDialogState> {
               opacity: 0.8,
             }}
             onClick={() => {
-              if (!canUseProFeature(this.props.isAuthed, "metadata")) {
+              if (!canUseProFeature("metadata")) {
                 toast(
                   this.props.t("Please upgrade to Pro to use this feature")
                 );
@@ -225,7 +225,7 @@ class EditDialog extends React.Component<EditDialogProps, EditDialogState> {
             }}
           >
             <Trans>Get metadata</Trans>
-            {!canUseProFeature(this.props.isAuthed, "metadata") && (
+            {!canUseProFeature("metadata") && (
               <span style={{ fontSize: "13px", color: "var(--accent)" }}>
                 {" "}
                 (Pro)

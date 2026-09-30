@@ -1,6 +1,6 @@
 import { ConfigService } from "../../assets/lib/kookit-extra-browser.min";
 
-export const BOOK_DRAG_TYPE = "application/x-koodo-book";
+export const BOOK_DRAG_TYPE = "application/x-folio-book";
 
 export function setBookDragData(e: React.DragEvent, bookKeys: string[]): void {
   if (!e.dataTransfer) return;

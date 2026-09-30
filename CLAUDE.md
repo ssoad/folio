@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Architecture Overview
 
-Koodo Reader 是一个跨平台电子书阅读器（Electron + React CRA + Redux）。
+Folio 是一个跨平台电子书阅读器（Electron + React CRA + Redux）。
 
 ### 四层架构
 
@@ -80,7 +80,17 @@ yarn release
 
 # 重新编译原生模块
 yarn rebuild
+
+# Android（Capacitor，android/ 目录）
+yarn android:apk    # 调试版 APK
+yarn android:run    # 在设备或模拟器上运行
 ```
+
+### 移动端与 Android
+
+- 宽度 ≤ 768px 时 `<html>` 带 `is-compact`（`src/utils/responsive.ts`），手机布局在 `src/assets/styles/compact.css`
+- 运行环境判断用 `src/utils/platform.ts`（`isCompact`、`isNativeApp`、`readsInSameWindow`）
+- Android 原生集成（返回键、状态栏、"用 Folio 打开"）在 `src/utils/native.ts`；页面通过 `NATIVE_BACK_EVENT` 处理返回键
 
 ## 开发规范
 

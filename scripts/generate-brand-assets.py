@@ -75,6 +75,74 @@ def wide_tile(width, height):
     return img.resize((width, height), Image.LANCZOS)
 
 
+def android_foreground(size, color=True):
+    """Adaptive-icon foreground: the mark alone, inside Android's safe zone.
+
+    The 108dp canvas is masked to a ~72dp shape, so the mark spans ~44%.
+    `color=False` gives the white monochrome layer for themed icons.
+    """
+    big = size * SUPERSAMPLE
+    img = Image.new("RGBA", (big, big), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(img)
+    unit = big * 0.44 / 64
+    start = (big - unit * 64) / 2
+    clear = (0, 0, 0, 0)
+    if color:
+        draw_mark(draw, start, start, unit, WHITE, FOLD, ACCENT, clear)
+    else:
+        draw_mark(draw, start, start, unit, WHITE, WHITE, clear, clear)
+    return img.resize((size, size), Image.LANCZOS)
+
+
+def round_icon(size):
+    """Legacy round launcher icon (Android 7)."""
+    big = size * SUPERSAMPLE
+    img = Image.new("RGBA", (big, big), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(img)
+    draw.ellipse([0, 0, big - 1, big - 1], fill=ACCENT)
+    unit = big * 0.56 / 64
+    start = (big - unit * 64) / 2
+    draw_mark(draw, start, start, unit, WHITE, FOLD, ACCENT, ACCENT)
+    return img.resize((size, size), Image.LANCZOS)
+
+
+def splash_icon(size):
+    """Android 12+ splash icon: the colored tile, inside the 240dp circle's 160dp."""
+    big = size * SUPERSAMPLE
+    img = Image.new("RGBA", (big, big), (0, 0, 0, 0))
+    tile = app_icon(int(size * 0.5)).resize((int(big * 0.5),) * 2, Image.LANCZOS)
+    offset = (big - tile.width) // 2
+    img.alpha_composite(tile, (offset, offset))
+    return img.resize((size, size), Image.LANCZOS)
+
+
+ANDROID_DENSITIES = {"mdpi": 1, "hdpi": 1.5, "xhdpi": 2, "xxhdpi": 3, "xxxhdpi": 4}
+
+
+def android_icons():
+    res = os.path.join(ROOT, "android", "app", "src", "main", "res")
+    if not os.path.isdir(res):
+        print("android/ not found (run `npx cap add android`), skipped Android icons")
+        return
+    for density, scale in ANDROID_DENSITIES.items():
+        folder = ("android", "app", "src", "main", "res", f"mipmap-{density}")
+        save(app_icon(round(48 * scale)), *folder, "ic_launcher.png")
+        save(round_icon(round(48 * scale)), *folder, "ic_launcher_round.png")
+        save(android_foreground(round(108 * scale)), *folder, "ic_launcher_foreground.png")
+        save(android_foreground(round(108 * scale), color=False), *folder, "ic_launcher_monochrome.png")
+    save(splash_icon(288 * 4), "android", "app", "src", "main", "res", "drawable", "ic_splash.png")
+    # Capacitor's legacy splash images (its own logo by default): the tile on
+    # the dark app background, at each existing size
+    for folder in sorted(os.listdir(res)):
+        path = os.path.join(res, folder, "splash.png")
+        if folder.startswith("drawable") and os.path.exists(path):
+            width, height = Image.open(path).size
+            img = Image.new("RGBA", (width, height), (20, 20, 19, 255))
+            tile = app_icon(int(min(width, height) * 0.22))
+            img.alpha_composite(tile, ((width - tile.width) // 2, (height - tile.height) // 2))
+            save(img.convert("RGB"), "android", "app", "src", "main", "res", folder, "splash.png")
+
+
 def save(img, *parts):
     path = os.path.join(ROOT, *parts)
     img.save(path)
@@ -121,6 +189,8 @@ def main():
             print("wrote assets/icons/icon.icns")
     else:
         print("iconutil not found (macOS only), skipped icon.icns")
+
+    android_icons()
 
 
 if __name__ == "__main__":

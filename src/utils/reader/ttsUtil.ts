@@ -250,9 +250,7 @@ class TTSUtil {
         text,
         voice.language,
         voice.name,
-        (speed + 100) / 100,
-        1.0,
-        isFirst
+        (speed + 100) / 100
       );
       if (res && res.data && res.data.audio_base64) {
         return res.data.audio_base64;

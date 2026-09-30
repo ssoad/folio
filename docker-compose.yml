@@ -1,9 +1,9 @@
 version: "3.8"
 
 services:
-  koodo-reader:
+  folio:
     build: .
-    container_name: koodo-reader
+    container_name: folio
     restart: unless-stopped
     ports:
       - "80:80"
@@ -21,9 +21,22 @@ services:
       - PRO_AI_MODEL=${PRO_AI_MODEL:-}
       - PRO_TTS_BASE_URL=${PRO_TTS_BASE_URL:-}
       - PRO_TTS_API_KEY=${PRO_TTS_API_KEY:-}
+      # Address the server is reached at, needed for cloud-drive sign-in
+      - PRO_PUBLIC_URL=${PRO_PUBLIC_URL:-}
+      # Cloud drives: the OAuth app you registered with each provider
+      - PRO_OAUTH_GOOGLE_CLIENT_ID=${PRO_OAUTH_GOOGLE_CLIENT_ID:-}
+      - PRO_OAUTH_GOOGLE_CLIENT_SECRET=${PRO_OAUTH_GOOGLE_CLIENT_SECRET:-}
+      - PRO_OAUTH_GOOGLE_APP_ID=${PRO_OAUTH_GOOGLE_APP_ID:-}
+      - PRO_OAUTH_GOOGLE_API_KEY=${PRO_OAUTH_GOOGLE_API_KEY:-}
+      - PRO_OAUTH_MICROSOFT_CLIENT_ID=${PRO_OAUTH_MICROSOFT_CLIENT_ID:-}
+      - PRO_OAUTH_MICROSOFT_CLIENT_SECRET=${PRO_OAUTH_MICROSOFT_CLIENT_SECRET:-}
+      - PRO_OAUTH_DROPBOX_CLIENT_ID=${PRO_OAUTH_DROPBOX_CLIENT_ID:-}
+      - PRO_OAUTH_DROPBOX_CLIENT_SECRET=${PRO_OAUTH_DROPBOX_CLIENT_SECRET:-}
     volumes:
       # 使用主机目录（推荐）
       - /opt/uploads:/app/uploads
+      # Fonts, dictionaries and backgrounds the app can download
+      - /opt/folio-assets:/app/assets
       # 或者使用命名卷
       # - uploads_data:/app/uploads
 # 如果使用命名卷，取消注释以下内容

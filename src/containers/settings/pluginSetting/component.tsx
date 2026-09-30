@@ -5,7 +5,6 @@ import _ from "underscore";
 
 import toast from "react-hot-toast";
 import {
-  getWebsiteUrl,
   handleContextMenu,
   openExternalUrl,
   vexComfirmAsync,
@@ -78,11 +77,6 @@ class SettingDialog extends React.Component<
     );
     this.setState({ availablePlugins: pluginList });
   };
-  getPluginTutorialUrl = () =>
-    getWebsiteUrl() +
-    (ConfigService.getReaderConfig("lang")?.startsWith("zh")
-      ? "/zh/plugin"
-      : "/en/plugin");
   handleOpenAddNew = async (scrollToTop = false) => {
     if (window.electronAPI?.runtime?.windowsStore) {
       return;
@@ -111,14 +105,6 @@ class SettingDialog extends React.Component<
         buttons: [
           window.vex.dialog.buttons.YES,
           window.vex.dialog.buttons.NO,
-          {
-            text: this.props.t("Tutorial"),
-            type: "button",
-            className: "vex-dialog-button-secondary",
-            click: () => {
-              openExternalUrl(this.getPluginTutorialUrl());
-            },
-          },
         ],
         callback: (data) => {
           if (!data) {
@@ -324,22 +310,6 @@ class SettingDialog extends React.Component<
                   }}
                 >
                   <Trans>Cancel</Trans>
-                </div>
-                <div
-                  className="voice-add-cancel"
-                  style={{ marginRight: "10px" }}
-                  onClick={() => {
-                    if (
-                      ConfigService.getReaderConfig("lang") &&
-                      ConfigService.getReaderConfig("lang").startsWith("zh")
-                    ) {
-                      openExternalUrl(getWebsiteUrl() + "/zh/plugin");
-                    } else {
-                      openExternalUrl(getWebsiteUrl() + "/en/plugin");
-                    }
-                  }}
-                >
-                  <Trans>Document</Trans>
                 </div>
               </div>
             </div>
@@ -665,34 +635,7 @@ class SettingDialog extends React.Component<
         {!window.electronAPI?.runtime?.windowsStore && (
           <div className="setting-dialog-new-plugin">
             <span
-              style={{ textDecoration: "underline", marginRight: "20px" }}
-              onClick={() => {
-                openExternalUrl(this.getPluginTutorialUrl());
-              }}
-            >
-              <Trans>Visit online version</Trans>
-            </span>
-            <span
-              style={{ textDecoration: "underline" }}
-              onClick={() => {
-                if (
-                  ConfigService.getReaderConfig("lang") &&
-                  ConfigService.getReaderConfig("lang").startsWith("zh")
-                ) {
-                  openExternalUrl(
-                    "https://github.com/koodo-reader/plugins/blob/main/README_CN.md"
-                  );
-                } else {
-                  openExternalUrl(
-                    "https://github.com/koodo-reader/plugins/blob/main/README.md"
-                  );
-                }
-              }}
-            >
-              <Trans>How to custom plugin</Trans>
-            </span>
-            <span
-              style={{ marginLeft: "20px", fontWeight: "bold" }}
+              style={{ fontWeight: "bold" }}
               onClick={async () => {
                 this.handleOpenAddNew(true);
               }}

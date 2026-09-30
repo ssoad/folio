@@ -1,5 +1,5 @@
 import { RouteComponentProps } from "react-router-dom";
-import { DictMeta } from "../../../utils/file/dictUtil";
+import { CloudDictItem, DictMeta } from "../../../utils/file/dictUtil";
 
 export interface SettingInfoProps extends RouteComponentProps<any> {
   t: (title: string) => string;
@@ -12,4 +12,6 @@ export interface SettingInfoState {
   isLoading: boolean;
   downloadingId: string;
   downloadProgress: number;
+  // Dictionaries the server offers
+  serverDicts: CloudDictItem[];
 }

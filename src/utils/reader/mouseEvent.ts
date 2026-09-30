@@ -1,4 +1,5 @@
 import { ConfigService } from "../../assets/lib/kookit-extra-browser.min";
+import { exitWebReader, isCompact, isTouchDevice } from "../platform";
 import { isElectron } from "react-device-detect";
 import { getIframeDoc, getIframeWin } from "./docUtil";
 import {
@@ -140,7 +141,7 @@ const SELECTION_SHORTCUT_OPTIONS: Array<{
   { shortcut: "selectionSearch", optionName: "search-book" },
 ];
 
-export const READING_PANEL_TOGGLE_EVENT = "koodo-reading-panel-toggle";
+export const READING_PANEL_TOGGLE_EVENT = "folio-reading-panel-toggle";
 
 export const openReadingPanel = (
   position: "left" | "right" | "top" | "bottom"
@@ -174,7 +175,55 @@ const READING_PANEL_SHORTCUTS: Array<{
   { shortcut: "openBottomPanel", position: "bottom" },
 ];
 
-export const NAV_TAB_TOGGLE_EVENT = "koodo-nav-tab-toggle";
+// Taps on the page (phones, tablets): the outer thirds turn the page, the
+// middle shows or hides the reader bars
+export const READER_CHROME_TOGGLE_EVENT = "folio-reader-chrome-toggle";
+// Asks the reader's top bar to leave the book (Android back button)
+export const READER_EXIT_EVENT = "folio-reader-exit";
+const TAP_TURN_ZONE = 0.3;
+const handleReaderTap = async (
+  event: MouseEvent,
+  rendition: any,
+  doc: Document,
+  readerMode: string,
+  key: string
+) => {
+  // The engine prevents the default of every click, so that can't be used to
+  // tell taps it handles
+  const target = event.target as Element | null;
+  if (
+    doc.getSelection()?.toString() ||
+    target?.closest?.("a, button, input, textarea, select, audio, video")
+  ) {
+    return;
+  }
+  // The iframe can be wider than the screen (paginated books), so measure
+  // against the app window
+  const frame = doc.defaultView?.frameElement;
+  const x = (frame ? frame.getBoundingClientRect().left : 0) + event.clientX;
+  const ratio = x / window.innerWidth;
+  if (readerMode !== "scroll" && ratio < TAP_TURN_ZONE) {
+    if (lock) return;
+    lock = true;
+    await rendition.prev();
+    handleLocation(key, rendition);
+    setTimeout(() => (lock = false), throttleTime);
+  } else if (readerMode !== "scroll" && ratio > 1 - TAP_TURN_ZONE) {
+    if (lock) return;
+    lock = true;
+    await rendition.next();
+    handleLocation(key, rendition);
+    setTimeout(() => (lock = false), throttleTime);
+  } else {
+    // A tap on a highlight or note opens the engine's popup instead
+    await sleep(150);
+    const popup = document.querySelector(".popup-menu-container");
+    if (popup && getComputedStyle(popup).display !== "none") return;
+    window.dispatchEvent(new CustomEvent(READER_CHROME_TOGGLE_EVENT));
+  }
+};
+
+export const NAV_TAB_TOGGLE_EVENT = "folio-nav-tab-toggle";
 export const toggleNavTab = (tab: string) => {
   window.dispatchEvent(
     new CustomEvent(NAV_TAB_TOGGLE_EVENT, {
@@ -270,8 +319,9 @@ const handleShortcut = (
           window.electronAPI.invoke("exit-reader", "ping");
         }
       } else {
-        ConfigService.setReaderConfig("isFinishWebReading", "yes");
-        window.close();
+        exitWebReader(() =>
+          ConfigService.setReaderConfig("isFinishWebReading", "yes")
+        );
       }
     }
   }
@@ -448,7 +498,9 @@ export const bindHtmlEvent = (
     { passive: false }
   );
 
-  if (ConfigService.getReaderConfig("isTouch") === "yes") {
+  // Swipes turn pages when switched on, and by default on touch screens
+  const touchSetting = ConfigService.getReaderConfig("isTouch");
+  if (touchSetting === "yes" || (touchSetting !== "no" && isTouchDevice())) {
     const mc = new Hammer(doc);
     mc.on("panleft panright panup pandown", async (event: any) => {
       if (readerMode === "scroll") {
@@ -460,6 +512,12 @@ export const bindHtmlEvent = (
       handleLocation(key, rendition);
       setTimeout(() => (lock = false), throttleTime);
     });
+  }
+
+  if (isCompact() || isTouchDevice()) {
+    doc.addEventListener("click", (event: MouseEvent) =>
+      handleReaderTap(event, rendition, doc, readerMode, key)
+    );
   }
 
   doc.addEventListener(

@@ -26,7 +26,7 @@ export const backup = async (service: string): Promise<BackupResult> => {
   let fileName = "data.zip";
   if (service === "local") {
     let now = new Date();
-    fileName = `KoodoReader-Backup-${now.getFullYear()}-${
+    fileName = `Folio-Backup-${now.getFullYear()}-${
       now.getMonth() + 1
     }-${now.getDate()}-${Date.now()}.zip`;
   }

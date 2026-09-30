@@ -1,4 +1,5 @@
 import { ConfigService } from "../../assets/lib/kookit-extra-browser.min";
+import { readsInSameWindow } from "../platform";
 import { isElectron } from "react-device-detect";
 import localforage from "localforage";
 import { deleteChapterSummaries } from "../ai/chapterSummaries";
@@ -358,11 +359,12 @@ class BookUtil {
         });
       }
     } else {
-      window.open(
-        `${window.location.href.split("#")[0]}#/${ref}/${book.key}?title=${
-          book.name
-        }&file=${book.key}`
-      );
+      const hash = `#/${ref}/${book.key}?title=${book.name}&file=${book.key}`;
+      if (readsInSameWindow()) {
+        window.location.hash = hash;
+      } else {
+        window.open(`${window.location.href.split("#")[0]}${hash}`);
+      }
     }
   }
   static getBookUrl(book: BookModel) {

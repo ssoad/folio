@@ -28,7 +28,7 @@ const getFileTimestamp = (): string => {
 };
 
 const getZipFileName = (type: string, format: string): string =>
-  `KoodoReader-${type}-${getFileTimestamp()}-${format.toUpperCase()}.zip`;
+  `Folio-${type}-${getFileTimestamp()}-${format.toUpperCase()}.zip`;
 
 export type ExportResult = "success" | "failed" | "cancel";
 
@@ -114,7 +114,7 @@ export const exportBooks = async (
 
     saveAs(
       await zipFilesToBlob(booksBuffers, bookNames),
-      `KoodoReader-Book-${getFileTimestamp()}.zip`
+      `Folio-Book-${getFileTimestamp()}.zip`
     );
     return "success";
   } catch (error) {
@@ -261,32 +261,32 @@ export const exportNotes = async (
     if (format === "md") {
       saveAs(
         toBlob(convertNotesToMarkdown(data), "md"),
-        `KoodoReader-Note-${fileDate}.md`
+        `Folio-Note-${fileDate}.md`
       );
     } else if (format === "txt") {
       saveAs(
         toBlob(convertNotesToTxt(data), "txt"),
-        `KoodoReader-Note-${fileDate}.txt`
+        `Folio-Note-${fileDate}.txt`
       );
     } else if (format === "html") {
       saveAs(
         toBlob(convertNotesToHTML(data), "html"),
-        `KoodoReader-Note-${fileDate}.html`
+        `Folio-Note-${fileDate}.html`
       );
     } else if (format === "pdf") {
       await exportHTMLAsPDF(
         convertNotesToHTML(data),
-        `KoodoReader-Note-${fileDate}.pdf`
+        `Folio-Note-${fileDate}.pdf`
       );
     } else if (format === "json") {
       saveAs(
         toBlob(JSON.stringify(data, null, 2), "json"),
-        `KoodoReader-Note-${fileDate}.json`
+        `Folio-Note-${fileDate}.json`
       );
     } else {
       saveAs(
         toBlob(convertArrayToCSV(data), "csv"),
-        `KoodoReader-Note-${fileDate}.csv`
+        `Folio-Note-${fileDate}.csv`
       );
     }
     return "success";
@@ -401,32 +401,32 @@ export const exportHighlights = async (
     if (format === "md") {
       saveAs(
         toBlob(convertHighlightsToMarkdown(data), "md"),
-        `KoodoReader-Highlight-${fileDate}.md`
+        `Folio-Highlight-${fileDate}.md`
       );
     } else if (format === "txt") {
       saveAs(
         toBlob(convertHighlightsToTxt(data), "txt"),
-        `KoodoReader-Highlight-${fileDate}.txt`
+        `Folio-Highlight-${fileDate}.txt`
       );
     } else if (format === "html") {
       saveAs(
         toBlob(convertHighlightsToHTML(data), "html"),
-        `KoodoReader-Highlight-${fileDate}.html`
+        `Folio-Highlight-${fileDate}.html`
       );
     } else if (format === "pdf") {
       await exportHTMLAsPDF(
         convertHighlightsToHTML(data),
-        `KoodoReader-Highlight-${fileDate}.pdf`
+        `Folio-Highlight-${fileDate}.pdf`
       );
     } else if (format === "json") {
       saveAs(
         toBlob(JSON.stringify(data, null, 2), "json"),
-        `KoodoReader-Highlight-${fileDate}.json`
+        `Folio-Highlight-${fileDate}.json`
       );
     } else {
       saveAs(
         toBlob(convertArrayToCSV(data), "csv"),
-        `KoodoReader-Highlight-${fileDate}.csv`
+        `Folio-Highlight-${fileDate}.csv`
       );
     }
     return "success";
@@ -463,7 +463,7 @@ export const exportDictionaryHistory = async (
       format === "json"
         ? toBlob(JSON.stringify(data, null, 2), "json")
         : new Blob([convertArrayToCSV(data)], { type: "text/csv,charset=UTF-8" }),
-      `KoodoReader-Dictionary-History-${getFileTimestamp()}.${format}`
+      `Folio-Dictionary-History-${getFileTimestamp()}.${format}`
     );
     return "success";
   } catch (error) {
@@ -501,7 +501,7 @@ export const convertNotesToMarkdown = (notes: any[]) => {
     bookMap[key].push(note);
   });
 
-  let md = `# Koodo Reader - Notes\n\n`;
+  let md = `# Folio - Notes\n\n`;
   Object.entries(bookMap).forEach(([bookName, bookNotes]) => {
     const author = bookNotes[0].bookAuthor || "Unknown author";
     md += `## ${bookName}\n\n`;
@@ -538,7 +538,7 @@ export const convertNotesToTxt = (notes: any[]) => {
     bookMap[key].push(note);
   });
 
-  let txt = `Koodo Reader - Notes\n${"=".repeat(40)}\n\n`;
+  let txt = `Folio - Notes\n${"=".repeat(40)}\n\n`;
   Object.entries(bookMap).forEach(([bookName, bookNotes]) => {
     const author = bookNotes[0].bookAuthor || "Unknown author";
     txt += `Book: ${bookName}\n`;
@@ -573,7 +573,7 @@ export const convertHighlightsToMarkdown = (highlights: any[]) => {
     bookMap[key].push(highlight);
   });
 
-  let md = `# Koodo Reader - Highlights\n\n`;
+  let md = `# Folio - Highlights\n\n`;
   Object.entries(bookMap).forEach(([bookName, bookHighlights]) => {
     const author = bookHighlights[0].bookAuthor || "Unknown author";
     md += `## ${bookName}\n\n`;
@@ -609,7 +609,7 @@ export const convertHighlightsToTxt = (highlights: any[]) => {
     bookMap[key].push(highlight);
   });
 
-  let txt = `Koodo Reader - Highlights\n${"=".repeat(40)}\n\n`;
+  let txt = `Folio - Highlights\n${"=".repeat(40)}\n\n`;
   Object.entries(bookMap).forEach(([bookName, bookHighlights]) => {
     const author = bookHighlights[0].bookAuthor || "Unknown author";
     txt += `Book: ${bookName}\n`;
@@ -665,7 +665,7 @@ export const convertNotesToHTML = (notes: any[]): string => {
     bookMap[key].push(note);
   });
 
-  let body = `<h1>Koodo Reader - Notes</h1>\n`;
+  let body = `<h1>Folio - Notes</h1>\n`;
   Object.entries(bookMap).forEach(([bookName, bookNotes]) => {
     const author = bookNotes[0].bookAuthor || "Unknown author";
     body += `<h2>${escapeHTML(bookName)}</h2>\n<p><em>${escapeHTML(author)}</em></p>\n`;
@@ -689,7 +689,7 @@ export const convertNotesToHTML = (notes: any[]): string => {
       body += `<hr />\n`;
     });
   });
-  return buildHTMLTemplate("Koodo Reader - Notes", body);
+  return buildHTMLTemplate("Folio - Notes", body);
 };
 
 export const convertHighlightsToHTML = (highlights: any[]): string => {
@@ -700,7 +700,7 @@ export const convertHighlightsToHTML = (highlights: any[]): string => {
     bookMap[key].push(highlight);
   });
 
-  let body = `<h1>Koodo Reader - Highlights</h1>\n`;
+  let body = `<h1>Folio - Highlights</h1>\n`;
   Object.entries(bookMap).forEach(([bookName, bookHighlights]) => {
     const author = bookHighlights[0].bookAuthor || "Unknown author";
     body += `<h2>${escapeHTML(bookName)}</h2>\n<p><em>${escapeHTML(author)}</em></p>\n`;
@@ -723,7 +723,7 @@ export const convertHighlightsToHTML = (highlights: any[]): string => {
       body += `<hr />\n`;
     });
   });
-  return buildHTMLTemplate("Koodo Reader - Highlights", body);
+  return buildHTMLTemplate("Folio - Highlights", body);
 };
 
 const escapeHTML = (str: string): string => {

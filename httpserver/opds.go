@@ -263,9 +263,9 @@ func handleOPDSRoot(w http.ResponseWriter, r *http.Request, base string) {
 		XmlnsOS:   opensearchNS,
 		XmlnsOPDS: opdsNS,
 		ID:        base + "/opds",
-		Title:     "Koodo Reader OPDS Catalog",
+		Title:     "Folio OPDS Catalog",
 		Updated:   now(),
-		Author:    atomPerson{Name: "Koodo Reader"},
+		Author:    atomPerson{Name: "Folio"},
 		Links: []atomLink{
 			{Rel: "self", Href: base + "/opds", Type: opdsMimeNav},
 			{Rel: "start", Href: base + "/opds", Type: opdsMimeNav},
@@ -327,7 +327,7 @@ func handleOPDSBooks(w http.ResponseWriter, r *http.Request, base, search string
 		ID:           selfHref,
 		Title:        title,
 		Updated:      now(),
-		Author:       atomPerson{Name: "Koodo Reader"},
+		Author:       atomPerson{Name: "Folio"},
 		TotalResults: len(books),
 		ItemsPerPage: len(books),
 		StartIndex:   1,
@@ -370,7 +370,7 @@ func handleOPDSBook(w http.ResponseWriter, r *http.Request, base, key string) {
 		ID:        base + "/opds/book/" + key,
 		Title:     b.Name,
 		Updated:   now(),
-		Author:    atomPerson{Name: "Koodo Reader"},
+		Author:    atomPerson{Name: "Folio"},
 		Links: []atomLink{
 			{Rel: "self", Href: base + "/opds/book/" + key, Type: opdsMimeAcq},
 			{Rel: "start", Href: base + "/opds", Type: opdsMimeNav},
@@ -474,7 +474,7 @@ func handleOPDSSearchDesc(w http.ResponseWriter, r *http.Request, base string) {
 
 	desc := osDesc{
 		Xmlns:       "http://a9.com/-/spec/opensearch/1.1/",
-		ShortName:   "Koodo Reader",
+		ShortName:   "Folio",
 		Description: "Search books by title, author or description",
 		InputEnc:    "UTF-8",
 		URL: osURL{

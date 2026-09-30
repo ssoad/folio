@@ -1,5 +1,6 @@
 import { isElectron } from "react-device-detect";
-import { getServerRegion, getStorageLocation } from "../common";
+import { getStorageLocation } from "../common";
+import { fetchSelfHostedAsset } from "../request/selfHosted";
 import { ConfigService } from "../../assets/lib/kookit-extra-browser.min";
 import { Buffer } from "buffer";
 import toast from "react-hot-toast";
@@ -141,25 +142,13 @@ class DictUtil {
     return lang.startsWith("zh") ? dict.translation : dict.name;
   }
 
-  /** Build download url of a cloud dict */
-  static getCloudDictUrl(dictId: string, isAuthed: boolean): string {
-    const base = "https://storage.koodoreader.com";
-    return `${base}/dicts/${dictId}.mdx`;
-  }
-
   /** Download a cloud dict with progress, then save it as a local dict */
   static async downloadCloudDict(
     dict: CloudDictItem,
-    isAuthed: boolean,
     onProgress?: (progress: number) => void
   ): Promise<boolean> {
-    const url = this.getCloudDictUrl(dict.id, isAuthed);
-    const response = await fetch(url, {
-      headers: {
-        "Cache-Control": "no-transform",
-        "Accept-Encoding": "identity",
-      },
-    });
+    // Dictionaries are served by the Folio server
+    const response = await fetchSelfHostedAsset("dicts", `/${dict.id}.mdx`);
     if (!response.ok) return false;
 
     const contentLength = Number(response.headers.get("Content-Length") || 0);

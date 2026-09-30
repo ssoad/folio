@@ -1,6 +1,6 @@
 package main
 
-// Self-hosted replacements for Koodo Reader's Pro services. The app talks to
+// Folio's server-side services beyond reading. The app talks to
 // these endpoints instead of the official API when a self-hosted server is
 // configured. AI features go to any OpenAI-compatible provider you run or pay
 // for yourself (OpenAI, OpenRouter, Ollama, LiteLLM, ...), speech to any
@@ -84,6 +84,8 @@ func initPro() {
 	}
 	proTTSVoice = getEnv("PRO_TTS_VOICE", "af_heart")
 	initProVault()
+	initProOAuth()
+	initProAssets()
 
 	log.Printf("[pro] Self-hosted Pro services enabled (AI: %t, OCR: %t, TTS: %t, metadata: true)",
 		proAI.configured(), proAI.configured() && proOCRModel != "", proTTS.configured())
@@ -92,13 +94,35 @@ func initPro() {
 // ── Routing ───────────────────────────────────────────────────────────────────
 
 func proHandler(w http.ResponseWriter, r *http.Request) {
+	path := strings.TrimSuffix(r.URL.Path, "/")
+	// Pages the browser opens during cloud-drive sign-in; they can't carry the
+	// bearer token and expose nothing secret
+	if r.Method == http.MethodGet {
+		if key, ok := strings.CutPrefix(path, "/pro/v1/oauth/"); ok {
+			if provider, found := strings.CutSuffix(key, "/authorize"); found {
+				proHandleOAuthAuthorize(w, r, provider)
+				return
+			}
+			switch key {
+			case "callback":
+				proHandleOAuthCallback(w, r)
+				return
+			case "google/picker":
+				proHandleGooglePicker(w, r)
+				return
+			}
+		}
+	}
 	if !proAuthenticate(r) {
 		proFail(w, http.StatusUnauthorized, 401, "Invalid access token")
 		return
 	}
 	r.Body = http.MaxBytesReader(w, r.Body, proMaxBodyBytes)
 
-	path := strings.TrimSuffix(r.URL.Path, "/")
+	if rest, ok := strings.CutPrefix(path, "/pro/v1/assets/"); ok && r.Method == http.MethodGet && rest != "catalog" {
+		proHandleAssetFile(w, r, rest)
+		return
+	}
 	switch {
 	case r.Method == http.MethodGet && path == "/pro/v1/status":
 		proHandleStatus(w, r)
@@ -122,6 +146,12 @@ func proHandler(w http.ResponseWriter, r *http.Request) {
 		proHandleEncryptToken(w, r)
 	case r.Method == http.MethodPost && path == "/pro/v1/token/decrypt":
 		proHandleDecryptToken(w, r)
+	case r.Method == http.MethodPost && path == "/pro/v1/oauth/token":
+		proHandleOAuthToken(w, r)
+	case r.Method == http.MethodPost && path == "/pro/v1/oauth/refresh":
+		proHandleOAuthRefresh(w, r)
+	case r.Method == http.MethodGet && path == "/pro/v1/assets/catalog":
+		proHandleAssetCatalog(w, r)
 	default:
 		proFail(w, http.StatusNotFound, 404, "Not Found")
 	}
@@ -163,7 +193,14 @@ func proHandleStatus(w http.ResponseWriter, _ *http.Request) {
 			"metadata": true,
 			// Encrypts data-source credentials in place of the official service
 			"vault": true,
+			// Fonts, dictionaries and backgrounds to download
+			"assets": true,
 		},
+		// Cloud drives that can sign in through the server's OAuth apps
+		"drives": proOAuthDrives(),
+		// Google Drive picker for importing books (desktop opens the page,
+		// the web app builds the picker itself)
+		"googlePicker": map[string]string{"appId": proGooglePickerID, "apiKey": proGoogleAPIKey},
 	})
 }
 

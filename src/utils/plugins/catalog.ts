@@ -30,7 +30,7 @@ const builtinPluginCatalog: BuiltinPluginDefinition[] = [
     },
     configuration: {
       en: "Install Pot on your computer, and configure the host and port, default should work if you're running Pot on the same machine without changing settings",
-      zhCN: "安装Pot并运行，配置Host和Port，如果Pot和Koodo Reader运行在同一台设备上，则使用默认配置即可",
+      zhCN: "安装Pot并运行，配置Host和Port，如果Pot和Folio运行在同一台设备上，则使用默认配置即可",
     },
     websiteName: "Pot | Cross-Platform Text Translation and OCR (pot-app.com)",
     websiteUrl: "https://pot-app.com/",

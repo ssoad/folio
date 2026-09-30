@@ -43,7 +43,7 @@ class MetadataDialog extends React.Component<
       return;
     }
 
-    if (!canUseProFeature(this.props.isAuthed, "metadata")) {
+    if (!canUseProFeature("metadata")) {
       toast(this.props.t("Please upgrade to Pro to use this feature"));
       this.props.handleSetting(true);
       this.props.handleSettingMode("account");
@@ -118,7 +118,7 @@ class MetadataDialog extends React.Component<
       <div className="metadata-dialog-container edit-dialog-container">
         <div className="metadata-dialog-title">
           <Trans>Get metadata</Trans>
-          {!canUseProFeature(this.props.isAuthed, "metadata") && (
+          {!canUseProFeature("metadata") && (
             <span style={{ fontSize: "13px", color: "var(--accent)" }}>
               {" "}
               (Pro)

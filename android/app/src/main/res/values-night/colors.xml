@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="folio_background">#141413</color>
+    <color name="colorPrimary">#8C9BFF</color>
+    <color name="colorPrimaryDark">#141413</color>
+    <color name="colorAccent">#8C9BFF</color>
+</resources>

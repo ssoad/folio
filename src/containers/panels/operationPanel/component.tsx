@@ -1,4 +1,6 @@
 import React from "react";
+import { READER_EXIT_EVENT } from "../../../utils/reader/mouseEvent";
+import { exitWebReader } from "../../../utils/platform";
 import "./operationPanel.css";
 import Bookmark from "../../../models/Bookmark";
 import { Trans } from "react-i18next";
@@ -54,6 +56,7 @@ class OperationPanel extends React.Component<
 
   componentDidMount() {
     document.addEventListener("fullscreenchange", this.handleFullscreenChange);
+    window.addEventListener(READER_EXIT_EVENT, this.handleExitEvent);
     this.props.htmlBook.rendition.on("page-changed", async () => {
       this.speed = Date.now() - this.timeStamp;
       this.timeStamp = Date.now();
@@ -72,7 +75,11 @@ class OperationPanel extends React.Component<
       "fullscreenchange",
       this.handleFullscreenChange
     );
+    window.removeEventListener(READER_EXIT_EVENT, this.handleExitEvent);
   }
+  handleExitEvent = () => {
+    this.handleExit();
+  };
 
   handleShortcut() {}
   handleScreen() {
@@ -103,8 +110,9 @@ class OperationPanel extends React.Component<
         window.electronAPI.invoke("exit-reader", "ping");
       }
     } else {
-      ConfigService.setReaderConfig("isFinishWebReading", "yes");
-      window.close();
+      exitWebReader(() =>
+        ConfigService.setReaderConfig("isFinishWebReading", "yes")
+      );
     }
   }
   handleAddBookmark = async () => {

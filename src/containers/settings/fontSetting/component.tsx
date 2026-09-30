@@ -10,6 +10,7 @@ import FontUtil, {
 } from "../../../utils/file/fontUtil";
 import { ChineseFonts, NonChineseFonts } from "../../../constants/fontConfig";
 import { applyCustomSystemFont } from "../../../utils/reader/launchUtil";
+import { getSelfHostedAssetCatalog } from "../../../utils/request/selfHosted";
 
 class FontSetting extends React.Component<SettingInfoProps, SettingInfoState> {
   fileInputRef = React.createRef<HTMLInputElement>();
@@ -27,11 +28,15 @@ class FontSetting extends React.Component<SettingInfoProps, SettingInfoState> {
       expandedFamily: "",
       downloadingId: "",
       downloadProgress: 0,
+      serverFonts: [],
     };
   }
 
   componentDidMount() {
     this.loadAllFonts();
+    getSelfHostedAssetCatalog().then((catalog) => {
+      this.setState({ serverFonts: catalog.fonts });
+    });
     window.addEventListener("font-list-changed", this.loadAllFonts);
   }
 
@@ -261,11 +266,13 @@ class FontSetting extends React.Component<SettingInfoProps, SettingInfoState> {
     );
   };
 
+  // Only the fonts the server has files for
   getFeaturedFontList = () => {
     const lang = ConfigService.getReaderConfig("lang") || "";
-    return lang.startsWith("zh")
+    const all = lang.startsWith("zh")
       ? [...ChineseFonts, ...NonChineseFonts]
       : [...NonChineseFonts, ...ChineseFonts];
+    return all.filter((font) => this.state.serverFonts.includes(font.url));
   };
 
   getFeaturedFamilies = () => {
@@ -305,7 +312,6 @@ class FontSetting extends React.Component<SettingInfoProps, SettingInfoState> {
     try {
       const success = await FontUtil.downloadFeaturedFont(
         font,
-        this.props.isAuthed,
         (progress) => {
           this.setState({ downloadProgress: progress });
         }
@@ -348,6 +354,9 @@ class FontSetting extends React.Component<SettingInfoProps, SettingInfoState> {
 
   renderFeaturedSection = () => {
     const families = this.getFeaturedFamilies();
+    if (families.length === 0) {
+      return null;
+    }
     const allFonts = this.getFeaturedFontList();
     const { expandedFamily, downloadingId, downloadProgress } = this.state;
 

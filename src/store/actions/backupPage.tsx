@@ -1,7 +1,5 @@
 import { Dispatch } from "redux";
 import { ConfigService } from "../../assets/lib/kookit-extra-browser.min";
-import { getUserRequest } from "../../utils/request/user";
-import { handleExitApp } from "../../utils/request/common";
 
 export function handleBackupDialog(mode: boolean) {
   return { type: "HANDLE_BACKUP", payload: mode };
@@ -45,17 +43,10 @@ export function handleFetchDataSourceList() {
     dispatch(handleDataSourceList(dataSourceList));
   };
 }
+// There are no account logins; kept for the settings pages that refresh it
 export function handleFetchLoginOptionList() {
-  return async (dispatch: Dispatch) => {
-    let loginOptionList: { email: string; provider: string }[] = [];
-    let userRequest = await getUserRequest();
-    let response = await userRequest.getLoginsV2();
-    if (response.code === 200) {
-      loginOptionList = response.data;
-    } else if (response.code === 401) {
-      handleExitApp();
-    }
-    dispatch(handleLoginOptionList(loginOptionList));
+  return (dispatch: Dispatch) => {
+    dispatch(handleLoginOptionList([]));
   };
 }
 export function handleDefaultSyncOption(option: string) {

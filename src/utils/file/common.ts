@@ -51,7 +51,7 @@ export const changePath = async (newPath: string) => {
   }
 };
 export const changeLibrary = async (newPath: string) => {
-  if (!isKoodoLibrary(newPath)) {
+  if (!isLibraryFolder(newPath)) {
     toast.error(i18n.t("Please select a valid library"));
     return false;
   }
@@ -73,7 +73,7 @@ const isFolderContainsFile = (folderPath: string) => {
   const files = fs.readdirSync(folderPath);
   return files.length > 0;
 };
-const isKoodoLibrary = (folderPath: string) => {
+const isLibraryFolder = (folderPath: string) => {
   const fs = window.electronAPI.fs;
   if (!fs.existsSync(folderPath)) {
     return false;
@@ -308,7 +308,7 @@ export const getCloudToken = async (service: string) => {
     return configCache[service];
   } else {
     let result = await decryptToken(service);
-    if (result.code !== 200) {
+    if (result.code !== 200 || !result.data) {
       return null;
     }
     let config = JSON.parse(result.data.token);

@@ -1,4 +1,5 @@
 ﻿import Plugin from "../models/Plugin";
+import { isCompact } from "./platform";
 import { isElectron } from "react-device-detect";
 import CryptoJS from "crypto-js";
 import {
@@ -14,11 +15,7 @@ import DatabaseService from "./storage/databaseService";
 import packageJson from "../../package.json";
 import toast from "react-hot-toast";
 import i18n from "../i18n";
-import {
-  encryptToken,
-  getCloudSyncToken,
-  refreshThirdToken,
-} from "./request/thirdparty";
+import { encryptToken, refreshThirdToken } from "./request/thirdparty";
 import {
   getCloudConfig,
   getCloudToken,
@@ -27,7 +24,6 @@ import {
 import SyncService from "./storage/syncService";
 import localforage from "localforage";
 import { driveList } from "../constants/driveList";
-import { updateUserConfig } from "./request/user";
 import { languageCNMap, languageENMap } from "../constants/ttsList";
 import { BookHelper } from "../assets/lib/kookit.min";
 import {
@@ -171,84 +167,6 @@ export const vexComfirmAsync = (
     });
   });
 };
-const NAMESPACE = "__KOODO_EXTENSION__";
-
-export type KoodoExtensionInfo = {
-  installed: boolean;
-  /** Extension version from chrome.runtime.getManifest().version, when known. */
-  version?: string;
-};
-export const confirmBrowserExtensionAsync = async (): Promise<boolean> => {
-  const extensionInfo = await detectKoodoExtension();
-  if (extensionInfo.installed) {
-    return true;
-  }
-  const result = await vexComfirmAsync(
-    "Due to browser security restrictions, you may not be able to use this data source properly. If you encounter any issues, you can resolve them by installing our browser extension.",
-    "Confirm",
-    "Install extension"
-  );
-  if (!result) {
-    const lang = ConfigService.getReaderConfig("lang");
-    openExternalUrl(
-      getWebsiteUrl() +
-        (lang?.startsWith("zh") ? "/zh/use-extension" : "/en/use-extension")
-    );
-    return false;
-  }
-  return true;
-};
-export function detectKoodoExtension(
-  timeoutMs = 500
-): Promise<KoodoExtensionInfo> {
-  return new Promise((resolve) => {
-    let id = 0;
-    // Increment until unused so concurrent probes don't steal each other's RES.
-    const probes = (window as { __koodoProbeId?: number }).__koodoProbeId ?? 0;
-    id = probes + 1;
-    (window as { __koodoProbeId?: number }).__koodoProbeId = id;
-
-    let settled = false;
-    let timer: ReturnType<typeof setTimeout> | undefined;
-
-    const cleanup = () => {
-      if (timer) clearTimeout(timer);
-      window.removeEventListener("message", onMessage);
-    };
-
-    const finish = (info: KoodoExtensionInfo) => {
-      if (settled) return;
-      settled = true;
-      cleanup();
-      resolve(info);
-    };
-
-    function onMessage(event: MessageEvent) {
-      if (
-        event.source !== window ||
-        !event.data ||
-        event.data.__ns !== NAMESPACE ||
-        event.data.__type !== "RES" ||
-        event.data.__id !== id
-      )
-        return;
-
-      const payload = event.data.payload;
-      if (payload && payload.type === "PONG") {
-        finish({ installed: true, version: payload.version });
-      }
-    }
-
-    window.addEventListener("message", onMessage);
-
-    timer = setTimeout(() => finish({ installed: false }), timeoutMs);
-
-    window.postMessage(
-      { __ns: NAMESPACE, __type: "REQ", __id: id, payload: { type: "PING" } },
-      "*"
-    );
-  });
-}
 export const vexOpenAsync = (
   config: Record<string, any>,
   message: string,
@@ -626,6 +544,15 @@ export const getPageWidth = (
 
     return limit;
   };
+  // Phones: the page fills the screen less a small gutter; the scale setting
+  // is for wide windows
+  if (isCompact() && readerMode !== "double") {
+    const width = findValidMultiple(document.body.clientWidth - 28);
+    return {
+      pageOffset: `calc(50vw - ${width / 2}px)`,
+      pageWidth: width + "px",
+    };
+  }
   if (
     document.body.clientWidth * Math.abs(parseFloat(scale)) -
       document.body.clientWidth * 0.4 >
@@ -899,26 +826,6 @@ export const getDefaultTransTarget = (langList) => {
   return langMap[langTarget || "English"];
 };
 export const FOLIO_URL = "https://github.com/ssoad/folio";
-export const WEBSITE_URL = "https://koodoreader.com";
-export const CN_WEBSITE_URL = "https://koodoreader.cn";
-export const getServerRegion = () => {
-  let isUseCN = false;
-  if (ConfigService.getItem("serverRegion")) {
-    isUseCN = ConfigService.getItem("serverRegion") === "china";
-  } else {
-    if (navigator.language && navigator.language === "zh-CN") {
-      isUseCN = true;
-    }
-    const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-    if (timeZone && ["Asia/Shanghai", "Asia/Urumqi"].includes(timeZone)) {
-      isUseCN = true;
-    }
-  }
-  return isUseCN ? "china" : "global";
-};
-export const getWebsiteUrl = () => {
-  return getServerRegion() === "china" ? CN_WEBSITE_URL : WEBSITE_URL;
-};
 export const formatTimestamp = (timestamp) => {
   if (!timestamp) return "";
 
@@ -1032,7 +939,7 @@ export const testConnection = async (driveName: string, driveConfig: any) => {
       ) {
         toast.error(
           i18n.t(
-            "Please make sure the KoodoReader folder is created in the root directory of your Jianguoyun account, not in the My Jianguoyun folder."
+            "Please make sure the Folio folder is created in the root directory of your Jianguoyun account, not in the My Jianguoyun folder."
           ),
           {
             id: "jianguoyun-folder-error",
@@ -1347,68 +1254,6 @@ export const clearAllData = async () => {
   }
   await localforage.clear();
 };
-export const resetKoodoSync = async () => {
-  let encryptToken = await TokenService.getToken(
-    ConfigService.getItem("defaultSyncOption") + "_token"
-  );
-  await updateUserConfig({
-    is_enable_koodo_sync: "no",
-    default_sync_option: ConfigService.getItem("defaultSyncOption"),
-    default_sync_token: encryptToken || "",
-  });
-  setTimeout(() => {
-    updateUserConfig({
-      is_enable_koodo_sync: "yes",
-      default_sync_option: ConfigService.getItem("defaultSyncOption"),
-      default_sync_token: encryptToken || "",
-    });
-  }, 1000);
-};
-export const handleAutoCloudSync = async () => {
-  let syncRes = await getCloudSyncToken();
-  if (
-    syncRes.code === 200 &&
-    syncRes.data.default_sync_option &&
-    syncRes.data.default_sync_option !== "icloud" &&
-    syncRes.data.default_sync_option !== "folder" &&
-    syncRes.data.default_sync_token
-  ) {
-    let supportedSources = driveList
-      .filter((item) => {
-        if (isElectron) {
-          return item.support.includes("desktop");
-        } else {
-          return item.support.includes("browser");
-        }
-      })
-      .map((item) => item.value);
-    if (!supportedSources.includes(syncRes.data.default_sync_option)) {
-      return false;
-    }
-    if (
-      !isElectron &&
-      (syncRes.data.default_sync_option === "webdav" ||
-        syncRes.data.default_sync_option === "s3compatible")
-    ) {
-      return false;
-    }
-    ConfigService.setItem(
-      "defaultSyncOption",
-      syncRes.data.default_sync_option
-    );
-    ConfigService.setReaderConfig("isEnableKoodoSync", "yes");
-    await TokenService.setToken(
-      syncRes.data.default_sync_option + "_token",
-      syncRes.data.default_sync_token
-    );
-    ConfigService.setListConfig(
-      syncRes.data.default_sync_option,
-      "dataSourceList"
-    );
-    return true;
-  }
-  return false;
-};
 export const detectLocalLanguage = (text: string): string => {
   const chinesePattern = /[\u4e00-\u9fff\u3000-\u303f\uf900-\ufaff]/g;
   const japanesePattern = /[\u3040-\u309f\u30a0-\u30ff]/g;
@@ -1653,40 +1498,6 @@ export const findLastMatchIndex = (a: string[], b: string[]) => {
 
   return lastMatchIndex;
 };
-export const getICloudDrivePath = () => {
-  if (!isElectron) return "";
-  const fs = window.electronAPI.fs;
-  const path = window.electronAPI.path;
-  const os = window.electronAPI.os;
-
-  let iCloudPath = "";
-
-  // 自动检测iCloud Drive路径
-  if (isElectron && window.electronAPI?.runtime?.platform === "darwin") {
-    // macOS
-    const possiblePath = path.join(
-      os.homedir(),
-      "Library",
-      "Mobile Documents",
-      "iCloud~com~koodoreader~expo",
-      "Documents"
-    );
-    if (fs.existsSync(possiblePath)) {
-      iCloudPath = possiblePath;
-    }
-  }
-
-  // 如果自动检测失败，弹窗让用户手动选择
-  if (!iCloudPath || !fs.existsSync(iCloudPath)) {
-    return "";
-  }
-
-  // 验证路径是否有效
-  if (iCloudPath && fs.existsSync(iCloudPath)) {
-    return iCloudPath;
-  }
-  return "";
-};
 export const prepareThirdConfig = async (service: string, config: any) => {
   if (
     service === "adrive" ||
@@ -1750,20 +1561,7 @@ export const prepareThirdConfig = async (service: string, config: any) => {
       config.access_token = res.data.access_token;
       config.expires_at = new Date().getTime() + res.data.expires_in * 1000;
     }
-    let response: any = await encryptToken(service, config);
-    if (response.code === 200) {
-      if (
-        ConfigService.getReaderConfig("isEnableKoodoSync") === "yes" &&
-        ConfigService.getItem("defaultSyncOption") === service
-      ) {
-        let syncToken = await TokenService.getToken(service + "_token");
-        await updateUserConfig({
-          is_enable_koodo_sync: "yes",
-          default_sync_option: service,
-          default_sync_token: syncToken || "",
-        });
-      }
-    }
+    await encryptToken(service, config);
     SyncService.removeSyncUtil(service);
     removeCloudConfig(service);
     if (isElectron) {
@@ -1942,7 +1740,8 @@ export const getDefaultOcrEngine = (currentBook: any) => {
       ? "scannedOcrEngine"
       : "textOcrEngine"
   );
-  if (engine) return engine;
+  // "official-ai-ocr" was a removed cloud engine
+  if (engine && engine !== "official-ai-ocr") return engine;
   if (currentBook.description.indexOf("scanned") > -1) {
     return "paddle";
   } else {
@@ -1953,19 +1752,6 @@ export const getOcrLangList = (engine: string) => {
   let list: any[];
   if (engine === "tesseract") {
     list = ocrTesseractLangList;
-  } else if (engine === "official-ai-ocr") {
-    list = [
-      {
-        label: "General",
-        value: "general",
-        lang: "general",
-      },
-      {
-        label: "Accurate",
-        value: "accurate",
-        lang: "accurate",
-      },
-    ];
   } else if (engine === "system-ocr" || engine === "selfhosted-ocr") {
     list = [
       {
@@ -1992,8 +1778,6 @@ export const getDefaultOcrLang = (engine: string, currentBook: any) => {
         (item) => item.lang === ConfigService.getReaderConfig("lang")
       )?.value || "chi_sim"
     );
-  } else if (engine === "official-ai-ocr") {
-    return "general";
   } else if (engine === "system-ocr" || engine === "selfhosted-ocr") {
     return "auto";
   } else if (engine === "paddle") {

@@ -46,7 +46,7 @@ declare global {
 }
 export class LocalFileManager {
   private static directoryHandle: FileSystemDirectoryHandle | null = null;
-  private static readonly STORAGE_KEY = "koodo_directory_handle";
+  private static readonly STORAGE_KEY = "folio_directory_handle";
   private static async verifyDirectoryHandleUsable(
     handle: FileSystemDirectoryHandle
   ): Promise<boolean> {
@@ -266,7 +266,7 @@ export class LocalFileManager {
   // 打开 IndexedDB 数据库
   private static openDatabase(): Promise<IDBDatabase> {
     return new Promise((resolve, reject) => {
-      const request = indexedDB.open("KoodoFileSystemDB", 1);
+      const request = indexedDB.open("FolioFileSystemDB", 1);
 
       request.onerror = () => reject(request.error);
       request.onsuccess = () => resolve(request.result);

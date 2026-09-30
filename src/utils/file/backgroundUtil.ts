@@ -1,4 +1,5 @@
 import { isElectron } from "react-device-detect";
+import { fetchSelfHostedAsset } from "../request/selfHosted";
 import { getStorageLocation } from "../common";
 import { ConfigService } from "../../assets/lib/kookit-extra-browser.min";
 import { LocalFileManager } from "./localFile";
@@ -203,17 +204,20 @@ class BackgroundUtil {
     ConfigService.deleteListConfig(id, "backgroundList");
   }
 
-  /** Featured backgrounds live on the public storage server, 1-indexed. */
-  static getFeaturedBackgroundId(index: number): string {
-    return `official-background-${index}`;
+  /**
+   * Featured backgrounds are served by the Folio server from
+   * assets/backgrounds/desktop, with optional previews of the same name in
+   * assets/backgrounds/desktop-thumbnail.
+   */
+  static getFeaturedBackgroundId(name: string): string {
+    return name.replace(/\.[^.]+$/, "");
   }
 
-  static getFeaturedThumbnailUrl(index: number): string {
-    return `https://storage.koodoreader.com/backgrounds/desktop-thumbnail/official-background-${index}.png`;
-  }
-
-  static getFeaturedOriginalUrl(index: number): string {
-    return `https://storage.koodoreader.com/backgrounds/desktop/official-background-${index}.png`;
+  /** Object URL of a featured background or its preview, for <img> */
+  static async loadFeaturedImage(path: string): Promise<string | null> {
+    const response = await fetchSelfHostedAsset("backgrounds", path);
+    if (!response.ok) return null;
+    return URL.createObjectURL(await response.blob());
   }
 
   /**
@@ -221,17 +225,13 @@ class BackgroundUtil {
    * Returns its local data-URL, or null when the download fails.
    */
   static async downloadFeaturedBackground(
-    index: number,
+    path: string,
     onProgress?: (progress: number) => void
   ): Promise<string | null> {
-    const id = this.getFeaturedBackgroundId(index);
-    const extension = "png";
-    const response = await fetch(this.getFeaturedOriginalUrl(index), {
-      headers: {
-        "Cache-Control": "no-transform",
-        "Accept-Encoding": "identity",
-      },
-    });
+    const fileName = path.split("/").pop() || path;
+    const id = this.getFeaturedBackgroundId(fileName);
+    const extension = (fileName.split(".").pop() || "png").toLowerCase();
+    const response = await fetchSelfHostedAsset("backgrounds", path);
     if (!response.ok) return null;
 
     const contentLength = Number(response.headers.get("Content-Length") || 0);
@@ -269,7 +269,7 @@ class BackgroundUtil {
       dataUrl
     );
     this.saveImageMeta(id, {
-      name: `${i18n.t("Official background")} ${index}`,
+      name: id,
       extension,
       backgroundColor,
       textColor,

@@ -4,7 +4,6 @@ import { SettingInfoProps, SettingInfoState } from "./interface";
 import { Trans } from "react-i18next";
 import GeneralSetting from "../../../containers/settings/generalSetting";
 import SyncSetting from "../../../containers/settings/syncSetting";
-import AccountSetting from "../../../containers/settings/accountSetting";
 import SelfHostedSetting from "../../../containers/settings/selfHostedSetting";
 import PluginSetting from "../../../containers/settings/pluginSetting";
 import ReadingSetting from "../../../containers/settings/readingSetting";
@@ -80,7 +79,7 @@ class SettingDialog extends React.Component<
       case "sync":
         return "Sync and backup";
       case "account":
-        return "Account";
+        return "Server";
       case "about":
         return "About";
       case "ai":
@@ -141,7 +140,7 @@ class SettingDialog extends React.Component<
               "More settings",
               "13px"
             )}
-            {this.renderSidebarItem("account", "icon-user", "Account", "18px")}
+            {this.renderSidebarItem("account", "icon-user", "Server", "18px")}
             {this.renderSidebarItem("about", "icon-detail", "About", "18px")}
           </div>
 
@@ -218,10 +217,7 @@ class SettingDialog extends React.Component<
             ) : this.props.settingMode === "sync" ? (
               <SyncSetting />
             ) : this.props.settingMode === "account" ? (
-              <>
-                <SelfHostedSetting />
-                <AccountSetting />
-              </>
+              <SelfHostedSetting />
             ) : this.props.settingMode === "data" ? (
               <DataSetting />
             ) : this.props.settingMode === "about" ? (

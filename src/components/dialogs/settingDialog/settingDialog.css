@@ -806,15 +806,3 @@
   display: flex;
   gap: 10px;
 }
-
-/* Koodo login row shown under a connected self-hosted server */
-.koodo-account-optional {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  width: calc(100% - 100px);
-}
-.koodo-account-optional .setting-option-subtitle {
-  margin: 0;
-  font-weight: normal;
-}

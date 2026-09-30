@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- The app page background, the ground color in public/assets/styles/theme.css -->
+    <color name="folio_background">#F7F6F3</color>
+    <color name="colorPrimary">#4458C7</color>
+    <color name="colorPrimaryDark">#F7F6F3</color>
+    <color name="colorAccent">#4458C7</color>
+</resources>

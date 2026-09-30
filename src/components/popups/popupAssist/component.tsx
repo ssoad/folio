@@ -16,7 +16,6 @@ import { Trans } from "react-i18next";
 import { handleContextMenu } from "../../../utils/common";
 import toast from "react-hot-toast";
 import { saveAs } from "file-saver";
-import { getAnswerStream } from "../../../utils/request/reader";
 import { streamChat } from "../../../utils/ai";
 import {
   isSpoilerProtectionOn,
@@ -211,19 +210,13 @@ class PopupAssist extends React.Component<PopupAssistProps, PopupAssistState> {
     if (!this.state.aiService) {
       let pluginList = this.props.plugins.filter(
         (item) =>
-          item.type === "assistant" && !item.key.startsWith("official-ai-")
+          item.type === "assistant"
       );
       if (pluginList.length > 0) {
         this.setState({
           aiService: pluginList[0].key,
         });
         ConfigService.setReaderConfig("aiService", pluginList[0].key);
-      } else if (this.props.isAuthed) {
-        this.setState({
-          aiService: "official-ai-assistant-plugin",
-          isAddNew: false,
-        });
-        ConfigService.setReaderConfig("aiService", "official-ai-assistant-plugin");
       } else {
         this.setState({
           isAddNew: true,
@@ -305,11 +298,10 @@ class PopupAssist extends React.Component<PopupAssistProps, PopupAssistState> {
             .trim()
         : "";
     if (
-      (!ConfigService.getReaderConfig("aiService") ||
-        this.props.plugins.findIndex(
-          (item) => item.key === ConfigService.getReaderConfig("aiService")
-        ) === -1) &&
-      !this.props.isAuthed
+      !ConfigService.getReaderConfig("aiService") ||
+      this.props.plugins.findIndex(
+        (item) => item.key === ConfigService.getReaderConfig("aiService")
+      ) === -1
     ) {
       this.setState({ isAddNew: true });
     }
@@ -417,46 +409,6 @@ class PopupAssist extends React.Component<PopupAssistProps, PopupAssistState> {
         if (ConfigService.getReaderConfig("isManualScroll") !== "yes") {
           this.scrollToBottom();
         }
-      } else if (
-        ConfigService.getReaderConfig("aiService") &&
-        ConfigService.getReaderConfig("aiService") !== "official-ai-assistant-plugin"
-      ) {
-      } else if (this.props.isAuthed) {
-        let plugin = this.props.plugins.find(
-          (item) => item.key === "official-ai-assistant-plugin"
-        );
-        if (!plugin) {
-          return;
-        }
-        this.answerTextAccumulator = "";
-        this.startUpdateInterval();
-        let res = await getAnswerStream(
-          text,
-          this.state.question,
-          this.getHistory(),
-          this.state.mode,
-          (result) => {
-            if (result && result.text) {
-              if (!this.answerTextAccumulator) {
-                this.setState({ isWaiting: false });
-              }
-              this.answerTextAccumulator += result.text;
-            }
-          }
-        );
-        this.stopUpdateInterval(this.answerTextAccumulator);
-        const finalAnswer = this.answerTextAccumulator;
-        this.answerTextAccumulator = "";
-        if (res.data && res.done) {
-          this.appendHistory([{ role: "assistant", content: finalAnswer }], {
-            answer: "",
-            question: "",
-            isWaiting: false,
-          });
-        }
-        if (ConfigService.getReaderConfig("isManualScroll") !== "yes") {
-          this.scrollToBottom();
-        }
       }
     } catch (error) {
       toast.error(
@@ -471,15 +423,6 @@ class PopupAssist extends React.Component<PopupAssistProps, PopupAssistState> {
     }
   };
   handleChangeAiService = (aiService: string) => {
-    if (
-      aiService === "official-ai-assistant-plugin" &&
-      !this.props.isAuthed
-    ) {
-      toast(this.props.t("Please upgrade to Pro to use this feature"));
-      this.props.handleSetting(true);
-      this.props.handleSettingMode("account");
-      return;
-    }
     let plugin = this.props.plugins.find((item) => item.key === aiService);
     if (!plugin) {
       return;
@@ -626,7 +569,7 @@ class PopupAssist extends React.Component<PopupAssistProps, PopupAssistState> {
       new Blob([JSON.stringify(exportData, null, 2)], {
         type: "application/json;charset=UTF-8",
       }),
-      `KoodoReader-${modeLabel}-Assistant-${bookName}-${dateStr}.json`
+      `Folio-${modeLabel}-Assistant-${bookName}-${dateStr}.json`
     );
     toast.success(this.props.t("Export successful"), { id: "exporting" });
   };
@@ -766,23 +709,14 @@ class PopupAssist extends React.Component<PopupAssistProps, PopupAssistState> {
                 {this.props.t("Please select")}
               </option>
               {this.props.plugins
-                .filter(
-                  (item) =>
-                    item.type === "assistant" &&
-                    // Needs a Koodo account
-                    (item.key !== "official-ai-assistant-plugin" ||
-                      this.props.isAuthed)
-                )
+                .filter((item) => item.type === "assistant")
                 .map((item) => (
                   <option
                     value={item.key}
                     key={item.key}
                     className="add-dialog-shelf-list-option"
                   >
-                    {this.props.t(item.displayName) +
-                      (item.key === "official-ai-assistant-plugin"
-                        ? " (Pro)"
-                        : "")}
+                    {this.props.t(item.displayName)}
                   </option>
                 ))}
               <option

@@ -9,19 +9,19 @@ import { isElectron } from "react-device-detect";
 import { getCloudConfig } from "../../../utils/file/common";
 import SyncService from "../../../utils/storage/syncService";
 import {
-  getServerRegion,
   getStorageLocation,
   openExternalUrl,
   openInBrowser,
   showDownloadProgress,
   supportedFormats,
 } from "../../../utils/common";
-import {
-  KookitConfig,
-  SyncUtil,
-} from "../../../assets/lib/kookit-extra-browser.min";
 import { GooglePickerUtil } from "../../../utils/file/googlePicker";
-import { canUseDrive } from "../../../utils/request/selfHosted";
+import {
+  canUseDrive,
+  getSelfHostedAuthorizeUrl,
+  getSelfHostedConfig,
+  getSelfHostedPickerUrl,
+} from "../../../utils/request/selfHosted";
 declare var window: any;
 type FileInfo = {
   name: string;
@@ -66,7 +66,7 @@ class ImportDialog extends React.Component<
     }
     if (
       driveList.find((item) => item.value === event.target.value)?.isPro &&
-      !canUseDrive(this.props.isAuthed, event.target.value)
+      !canUseDrive(event.target.value)
     ) {
       toast(this.props.t("Please upgrade to Pro to use this feature"));
       this.props.handleSetting(true);
@@ -297,18 +297,28 @@ class ImportDialog extends React.Component<
           }
         );
       }
+      // The picker runs with the Google app configured on the Folio server
+      const pickerConfig = getSelfHostedConfig()?.googlePicker;
+      if (!pickerConfig || !pickerConfig.appId || !pickerConfig.apiKey) {
+        toast.error(
+          this.props.t(
+            "The Google Drive picker isn't set up on your server. Add PRO_OAUTH_GOOGLE_APP_ID and PRO_OAUTH_GOOGLE_API_KEY to its configuration"
+          ),
+          { id: "google-picker" }
+        );
+        return;
+      }
       let pickerUtil: any = await SyncService.getPickerUtil("google");
       this.googlePickerUtil = new GooglePickerUtil({
         accessToken: pickerUtil.remote.config.access_token,
-        apiKey: "",
-        appId: "1051055003225",
+        apiKey: pickerConfig.apiKey,
+        appId: pickerConfig.appId,
       });
       toast.dismiss("google-picker");
 
       if (isElectron) {
         openExternalUrl(
-          "https://dl.koodoreader.com/websites/google-picker.html?access_token=" +
-            pickerUtil.remote.config.access_token
+          getSelfHostedPickerUrl(pickerUtil.remote.config.access_token)
         );
         const ipcRenderer = window.electronAPI;
         ipcRenderer.once("picker-finished", async (config: any) => {
@@ -403,7 +413,7 @@ class ImportDialog extends React.Component<
                     onClick={() => {
                       if (
                         item.isPro &&
-                        !canUseDrive(this.props.isAuthed, item.value)
+                        !canUseDrive(item.value)
                       ) {
                         toast(
                           this.props.t(
@@ -433,16 +443,7 @@ class ImportDialog extends React.Component<
                           settingDrive === "microsoft"
                         ) {
                           openInBrowser(
-                            new SyncUtil(settingDrive, {}).getAuthUrl(
-                              getServerRegion() === "china" &&
-                                (settingDrive === "microsoft" ||
-                                  settingDrive === "microsoft_exp" ||
-                                  settingDrive === "dubox" ||
-                                  settingDrive === "yiyiwu" ||
-                                  settingDrive === "adrive")
-                                ? KookitConfig.ThirdpartyConfig.cnCallbackUrl
-                                : KookitConfig.ThirdpartyConfig.callbackUrl
-                            )
+                            getSelfHostedAuthorizeUrl(settingDrive)
                           );
                         }
                         return;
@@ -462,7 +463,7 @@ class ImportDialog extends React.Component<
                     <span className="cloud-drive-label">
                       {this.props.t(item.label) +
                         (item.isPro &&
-                        !canUseDrive(this.props.isAuthed, item.value)
+                        !canUseDrive(item.value)
                           ? " (Pro)"
                           : "")}
                     </span>

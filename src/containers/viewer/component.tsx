@@ -26,7 +26,6 @@ import {
   getPageWidth,
   getParserRegex,
   getPdfPassword,
-  getServerRegion,
   getTarBuffer,
   getTarEntries,
   getTextRules,
@@ -42,7 +41,6 @@ import { ConfigService } from "../../assets/lib/kookit-extra-browser.min";
 import * as Kookit from "../../assets/lib/kookit.min";
 import PopupRefer from "../../components/popups/popupRefer";
 import DatabaseService from "../../utils/storage/databaseService";
-import { getOcrResult, getOcrResultV2 } from "../../utils/request/reader";
 import { BookHelper } from "../../assets/lib/kookit.min";
 import { parseWithSystemOCR } from "../../utils/request/common";
 import {
@@ -301,7 +299,7 @@ class Viewer extends React.Component<ViewerProps, ViewerState> {
         fullTranslationMode:
           ConfigService.getAllListConfig("fullTranslationBooks").includes(
             this.props.currentBook.key
-          ) && canUseProFeature(this.props.isAuthed, "ai")
+          ) && canUseProFeature("ai")
             ? ConfigService.getReaderConfig("fullTranslationMode")
             : "no",
         textOrientation: ConfigService.getReaderConfig("textOrientation"),
@@ -346,14 +344,11 @@ class Viewer extends React.Component<ViewerProps, ViewerState> {
           this.props.currentBook
         ),
         externalWorker: {
+          // Paddle and Tesseract run inside the engine
           recognize:
-            getDefaultOcrEngine(this.props.currentBook) === "system-ocr"
-              ? parseWithSystemOCR
-              : getDefaultOcrEngine(this.props.currentBook) === "selfhosted-ocr"
-                ? selfHostedOcr
-                : ConfigService.getReaderConfig(ocrLangKey) === "accurate"
-                  ? getOcrResultV2
-                  : getOcrResult,
+            getDefaultOcrEngine(this.props.currentBook) === "selfhosted-ocr"
+              ? selfHostedOcr
+              : parseWithSystemOCR,
         },
         // Self-hosted OCR returns plain text like system OCR, so the engine
         // handles it through the same path
@@ -361,10 +356,7 @@ class Viewer extends React.Component<ViewerProps, ViewerState> {
           getDefaultOcrEngine(this.props.currentBook) === "selfhosted-ocr"
             ? "system-ocr"
             : getDefaultOcrEngine(this.props.currentBook),
-        serverRegion:
-          getServerRegion() === "china" && this.props.isAuthed
-            ? "china"
-            : "global",
+        serverRegion: "global",
         paraSpacingValue:
           ConfigService.getReaderConfig("paraSpacingValue") || "1.5",
         titleSizeValue:
@@ -442,7 +434,7 @@ class Viewer extends React.Component<ViewerProps, ViewerState> {
     this.props.handleReadingState(true);
 
     ConfigService.setListConfig(this.props.currentBook.key, "recentBooks");
-    document.title = name + " - Koodo Reader";
+    document.title = name + " - Folio";
   };
 
   handleRest = async (rendition: any) => {

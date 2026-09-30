@@ -13,16 +13,10 @@ import DictHistory from "../../../models/DictHistory";
 import { Trans } from "react-i18next";
 import {
   getFullTranslationTarget,
-  getOfficialDictLang,
-  getWebsiteUrl,
   openExternalUrl,
 } from "../../../utils/common";
 import toast from "react-hot-toast";
 import DatabaseService from "../../../utils/storage/databaseService";
-import {
-  getDictText,
-  getDictionaryStream,
-} from "../../../utils/request/reader";
 import { chatStream } from "../../../utils/request/common";
 import { marked } from "marked";
 import { getIframeDoc } from "../../../utils/reader/docUtil";
@@ -101,7 +95,7 @@ class PopupDict extends React.Component<PopupDictProps, PopupDictState> {
     if (!this.state.dictService) {
       let pluginList = this.props.plugins.filter(
         (item) =>
-          item.type === "dictionary" && !item.key.startsWith("official-ai-")
+          item.type === "dictionary"
       );
       if (pluginList.length > 0) {
         this.setState({
@@ -109,12 +103,6 @@ class PopupDict extends React.Component<PopupDictProps, PopupDictState> {
         });
         ConfigService.setReaderConfig("dictService", pluginList[0].key);
         await new Promise((resolve) => setTimeout(resolve, 100));
-      } else if (this.props.isAuthed) {
-        this.setState({
-          dictService: "official-ai-dict-plugin",
-          isAddNew: false,
-        });
-        ConfigService.setReaderConfig("dictService", "official-ai-dict-plugin");
       } else {
         this.setState({ isAddNew: true });
         return;
@@ -150,7 +138,6 @@ class PopupDict extends React.Component<PopupDictProps, PopupDictState> {
 
   handleDict = async (text: string): Promise<string> => {
     let dictText = "";
-    let isFullAnalysis = true;
     try {
       if (
         ConfigService.getReaderConfig("dictService") === "custom-ai-dict-plugin"
@@ -211,25 +198,7 @@ class PopupDict extends React.Component<PopupDictProps, PopupDictState> {
         const dictId: string = config.dictId || "";
         if (!dictId) return "";
         dictText = await DictUtil.lookupWord(dictId, text);
-      } else if (
-        this.props.isAuthed &&
-        ConfigService.getReaderConfig("isDisableAI") !== "yes" &&
-        ConfigService.getReaderConfig("dictService") ===
-          "official-ai-dict-plugin"
-      ) {
-        dictText = await getDictText(
-          text,
-          ConfigService.getReaderConfig("dictTarget") || "auto",
-          getOfficialDictLang()
-        );
-        if (dictText) {
-          isFullAnalysis = false;
-        }
-      } else if (
-        ConfigService.getReaderConfig("dictService") &&
-        ConfigService.getReaderConfig("dictService") !==
-          "official-ai-dict-plugin"
-      ) {
+      } else if (ConfigService.getReaderConfig("dictService")) {
         let plugin = this.props.plugins.find(
           (item) => item.key === ConfigService.getReaderConfig("dictService")
         );
@@ -275,19 +244,13 @@ class PopupDict extends React.Component<PopupDictProps, PopupDictState> {
             let moreElement = document.querySelector(".dict-learn-more");
             if (moreElement) {
               moreElement.addEventListener("click", () => {
-                openExternalUrl(window.learnMoreUrl || getWebsiteUrl());
+                if (window.learnMoreUrl) {
+                  openExternalUrl(window.learnMoreUrl);
+                }
               });
             }
           }
         );
-      }
-      if (
-        this.props.isAuthed &&
-        ConfigService.getReaderConfig("isDisableAI") !== "yes" &&
-        ConfigService.getReaderConfig("dictService") ===
-          "official-ai-dict-plugin"
-      ) {
-        this.handleDictionaryStream(text, isFullAnalysis);
       }
       return dictText;
     } catch (error) {
@@ -303,45 +266,7 @@ class PopupDict extends React.Component<PopupDictProps, PopupDictState> {
       return "";
     }
   };
-  handleDictionaryStream = async (text: string, isFullAnalysis: boolean) => {
-    try {
-      this.aiTextAccumulator = "";
-      this.setState({ aiAnswer: "", isAiWaiting: true });
-      this.startUpdateInterval();
-      let res = await getDictionaryStream(
-        text,
-        "auto",
-        getFullTranslationTarget(),
-        this.props.originalSentence,
-        isFullAnalysis,
-        (result) => {
-          if (result && result.text) {
-            if (!this.aiTextAccumulator) {
-              this.setState({ isAiWaiting: false });
-            }
-            this.aiTextAccumulator += result.text;
-          }
-        }
-      );
-      this.stopUpdateInterval();
-      this.aiTextAccumulator = "";
-      if (res && res.done) {
-        this.setState({ isAiWaiting: false });
-      }
-    } catch (error) {
-      this.stopUpdateInterval();
-      this.aiTextAccumulator = "";
-      this.setState({ isAiWaiting: false });
-      console.error(error);
-    }
-  };
   handleChangeDictService = (dictService: string) => {
-    if (dictService === "official-ai-dict-plugin" && !this.props.isAuthed) {
-      toast(this.props.t("Please upgrade to Pro to use this feature"));
-      this.props.handleSetting(true);
-      this.props.handleSettingMode("account");
-      return;
-    }
     this.setState(
       {
         dictService: dictService,
@@ -402,13 +327,7 @@ class PopupDict extends React.Component<PopupDictProps, PopupDictState> {
                 {this.props.t("Please select")}
               </option>
               {this.props.plugins
-                .filter(
-                  (item) =>
-                    item.type === "dictionary" &&
-                    // Needs a Koodo account, self-hosted users look up words with the server's model
-                    (item.key !== "official-ai-dict-plugin" ||
-                      this.props.isAuthed)
-                )
+                .filter((item) => item.type === "dictionary")
                 .map((item) => {
                   return (
                     <option
@@ -417,12 +336,6 @@ class PopupDict extends React.Component<PopupDictProps, PopupDictState> {
                       className="add-dialog-shelf-list-option"
                     >
                       {this.props.t(item.displayName)}
-                      {item.key === "official-ai-dict-plugin" && (
-                        <span style={{ fontSize: "13px", color: "var(--accent)" }}>
-                          {" "}
-                          (Pro)
-                        </span>
-                      )}
                     </option>
                   );
                 })}

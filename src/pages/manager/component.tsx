@@ -1,4 +1,5 @@
 import React from "react";
+import { NATIVE_BACK_EVENT } from "../../utils/native";
 import Sidebar from "../../containers/sidebar";
 import Header from "../../containers/header";
 import DeleteDialog from "../../components/dialogs/deleteDialog";
@@ -28,7 +29,6 @@ import {
   isBookDragEvent,
   isExternalFileDragEvent,
 } from "../../utils/reader/bookDrag";
-import Footer from "../../components/footer";
 import ProtectionOverlay from "../../components/protection";
 class Manager extends React.Component<ManagerProps, ManagerState> {
   timer!: NodeJS.Timeout;
@@ -88,6 +88,7 @@ class Manager extends React.Component<ManagerProps, ManagerState> {
     document.addEventListener("dragstart", this.handleDocumentDragStart, true);
     document.addEventListener("dragend", this.handleDocumentDragEnd, true);
     document.addEventListener("dragenter", this.handleExternalDragEnter, true);
+    window.addEventListener(NATIVE_BACK_EVENT, this.handleBack);
     // Auto switch to configured startup shelf
     const startupShelf = ConfigService.getReaderConfig("startupShelf");
     if (startupShelf) {
@@ -100,6 +101,7 @@ class Manager extends React.Component<ManagerProps, ManagerState> {
     }
   }
   componentWillUnmount() {
+    window.removeEventListener(NATIVE_BACK_EVENT, this.handleBack);
     document.removeEventListener(
       "dragstart",
       this.handleDocumentDragStart,
@@ -132,6 +134,50 @@ class Manager extends React.Component<ManagerProps, ManagerState> {
 
   handleDrag = (isDrag: boolean) => {
     this.setState({ isDrag });
+  };
+  isAnyDialogOpen = () =>
+    !!(
+      this.props.isSettingOpen ||
+      this.props.isOpenImportDialog ||
+      this.props.isOpenOPDSDialog ||
+      this.props.isOpenAutoImportDialog ||
+      this.props.isOpenSortShelfDialog ||
+      this.props.isShowNew ||
+      this.props.isShowSupport ||
+      this.props.isOpenDeleteDialog ||
+      this.props.isOpenEditDialog ||
+      this.props.isOpenLocalFileDialog ||
+      this.props.isDetailDialog ||
+      this.props.isShowPopupNote ||
+      this.props.isOpenAddDialog ||
+      this.props.isShowLoading ||
+      this.state.isDrag
+    );
+  closeDialogs = () => {
+    this.props.handleEditDialog(false);
+    this.props.handleDeleteDialog(false);
+    this.props.handleAddDialog(false);
+    this.props.handleDetailDialog(false);
+    this.props.handleLoadingDialog(false);
+    if (!this.props.isAuthed) {
+      this.props.handleNewDialog(false);
+      this.props.handleShowSupport(false);
+    }
+    this.props.handleLocalFileDialog(false);
+    this.props.handleImportDialog(false);
+    this.props.handleOPDSDialog(false);
+    this.props.handleAutoImportDialog(false);
+    this.props.handleShowPopupNote(false);
+    this.props.handleSortShelfDialog(false);
+    this.props.handleSetting(false);
+    this.handleDrag(false);
+  };
+  // Android back button: close whatever dialog is open first
+  handleBack = (event: Event) => {
+    if (this.isAnyDialogOpen()) {
+      event.preventDefault();
+      this.closeDialogs();
+    }
   };
   render() {
     let { books } = this.props;
@@ -239,41 +285,9 @@ class Manager extends React.Component<ManagerProps, ManagerState> {
               await this.props.cloudSyncFunc();
             }
           }}
-          onClick={() => {
-            this.props.handleEditDialog(false);
-            this.props.handleDeleteDialog(false);
-            this.props.handleAddDialog(false);
-            this.props.handleDetailDialog(false);
-            this.props.handleLoadingDialog(false);
-            if (!this.props.isAuthed) {
-              this.props.handleNewDialog(false);
-              this.props.handleShowSupport(false);
-            }
-            this.props.handleLocalFileDialog(false);
-            this.props.handleImportDialog(false);
-            this.props.handleOPDSDialog(false);
-            this.props.handleAutoImportDialog(false);
-            this.props.handleShowPopupNote(false);
-            this.props.handleSortShelfDialog(false);
-            this.props.handleSetting(false);
-            this.handleDrag(false);
-          }}
+          onClick={this.closeDialogs}
           style={
-            this.props.isSettingOpen ||
-            this.props.isOpenImportDialog ||
-            this.props.isOpenOPDSDialog ||
-            this.props.isOpenAutoImportDialog ||
-            this.props.isOpenSortShelfDialog ||
-            this.props.isShowNew ||
-            this.props.isShowSupport ||
-            this.props.isOpenDeleteDialog ||
-            this.props.isOpenEditDialog ||
-            this.props.isOpenLocalFileDialog ||
-            this.props.isDetailDialog ||
-            this.props.isShowPopupNote ||
-            this.props.isOpenAddDialog ||
-            this.props.isShowLoading ||
-            this.state.isDrag
+            this.isAnyDialogOpen()
               ? {}
               : {
                   display: "none",
@@ -323,7 +337,6 @@ class Manager extends React.Component<ManagerProps, ManagerState> {
             ))}
           </Switch>
         )}
-        <Footer />
       </div>
     );
   }

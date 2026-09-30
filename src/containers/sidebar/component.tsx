@@ -1,4 +1,5 @@
 import React from "react";
+import { isCompact, setDrawerOpen } from "../../utils/responsive";
 import "./sidebar.css";
 import FolioLogo from "../../components/folioLogo";
 import { canUseProFeature } from "../../utils/request/selfHosted";
@@ -27,8 +28,6 @@ class Sidebar extends React.Component<SidebarProps, SidebarState> {
       isCollpaseShelf: false,
       isOpenDelete: false,
       shelfTitle: "",
-      isCollapsed:
-        ConfigService.getReaderConfig("isCollapsed") === "yes" || false,
       isCreateShelf: false,
       newShelfName: "",
       dropTargetShelf: "",
@@ -78,7 +77,11 @@ class Sidebar extends React.Component<SidebarProps, SidebarState> {
     this.setState({ hoverShelfTitle });
   };
   handleCollapse = (isCollapsed: boolean) => {
-    this.setState({ isCollapsed });
+    // On phones the menu button closes the drawer instead
+    if (isCompact()) {
+      setDrawerOpen(false);
+      return;
+    }
     this.props.handleCollapse(isCollapsed);
     ConfigService.setReaderConfig("isCollapsed", isCollapsed ? "yes" : "no");
   };
@@ -376,24 +379,40 @@ class Sidebar extends React.Component<SidebarProps, SidebarState> {
     return (
       <>
         <div
+          className="sidebar-backdrop"
+          onClick={() => setDrawerOpen(false)}
+        ></div>
+        <div
           className={
             "sidebar" + (this.props.isCollapsed ? " sidebar-collapsed" : "")
           }
+          onClickCapture={(event) => {
+            // Leaving the drawer once a destination is picked
+            const target = event.target as HTMLElement;
+            if (
+              isCompact() &&
+              target.closest(
+                "li.side-menu-item, .side-menu-about, .sidebar-close-on-tap"
+              )
+            ) {
+              setDrawerOpen(false);
+            }
+          }}
         >
           <div
             className="sidebar-list-icon"
             onClick={() => {
-              this.handleCollapse(!this.state.isCollapsed);
+              this.handleCollapse(!this.props.isCollapsed);
             }}
           >
             <span className="icon-menu sidebar-list"></span>
           </div>
 
-          {!this.state.isCollapsed && (
+          {!this.props.isCollapsed && (
             <FolioLogo
               className="logo"
               size={26}
-              isPro={canUseProFeature(this.props.isAuthed)}
+              isPro={canUseProFeature()}
               onClick={() => {
                 this.handleJump(FOLIO_URL);
               }}
@@ -401,13 +420,13 @@ class Sidebar extends React.Component<SidebarProps, SidebarState> {
           )}
           <div
             className="side-menu-container-parent"
-            style={this.state.isCollapsed ? { width: "70px" } : {}}
+            style={this.props.isCollapsed ? { width: "70px" } : {}}
           >
             <ul className="side-menu-container">{renderSideMenu()}</ul>
             <div
               className="side-shelf-title-container"
               style={
-                this.state.isCollapsed
+                this.props.isCollapsed
                   ? { display: "none" }
                   : this.state.isCollpaseShelf
                     ? {}
@@ -500,7 +519,7 @@ class Sidebar extends React.Component<SidebarProps, SidebarState> {
             )}
             {!this.props.isCollapsed && (
               <div
-                className={"side-menu-selector"}
+                className={"side-menu-selector sidebar-close-on-tap"}
                 style={{ cursor: "pointer" }}
                 onClick={() => {
                   this.props.handleSortShelfDialog(true);

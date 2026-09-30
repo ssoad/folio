@@ -1,39 +1,20 @@
-<div align="left">
-
-[简体中文](./README_cn.md) | [हिंदी](./README_hi.md)
-|[Português](./README_pt.md) | [Indonesian](./README_id.md) | English | [Türkçe](./README_tr.md)
-
+<div align="center">
+  <img src="./src/assets/images/folio-mark.svg" width="88px" height="88px"/>
 </div>
 
-<div align="center" >
-  <img src="https://dl.koodoreader.com/screenshots/logo.png" width="96px" height="96px"/>
-</div>
+<h1 align="center">Folio</h1>
 
-<h1 align="center">
-  Koodo Reader
-</h1>
+<h3 align="center">A cross-platform ebook reader with its own server</h3>
 
-<h3 align="center">
-  A cross-platform ebook reader
-</h3>
 <div align="center">
 
-[Download](https://koodoreader.com/en) | [Preview](https://web.koodoreader.com) | [Roadmap](https://koodoreader.com/en/roadmap) | [Document](https://koodoreader.com/en/document) | [Plugins](https://koodoreader.com/en/plugin)
+[Releases](https://github.com/ssoad/folio/releases) | [Server setup](./httpserver/README.md) | [Issues](https://github.com/ssoad/folio/issues)
 
 </div>
 
-## Preview
-
-<div align="center">
-  <br/>
-  <br/>
-  <img src="https://dl.koodoreader.com/screenshots/7.png" width="800px">
-  <br/>
-  <br/>
-  <img src="https://dl.koodoreader.com/screenshots/8.png" width="800px">
-  <br/>
-  <br/>
-</div>
+Folio reads your books locally on Windows, macOS, Linux and the web. It has no
+central cloud and no accounts: sync, AI, voices, OCR and downloads come from a
+Folio server you run yourself.
 
 ## Features
 
@@ -46,118 +27,29 @@
   - Comic book archive (**.cbr**, **.cbz**, **.cbt**, **.cb7**)
   - Rich text (**.md**, **.docx**)
   - HyperText (**.html**, **.xml**, **.xhtml**, **.mhtml**, **.htm**)
-- Platform support: **Windows**, **macOS**, **Linux**, **Android**, **iOS** and **Web**
-- Sync and backup your data with **OneDrive**, **Google Drive**, **Dropbox**, **iCloud**, **MEGA**, **pCloud**, **Yandex Disk**, **Box**, **FTP**, **SFTP**, **WebDAV**, **SMB**, or **Object Storage**
-- Easily import books from **OneDrive**, **Google Drive**, **MEGA**, **Yandex Disk**, **Box**, **FTP**, **SFTP**, **WebDAV**, **SMB**, or **Object Storage**
-- Use your custom AI model to power AI Translation, AI Dictionary, AI Summarization, and AI Encyclopedia
+- Sync and back up your library with **WebDAV**, **S3-compatible storage**, **FTP**, **SFTP**, **SMB**, **MEGA**, a local folder or your Folio server, and with **Google Drive**, **OneDrive**, **Dropbox**, **Box**, **pCloud** and **Yandex Disk** through OAuth apps you register
+- Import books from the same sources
+- AI translation, dictionary, assistant, book summaries and full-book translation with the model your server runs, or any model you add yourself
+- Natural voices, multi-voice reading and OCR for scanned PDFs through your server
 - Sync reading progress with **KOReader**
 - Sync notes and highlights to **Readwise**, **Notion**, **Obsidian**, **Joplin**, and more
-- Support local MDX dictionary lookup
-- Automatically sync words to **Anki** and **Eudic**
-- Protect your library with password, PIN, Windows Hello, Touch ID, and more
-- One-click export of all books
-- One-click export of notes and highlights, supporting **CSV**, **Markdown**, **HTML**, **TXT**, and **PDF**
-- Privacy-first design: no tracking services, and no proactive uploading of your reading data or personal information
-- Support **OPDS** protocol and share your library as an **OPDS** feed
-- Support browser extension to save anything on the web to your library
-- Built-in 50+ plugins for translation, dictionaries, and text-to-speech, with support for custom plugins
-- Support vertical layout book
-- Support reading statistics
-- Built-in **Paddle** and **Tesseract** OCR engines
-- Support library snapshots and version control
+- Local MDX dictionaries, word sync to **Anki** and **Eudic**
+- Protect your library with a password, PIN, Windows Hello or Touch ID
+- Export books, notes and highlights (**CSV**, **Markdown**, **HTML**, **TXT**, **PDF**)
+- Share your library as an **OPDS** feed
+- 50+ built-in plugins for translation, dictionaries and text-to-speech, plus custom plugins
+- Vertical layout, reading statistics, library snapshots
+- **Paddle** and **Tesseract** OCR built in
 - Single-column, two-column or continuous scrolling layouts
-- Text-to-speech, translation, dictionary, touch screen support, and batch import
-- Add bookmarks, notes, and highlights to your books
-- Adjust font size, font family, line-spacing, paragraph spacing, background color, text color, margins, and brightness
-- Night mode and theme color
-- Text highlighting, underline, boldness, italics, and shadow
+- Bookmarks, notes and highlights; font, spacing, colour, margin and brightness settings; night mode
 
-## Installation
+## Server
 
-### Desktop version: [Download](https://koodoreader.com/en/download)
-
-### Web version：[Visit](https://web.koodoreader.com)
-
-### Android version：[Download](https://koodoreader.com/en/download)
-
-### iOS version：[Download](https://koodoreader.com/en/download)
-
-### Browser extension：[Download](https://www.koodoreader.com/en/use-extension)
-
-### Install with Scoop:
-
-```shell
-scoop bucket add extras
-scoop install extras/koodo-reader
-```
-
-### Install with Winget:
-
-```shell
-winget install AppByTroye.KoodoReader
-```
-
-### Install with Flathub:
-
-```shell
-flatpak install flathub io.github.troyeguo.koodo-reader
-```
-
-### Install with Snap Store:
-
-```shell
-sudo snap install koodo-reader
-```
-
-### Install with Homebrew:
-
-```shell
-brew install --cask koodo-reader
-```
-
-### Install with Docker:
-
-[Installation Guide](https://koodoreader.com/en/deploy-docker)
-
-## Screenshot
-
-<div align="center">
-  <b>Book list</b>
-  <br/>
-  <br/>
-  <kbd><img src="https://dl.koodoreader.com/screenshots/1.png" width="800px"></kbd>
-  <br/>
-  <br/>
-  <b>Book display</b>
-  <br/>
-  <br/>
-  <kbd><img src="https://dl.koodoreader.com/screenshots/5.png" width="800px"></kbd>
-  <br/>
-  <br/>
-  <b>List mode</b>
-  <br/>
-  <br/>
-  <kbd><img src="https://dl.koodoreader.com/screenshots/2.png" width="800px"></kbd>
-  <br/>
-  <br/>
-  <b>Cover mode</b>
-  <br/>
-  <br/>
-  <kbd><img src="https://dl.koodoreader.com/screenshots/3.png" width="800px"></kbd>
-  <br/>
-  <br/>
-  <b>Reader menu</b>
-  <br/>
-  <br/>
-  <kbd><img src="https://dl.koodoreader.com/screenshots/6.png" width="800px"></kbd>
-  <br/>
-  <br/>
-  <b>Dark mode</b>
-  <br/>
-  <br/>
-  <kbd><img src="https://dl.koodoreader.com/screenshots/4.png" width="800px"></kbd>
-  <br/>
-</div>
+Everything beyond reading local books comes from the Folio server in
+[`httpserver/`](./httpserver). Run it with Docker, then open
+**Settings → Server** in the app and enter its address and access token.
+See the [server guide](./httpserver/README.md) for AI, voices, cloud drives
+and downloadable assets.
 
 ## Develop
 
@@ -166,7 +58,7 @@ Make sure that you have installed yarn and git
 1. Download the repo
 
    ```
-   git clone https://github.com/koodo-reader/koodo-reader.git
+   git clone https://github.com/ssoad/folio.git
    ```
 
 2. Enter desktop mode
@@ -183,6 +75,21 @@ Make sure that you have installed yarn and git
    yarn start
    ```
 
+## Android
+
+The Android app wraps the web build with [Capacitor](https://capacitorjs.com)
+(`android/`, configured in `capacitor.config.json`). It needs the Android SDK
+and JDK 21.
+
+```bash
+yarn android:apk    # build a debug APK: android/app/build/outputs/apk/debug/
+yarn android:run    # build and run on a connected device or emulator
+yarn android:open   # open the project in Android Studio (release signing, Play Store)
+```
+
+After changing web code, `yarn android:sync` rebuilds it and copies it into the
+app. Icons come from `scripts/generate-brand-assets.py`.
+
 ## Translation
 
 ### Edit current language
@@ -193,7 +100,7 @@ Make sure that you have installed yarn and git
 
 3. Translate the terms to your target language based on the given English reference
 
-4. Submit the translation file or just translation snippets based on the amount of your translation to [this link](https://github.com/koodo-reader/koodo-reader/issues/new?assignees=&labels=submit+translation&projects=&template=submit_translation.yml). Pull request is also welcomed.
+4. Submit the translation file or snippets to [this link](https://github.com/ssoad/folio/issues/new?labels=submit+translation&template=submit_translation.yml). Pull requests are also welcome.
 
 | Language(A-Z)   | Code  | View                                    |
 | --------------- | ----- | --------------------------------------- |
@@ -240,6 +147,11 @@ Make sure that you have installed yarn and git
 
 ### Add new language
 
-1. If you can't find your target language from the above list, download the English source file from [this link](./src/assets/locales/en.json).
+1. If you can't find your target language in the list above, download the [English source file](./src/assets/locales/en.json).
 
-2. When you're finished translating, submit the source file to [this link](https://github.com/koodo-reader/koodo-reader/issues/new?assignees=&labels=submit+translation&projects=&template=submit_translation.yml). Pull requests are also welcome.
+2. When you're finished translating, submit the file to [this link](https://github.com/ssoad/folio/issues/new?labels=submit+translation&template=submit_translation.yml). Pull requests are also welcome.
+
+## License
+
+Folio is a modified version of [Koodo Reader](https://github.com/koodo-reader/koodo-reader)
+and, like it, is licensed under the [GNU Affero General Public License v3.0](./LICENSE).

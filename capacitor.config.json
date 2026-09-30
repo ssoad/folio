@@ -1,0 +1,25 @@
+{
+  "appId": "io.github.ssoad.folio",
+  "appName": "Folio",
+  "webDir": "build",
+  "android": {
+    "allowMixedContent": false,
+    "captureInput": true
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 0,
+      "launchAutoHide": false,
+      "backgroundColor": "#141413",
+      "androidScaleType": "CENTER_INSIDE",
+      "showSpinner": false
+    },
+    "Keyboard": {
+      "resize": "body",
+      "resizeOnFullScreen": true
+    },
+    "StatusBar": {
+      "overlaysWebView": false
+    }
+  }
+}

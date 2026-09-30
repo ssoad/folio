@@ -3,10 +3,8 @@ import { SettingInfoProps, SettingInfoState } from "./interface";
 import { Trans } from "react-i18next";
 import {
   clearAllData,
-  confirmBrowserExtensionAsync,
   generateSyncRecord,
   getStorageLocation,
-  getWebsiteUrl,
   reloadManager,
   vexComfirmAsync,
   vexOpenAsync,
@@ -101,12 +99,6 @@ class DataSetting extends React.Component<SettingInfoProps, SettingInfoState> {
       return;
     }
 
-    if (!isElectron) {
-      if (!(await confirmBrowserExtensionAsync())) {
-        return;
-      }
-    }
-
     const savedConfig =
       ConfigService.getObjectConfig(
         "koReaderSyncConfig",
@@ -140,14 +132,7 @@ class DataSetting extends React.Component<SettingInfoProps, SettingInfoState> {
         },
       },
       "",
-      labels,
-      getWebsiteUrl() +
-        `/${
-          ConfigService.getReaderConfig("lang") &&
-          ConfigService.getReaderConfig("lang").startsWith("zh")
-            ? "zh"
-            : "en"
-        }/add-thirdparty`
+      labels
     );
 
     if (!result) {
@@ -216,12 +201,6 @@ class DataSetting extends React.Component<SettingInfoProps, SettingInfoState> {
     const currentlyEnabled = this.state[item.propName];
 
     if (!currentlyEnabled && item.requiresAuth) {
-      if (!isElectron) {
-        if (!(await confirmBrowserExtensionAsync())) {
-          return;
-        }
-      }
-
       // Special case: Markdown sync uses a folder picker in Electron
       if (item.propName === "isEnableMarkdownSync" && isElectron) {
         const ipcRenderer = window.electronAPI;
@@ -264,12 +243,7 @@ class DataSetting extends React.Component<SettingInfoProps, SettingInfoState> {
       const result = await vexOpenAsync(
         defaultValues,
         "",
-        labelsMap,
-        getWebsiteUrl() +
-          (ConfigService.getReaderConfig("lang").startsWith("zh")
-            ? "/zh"
-            : "/en") +
-          "/add-thirdparty"
+        labelsMap
       );
 
       if (!result) {
@@ -700,7 +674,7 @@ class DataSetting extends React.Component<SettingInfoProps, SettingInfoState> {
             <p className="setting-option-subtitle">
               <Trans>
                 {
-                  "Each time you open Koodo Reader, it automatically creates a snapshot of your library (excluding books and covers). You can use these snapshots to restore your library to a previous state. Please note that restoring from a snapshot will overwrite your current data"
+                  "Each time you open Folio, it automatically creates a snapshot of your library (excluding books and covers). You can use these snapshots to restore your library to a previous state. Please note that restoring from a snapshot will overwrite your current data"
                 }
               </Trans>
             </p>

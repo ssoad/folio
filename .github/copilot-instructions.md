@@ -1,4 +1,4 @@
-# Koodo Reader – Code Review Standards
+# Folio – Code Review Standards
 
 ## Security Critical Issues
 
@@ -40,7 +40,7 @@
 
 ## Architecture Context
 
-Koodo Reader is an **Electron + React (CRA) + Redux** cross-platform ebook reader.
+Folio is an **Electron + React (CRA) + Redux** cross-platform ebook reader.
 
 | Layer | Location | Role |
 | ----- | -------- | ---- |

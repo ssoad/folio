@@ -1,5 +1,6 @@
 import { isElectron } from "react-device-detect";
-import { getServerRegion, getStorageLocation, loadFontData } from "../common";
+import { getStorageLocation, loadFontData } from "../common";
+import { fetchSelfHostedAsset } from "../request/selfHosted";
 import { ConfigService } from "../../assets/lib/kookit-extra-browser.min";
 import { LocalFileManager } from "./localFile";
 import localforage from "localforage";
@@ -229,14 +230,6 @@ class FontUtil {
     window.dispatchEvent(new Event("font-list-changed"));
   }
 
-  static getFeaturedFontUrl(fontPath: string, isAuthed: boolean): string {
-    const base =
-      getServerRegion() === "china" && isAuthed
-        ? "https://storage.koodoreader.cn"
-        : "https://storage.koodoreader.com";
-    return `${base}/fonts${fontPath}`;
-  }
-
   static async downloadFeaturedFont(
     font: {
       id: string;
@@ -244,16 +237,10 @@ class FontUtil {
       style: string;
       url: string;
     },
-    isAuthed: boolean,
     onProgress?: (progress: number) => void
   ): Promise<boolean> {
-    const url = this.getFeaturedFontUrl(font.url, isAuthed);
-    const response = await fetch(url, {
-      headers: {
-        "Cache-Control": "no-transform",
-        "Accept-Encoding": "identity",
-      },
-    });
+    // Featured fonts are served by the Folio server
+    const response = await fetchSelfHostedAsset("fonts", font.url);
     if (!response.ok) return false;
 
     const contentLength = Number(response.headers.get("Content-Length") || 0);

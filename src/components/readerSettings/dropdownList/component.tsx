@@ -169,7 +169,7 @@ class DropdownList extends React.Component<
             "fullTranslationBooks"
           );
         } else {
-          if (!canUseProFeature(this.props.isAuthed, "ai")) {
+          if (!canUseProFeature("ai")) {
             this.setState({
               fullTranslationModeValue: "no",
             });
@@ -237,7 +237,7 @@ class DropdownList extends React.Component<
               <p className="general-setting-title">
                 <Trans>{item.title}</Trans>
                 {item.value === "fullTranslationMode" &&
-                  !canUseProFeature(this.props.isAuthed, "ai") && (
+                  !canUseProFeature("ai") && (
                   <span style={{ fontSize: "13px", color: "var(--accent)" }}>
                     {" "}
                     (Pro)

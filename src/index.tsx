@@ -5,6 +5,7 @@ import "@fontsource-variable/newsreader/opsz.css";
 import "./assets/styles/reset.css";
 import "./assets/styles/global.css";
 import "./assets/styles/style.css";
+import "./assets/styles/compact.css";
 import { Provider } from "react-redux";
 import "./i18n";
 import store from "./store";
@@ -17,11 +18,14 @@ import {
   applyAppBackgroundImage,
 } from "./utils/reader/launchUtil";
 import { migrateConfig } from "./utils/common";
+import { initResponsive } from "./utils/responsive";
+import { initNative } from "./utils/native";
 initTheme();
 initSystemFont();
 migrateConfig();
 applyCustomSystemCSS();
 applyAppBackgroundImage();
+initResponsive();
 const container = document.getElementById("root")!;
 ReactDOM.render(
   <Provider store={store}>
@@ -30,3 +34,4 @@ ReactDOM.render(
   container
 );
 StyleUtil.applyTheme();
+initNative();

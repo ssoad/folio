@@ -71,7 +71,7 @@ function Request-WindowsHelloVerification {
 using System;
 using System.Runtime.InteropServices;
 
-namespace KoodoReaderInterop
+namespace FolioInterop
 {
     [ComImport]
     [Guid("39E050C3-4E74-441A-8DC0-B81104DF949C")]
@@ -111,7 +111,7 @@ namespace KoodoReaderInterop
 
   $activationFactory = [System.Runtime.InteropServices.WindowsRuntime.WindowsRuntimeMarshal]::GetActivationFactory($verifier)
   $asyncOperationGuid = [Guid]::Parse('fd596ffd-2318-558f-9dbe-d21df43764a5')
-  $operation = [KoodoReaderInterop.UserConsentVerifierInteropHelper]::RequestVerificationForWindow($activationFactory, [Int64]::Parse($Hwnd), $Message, $asyncOperationGuid)
+  $operation = [FolioInterop.UserConsentVerifierInteropHelper]::RequestVerificationForWindow($activationFactory, [Int64]::Parse($Hwnd), $Message, $asyncOperationGuid)
   return Invoke-WinRtAsync -Operation $operation -ResultTypes @([Windows.Security.Credentials.UI.UserConsentVerificationResult])
 }
 

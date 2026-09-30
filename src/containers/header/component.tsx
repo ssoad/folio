@@ -1,11 +1,12 @@
 import React from "react";
+import { isDrawerOpen, setDrawerOpen } from "../../utils/responsive";
+import { isNativeApp } from "../../utils/platform";
 import "./header.css";
 import SearchBox from "../../components/searchBox";
 import ImportLocal from "../../components/importLocal";
 import { HeaderProps, HeaderState } from "./interface";
 import {
   ConfigService,
-  KookitConfig,
   KOReaderUtil,
 } from "../../assets/lib/kookit-extra-browser.min";
 import UpdateInfo from "../../components/dialogs/updateDialog";
@@ -30,8 +31,6 @@ import {
   generateSyncRecord,
   getBookPartialMd5,
   getTaskStats,
-  getWebsiteUrl,
-  openInBrowser,
   scanFolderForNewBooks,
   showTaskProgress,
   throttle,
@@ -39,12 +38,8 @@ import {
   AUTO_IMPORT_FOLDERS_KEY,
 } from "../../utils/common";
 import { driveList } from "../../constants/driveList";
-import SupportDialog from "../../components/dialogs/supportDialog";
 import { LocalFileManager } from "../../utils/file/localFile";
-import packageJson from "../../../package.json";
-import { getTempToken, updateUserConfig } from "../../utils/request/user";
 import i18n from "../../i18n";
-import { getNotification } from "../../utils/request/common";
 import TokenService from "../../utils/storage/tokenService";
 import {
   canUseProFeature,
@@ -53,6 +48,8 @@ import {
 } from "../../utils/request/selfHosted";
 declare var window: any;
 
+// The header remounts whenever the library is shown again
+let hasRunStartup = false;
 class Header extends React.Component<HeaderProps, HeaderState> {
   timer: any;
   scheduledSyncTimer: any;
@@ -70,7 +67,6 @@ class Header extends React.Component<HeaderProps, HeaderState> {
       width: document.body.clientWidth,
       isHidePro: false,
       isSync: false,
-      notificationCount: 0,
     };
   }
   async componentDidMount() {
@@ -147,29 +143,28 @@ class Header extends React.Component<HeaderProps, HeaderState> {
         );
         BookUtil.redirectBook(book);
       });
-      ipcRenderer.on("chat-message", async (msg: any) => {
-        if (msg.payload.event === "new-message") {
-          ConfigService.setReaderConfig("isAllowNotification", "yes");
-        }
-      });
     } else {
       await upgradeConfig();
-      const status = await LocalFileManager.getPermissionStatus();
-      if (
-        !ConfigService.getItem("isUseLocal") &&
-        LocalFileManager.isSupported()
-      ) {
-        this.props.handleLocalFileDialog(true);
-      } else if (
-        ConfigService.getItem("isUseLocal") === "yes" &&
-        !status.directoryName
-      ) {
-        this.props.handleLocalFileDialog(true);
-      } else if (
-        ConfigService.getItem("isUseLocal") === "yes" &&
-        (status.needsReauthorization || !status.hasAccess)
-      ) {
-        this.props.handleLocalFileDialog(true);
+      // The Android app keeps its data in app storage, so it doesn't ask for
+      // a folder
+      if (!isNativeApp()) {
+        const status = await LocalFileManager.getPermissionStatus();
+        if (
+          !ConfigService.getItem("isUseLocal") &&
+          LocalFileManager.isSupported()
+        ) {
+          this.props.handleLocalFileDialog(true);
+        } else if (
+          ConfigService.getItem("isUseLocal") === "yes" &&
+          !status.directoryName
+        ) {
+          this.props.handleLocalFileDialog(true);
+        } else if (
+          ConfigService.getItem("isUseLocal") === "yes" &&
+          (status.needsReauthorization || !status.hasAccess)
+        ) {
+          this.props.handleLocalFileDialog(true);
+        }
       }
     }
     this.resizeHandler = throttle(() => {
@@ -187,6 +182,21 @@ class Header extends React.Component<HeaderProps, HeaderState> {
         // ConfigService.setReaderConfig("isFinishWebReading", "no");
       }
     });
+    this.startScheduledSync();
+    // Coming back from a book opened in this window (phones, the Android
+    // app): sync what was read, but don't rerun the startup work, which would
+    // reopen the last book
+    if (hasRunStartup) {
+      if (
+        !isElectron &&
+        ConfigService.getReaderConfig("isFinishWebReading") === "yes"
+      ) {
+        ConfigService.setReaderConfig("isFinishWebReading", "no");
+        await this.handleFinishReading();
+      }
+      return;
+    }
+    hasRunStartup = true;
     let willAutoSync =
       ConfigService.getReaderConfig("isDisableAutoSync") !== "yes" &&
       ConfigService.getItem("defaultSyncOption");
@@ -194,17 +204,29 @@ class Header extends React.Component<HeaderProps, HeaderState> {
       this.handleOpenLastReadBook();
       this.autoScanFoldersOnStart();
     }
-    this.startScheduledSync();
     this.handleSelfHostedStartup(!!willAutoSync);
   }
-  // With a self-hosted server but no Koodo login, run the startup sync that
-  // otherwise starts once the login is confirmed
+  // Refreshes what the server offers, then runs the startup sync
   handleSelfHostedStartup = async (willAutoSync: boolean) => {
     if (!isSelfHostedConnected()) {
+      // Nothing to sync with; do what the sync would have done afterwards
+      if (willAutoSync) {
+        await this.handleOpenLastReadBook();
+        await this.autoScanFoldersOnStart();
+      }
       return;
     }
     await refreshSelfHostedStatus();
-    if ((await TokenService.getToken("is_authed")) === "yes" || !willAutoSync) {
+    if (ConfigService.getReaderConfig("isProUpgraded") !== "yes") {
+      // First sync of an existing library: record every item so it uploads
+      try {
+        ConfigService.setReaderConfig("isProUpgraded", "yes");
+        await generateSyncRecord();
+      } catch (error) {
+        console.error(error);
+      }
+    }
+    if (!willAutoSync) {
       return;
     }
     this.setState({ isSync: true });
@@ -264,46 +286,6 @@ class Header extends React.Component<HeaderProps, HeaderState> {
       }
     }, intervalMs);
   };
-  async UNSAFE_componentWillReceiveProps(
-    nextProps: Readonly<HeaderProps>,
-    _nextContext: any
-  ) {
-    if (nextProps.isAuthed && nextProps.isAuthed !== this.props.isAuthed) {
-      if (ConfigService.getReaderConfig("isAllowNotification") === "yes") {
-        getNotification().then((res) => {
-          if (
-            res.data &&
-            res.data.result === "ok" &&
-            res.data.unread &&
-            res.data.unread > 0
-          ) {
-            this.setState({ notificationCount: res.data.unread });
-            ConfigService.setReaderConfig("isAllowNotification", "no");
-          }
-        });
-      }
-      if (ConfigService.getReaderConfig("isProUpgraded") !== "yes") {
-        try {
-          ConfigService.setReaderConfig("isProUpgraded", "yes");
-          await generateSyncRecord();
-        } catch (error) {
-          console.error(error);
-        }
-      }
-      let userInfo = await this.props.handleFetchUserInfo();
-      if (
-        ConfigService.getReaderConfig("isDisableAutoSync") !== "yes" &&
-        ConfigService.getItem("defaultSyncOption")
-      ) {
-        this.setState({ isSync: true });
-        await this.handleCloudSync(userInfo);
-        await this.handleOpenLastReadBook();
-        await this.autoScanFoldersOnStart();
-      } else {
-        await this.autoScanFoldersOnStart();
-      }
-    }
-  }
   autoScanFoldersOnStart = async () => {
     if (!isElectron || this.hasRunAutoImport) return;
     this.hasRunAutoImport = true;
@@ -421,27 +403,6 @@ class Header extends React.Component<HeaderProps, HeaderState> {
       this.props.handleSettingMode("sync");
       return false;
     }
-    if (
-      ConfigService.getReaderConfig("isEnableKoodoSync") === "yes" &&
-      userInfo &&
-      userInfo.default_sync_option &&
-      userInfo.default_sync_option !== this.props.defaultSyncOption
-    ) {
-      toast.error(
-        this.props.t(
-          "The default sync options in the local and cloud are inconsistent, please set the local default sync option to "
-        ) +
-          this.props.t(
-            driveList.find(
-              (item) => item.value === userInfo.default_sync_option
-            )?.label || ""
-          ),
-        {
-          duration: 4000,
-        }
-      );
-      return false;
-    }
     let config = await getCloudConfig(
       ConfigService.getItem("defaultSyncOption") || ""
     );
@@ -459,21 +420,18 @@ class Header extends React.Component<HeaderProps, HeaderState> {
       );
       return false;
     }
-    if (ConfigService.getReaderConfig("isEnableKoodoSync") !== "yes") {
-      if (ConfigService.getReaderConfig("hideSyncProgress") !== "yes") {
-        toast.loading(
-          this.props.t("Start syncing") +
-            " (" +
-            this.props.t(
-              driveList.find(
-                (item) =>
-                  item.value === ConfigService.getItem("defaultSyncOption")
-              )?.label || ""
-            ) +
-            ")",
-          { id: "syncing", position: "bottom-center" }
-        );
-      }
+    if (ConfigService.getReaderConfig("hideSyncProgress") !== "yes") {
+      toast.loading(
+        this.props.t("Start syncing") +
+          " (" +
+          this.props.t(
+            driveList.find(
+              (item) => item.value === ConfigService.getItem("defaultSyncOption")
+            )?.label || ""
+          ) +
+          ")",
+        { id: "syncing", position: "bottom-center" }
+      );
     }
 
     return true;
@@ -566,63 +524,10 @@ class Header extends React.Component<HeaderProps, HeaderState> {
         }
       );
     }
-    if (ConfigService.getReaderConfig("isEnableKoodoSync") === "yes") {
-      ConfigUtil.updateSyncData();
-    }
     //when book is empty, need to refresh the book list
     setTimeout(async () => {
       if (this.props.mode === "home") {
         this.props.history.push("/manager/home");
-        if (
-          this.props.isAuthed &&
-          ConfigService.getReaderConfig("isFirstSync") !== "no" &&
-          ConfigService.getReaderConfig("isEnableKoodoSync") !== "yes"
-        ) {
-          ConfigService.setReaderConfig("isFirstSync", "no");
-          let config = await getCloudConfig(
-            ConfigService.getItem("defaultSyncOption") || ""
-          );
-          if (
-            config.url &&
-            (config.url.includes("192.168.") ||
-              config.url.includes("127.0.0.1") ||
-              config.url.includes("localhost"))
-          ) {
-            return;
-          }
-          if (
-            this.props.userInfo &&
-            this.props.userInfo.time_created &&
-            this.props.userInfo.time_created < 1769875200
-          ) {
-            return;
-          }
-          let result = await vexComfirmAsync(
-            `<h3>${this.props.t("Enable Koodo Sync")}</h3><p>${
-              this.props.t(
-                "To enjoy a faster and seamless synchronization experience."
-              ) +
-              " " +
-              this.props.t(
-                "Your reading progress, notes, highlights, bookmarks, and other data will be stored and synced through our cloud service. Your books and covers will still be synced by your added data sources. All your data will be encrypted and stored securely in our cloud. You can disable this feature anytime in the settings."
-              )
-            }</p>`
-          );
-          if (result) {
-            ConfigService.setReaderConfig("isEnableKoodoSync", "yes");
-            let encryptedToken = await TokenService.getToken(
-              this.props.defaultSyncOption + "_token"
-            );
-            await updateUserConfig({
-              is_enable_koodo_sync: "yes",
-              default_sync_option: this.props.defaultSyncOption,
-              default_sync_token: encryptedToken || "",
-            });
-            let userInfo = await this.props.handleFetchUserInfo();
-            toast.success(this.props.t("Setup successful"));
-            this.handleCloudSync(userInfo);
-          }
-        }
       }
     }, 1000);
   };
@@ -683,48 +588,15 @@ class Header extends React.Component<HeaderProps, HeaderState> {
       <div
         className={"header" + (this.props.isCollapsed ? " header-collapsed" : "")}
       >
-        {this.props.isAuthed && (
-          <div
-            className="header-chat-widget"
-            onClick={async () => {
-              this.setState({ notificationCount: 0 });
-              let deviceUuid = await TokenService.getFingerprint();
-              let url =
-                getWebsiteUrl() +
-                (ConfigService.getReaderConfig("lang").startsWith("zh")
-                  ? "/zh/faq"
-                  : "/en/faq") +
-                "?referer=app&version=" +
-                packageJson.version +
-                "&client=web&device=" +
-                deviceUuid;
-              if (isElectron) {
-                window.electronAPI?.invoke("new-chat", {
-                  url: url,
-                });
-              } else {
-                openInBrowser(url);
-              }
-            }}
-          >
-            <img
-              src={require("../../assets/images/chat-widget.png")}
-              alt="logo"
-              className="login-mobile-qr"
-              style={{
-                width: "100%",
-                height: "100%",
-              }}
-            />
-            {this.state.notificationCount > 0 && (
-              <div className="header-chat-widget-badge">
-                {this.state.notificationCount > 99
-                  ? "99+"
-                  : this.state.notificationCount}
-              </div>
-            )}
-          </div>
-        )}
+        {/* Opens the sidebar drawer on phones; hidden on wide screens */}
+        <button
+          type="button"
+          className="header-drawer-button"
+          aria-label={this.props.t("Menu")}
+          onClick={() => setDrawerOpen(!isDrawerOpen())}
+        >
+          <span className="icon-menu"></span>
+        </button>
         <div className="header-search-container">
           <SearchBox />
         </div>
@@ -772,7 +644,7 @@ class Header extends React.Component<HeaderProps, HeaderState> {
           <div
             className="setting-icon-container"
             onClick={async () => {
-              if (canUseProFeature(this.props.isAuthed)) {
+              if (canUseProFeature()) {
                 if (!ConfigService.getItem("defaultSyncOption")) {
                   toast(
                     this.props.t(
@@ -822,7 +694,7 @@ class Header extends React.Component<HeaderProps, HeaderState> {
           </div>
         </div>
 
-        {!canUseProFeature(this.props.isAuthed) && !this.state.isHidePro ? (
+        {!canUseProFeature() && !this.state.isHidePro ? (
           <div className="header-report-container">
             <span
               style={{ textDecoration: "underline" }}
@@ -832,7 +704,7 @@ class Header extends React.Component<HeaderProps, HeaderState> {
                 this.props.handleSettingMode("account");
               }}
             >
-              <Trans>Pro version</Trans>
+              <Trans>Connect a server</Trans>
               <span> </span>
             </span>
 
@@ -845,116 +717,11 @@ class Header extends React.Component<HeaderProps, HeaderState> {
             ></span>
           </div>
         ) : null}
-        {this.props.isAuthed &&
-        this.props.userInfo &&
-        ((this.props.userInfo.type === "pro" &&
-          this.props.userInfo.valid_until <
-            new Date().getTime() / 1000 + 30 * 24 * 3600) ||
-          (this.props.userInfo.type === "trial" &&
-            this.props.userInfo.valid_until <
-              new Date().getTime() / 1000 + 3 * 24 * 3600)) ? (
-          <div className="header-report-container">
-            <span
-              data-tooltip-id="my-tooltip"
-              data-tooltip-content={i18n.t("Your trial will expire in", {
-                ttl: Math.ceil(
-                  (this.props.userInfo.valid_until -
-                    new Date().getTime() / 1000) /
-                    (24 * 3600)
-                ),
-              })}
-            >
-              <span
-                style={{ textDecoration: "underline" }}
-                onClick={async () => {
-                  let response = await getTempToken();
-                  if (response.code === 200) {
-                    let tempToken = response.data.access_token;
-                    let deviceUuid = await TokenService.getFingerprint();
-                    openInBrowser(
-                      getWebsiteUrl() +
-                        (ConfigService.getReaderConfig("lang").startsWith("zh")
-                          ? "/zh"
-                          : "/en") +
-                        "/pricing?temp_token=" +
-                        tempToken +
-                        "&device_uuid=" +
-                        deviceUuid
-                    );
-                  } else if (response.code === 401) {
-                    this.props.handleFetchAuthed();
-                  }
-                }}
-              >
-                <Trans>Renew Pro</Trans>
-              </span>
-            </span>
-          </div>
-        ) : null}
-        {this.props.isAuthed &&
-        this.props.userInfo &&
-        this.props.userInfo.type === "trial" &&
-        this.props.userInfo.valid_until >
-          new Date().getTime() / 1000 + 3 * 24 * 3600 ? (
-          <div className="header-report-container" style={{ right: "200px" }}>
-            <span
-              data-tooltip-id="my-tooltip"
-              data-tooltip-content={i18n.t("Your trial will expire in", {
-                ttl: Math.ceil(
-                  (this.props.userInfo.valid_until -
-                    new Date().getTime() / 1000) /
-                    (24 * 3600)
-                ),
-              })}
-            >
-              <span
-                style={{ textDecoration: "underline" }}
-                onClick={async () => {
-                  let response = await getTempToken();
-                  if (response.code === 200) {
-                    let tempToken = response.data.access_token;
-                    let deviceUuid = await TokenService.getFingerprint();
-                    openInBrowser(
-                      getWebsiteUrl() +
-                        (ConfigService.getReaderConfig("lang").startsWith("zh")
-                          ? "/zh"
-                          : "/en") +
-                        "/pricing?temp_token=" +
-                        tempToken +
-                        "&device_uuid=" +
-                        deviceUuid
-                    );
-                  } else if (response.code === 401) {
-                    this.props.handleFetchAuthed();
-                  }
-                }}
-              >
-                <Trans>In trial</Trans>
-              </span>
-            </span>
-          </div>
-        ) : null}
-        {KookitConfig.CloudMode !== "production" ? (
-          <div className="header-report-container" style={{ right: "300px" }}>
-            <span
-              style={{
-                color: "red",
-                opacity: 1,
-                fontWeight: "bold",
-              }}
-            >
-              <Trans>TEST</Trans>
-              <span> </span>
-            </span>
-          </div>
-        ) : null}
-
         <ImportLocal
           {...({
             handleDrag: this.props.handleDrag,
           } as any)}
         />
-        <SupportDialog />
         <UpdateInfo />
       </div>
     );

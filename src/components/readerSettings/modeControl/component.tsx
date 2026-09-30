@@ -1,4 +1,5 @@
 import React from "react";
+import { isCompact } from "../../../utils/platform";
 import "./modeControl.css";
 import { ModeControlProps, ModeControlState } from "./interface";
 import { ConfigService } from "../../../assets/lib/kookit-extra-browser.min";
@@ -44,15 +45,20 @@ class ModeControl extends React.Component<ModeControlProps, ModeControlState> {
             <span className="icon-single-page single-page-icon"></span>
           </div>
 
-          <div
-            className="double-mode-container"
-            onClick={() => {
-              this.handleChangeMode("double");
-            }}
-            style={this.props.readerMode === "double" ? {} : { opacity: 0.4 }}
-          >
-            <span className="icon-two-page two-page-icon"></span>
-          </div>
+          {/* Two pages don't fit a phone */}
+          {!isCompact() && (
+            <div
+              className="double-mode-container"
+              onClick={() => {
+                this.handleChangeMode("double");
+              }}
+              style={
+                this.props.readerMode === "double" ? {} : { opacity: 0.4 }
+              }
+            >
+              <span className="icon-two-page two-page-icon"></span>
+            </div>
+          )}
 
           <div
             className="double-mode-container"

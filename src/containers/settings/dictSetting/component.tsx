@@ -9,6 +9,7 @@ import DictUtil, {
 } from "../../../utils/file/dictUtil";
 import { getFileNameWithoutExtension } from "../../../utils/common";
 import { KookitConfig } from "../../../assets/lib/kookit-extra-browser.min";
+import { getSelfHostedAssetCatalog } from "../../../utils/request/selfHosted";
 
 class DictSetting extends React.Component<SettingInfoProps, SettingInfoState> {
   constructor(props: SettingInfoProps) {
@@ -18,12 +19,31 @@ class DictSetting extends React.Component<SettingInfoProps, SettingInfoState> {
       isLoading: true,
       downloadingId: "",
       downloadProgress: 0,
+      serverDicts: [],
     };
   }
 
   componentDidMount() {
     this.loadDicts();
+    this.loadServerDicts();
   }
+
+  // Dictionaries in the server's assets/dicts folder: known ones keep their
+  // names, other .mdx files are listed by file name
+  loadServerDicts = async () => {
+    const catalog = await getSelfHostedAssetCatalog();
+    const serverDicts = catalog.dicts
+      .filter((path) => path.toLowerCase().endsWith(".mdx"))
+      .map((path) => {
+        const id = path.replace(/^\//, "").replace(/\.mdx$/i, "");
+        return (
+          KookitConfig.CloudDictList.find(
+            (dict: CloudDictItem) => dict.id === id
+          ) || { id, name: id, translation: id, source: "" }
+        );
+      });
+    this.setState({ serverDicts });
+  };
 
   loadDicts = () => {
     const ids = DictUtil.getDictIds();
@@ -101,7 +121,6 @@ class DictSetting extends React.Component<SettingInfoProps, SettingInfoState> {
     try {
       const success = await DictUtil.downloadCloudDict(
         dict,
-        this.props.isAuthed,
         (progress) => {
           this.setState({ downloadProgress: progress });
         }
@@ -122,7 +141,10 @@ class DictSetting extends React.Component<SettingInfoProps, SettingInfoState> {
   };
 
   renderCloudDictSection = () => {
-    const { downloadingId, downloadProgress } = this.state;
+    const { downloadingId, downloadProgress, serverDicts } = this.state;
+    if (serverDicts.length === 0) {
+      return null;
+    }
 
     return (
       <div className="dict-cloud-section">
@@ -130,7 +152,7 @@ class DictSetting extends React.Component<SettingInfoProps, SettingInfoState> {
           <Trans>Download open dictionaries</Trans>
         </div>
         <div className="dict-cloud-list">
-          {KookitConfig.CloudDictList.map((dict) => {
+          {serverDicts.map((dict) => {
             const installed = this.isCloudDictInstalled(dict.id);
             const isDownloading = downloadingId === dict.id;
             return (
@@ -140,11 +162,13 @@ class DictSetting extends React.Component<SettingInfoProps, SettingInfoState> {
                     <span className="dict-cloud-item-name">
                       {DictUtil.getCloudDictDisplayName(dict)}
                     </span>
-                    <span className="dict-cloud-item-source">
-                      <Trans>Source</Trans>
-                      {": "}
-                      {dict.source}
-                    </span>
+                    {dict.source && (
+                      <span className="dict-cloud-item-source">
+                        <Trans>Source</Trans>
+                        {": "}
+                        {dict.source}
+                      </span>
+                    )}
                   </div>
                   {installed ? (
                     <span

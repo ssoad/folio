@@ -1,4 +1,5 @@
 import React from "react";
+import { effectiveReaderMode } from "../../../utils/platform";
 import "./progressPanel.css";
 import { Trans } from "react-i18next";
 import { ProgressPanelProps, ProgressPanelState } from "./interface";
@@ -116,11 +117,12 @@ class ProgressPanel extends React.Component<
     if (!this.props.htmlBook) {
       return <div className="progress-panel">Loading</div>;
     }
-    let readerMode =
+    let readerMode = effectiveReaderMode(
       isReadingRawPDF(this.props.currentBook) ||
-      this.props.currentBook.format.startsWith("CB")
+        this.props.currentBook.format.startsWith("CB")
         ? ConfigService.getReaderConfig("pdfReaderMode") || "scroll"
-        : ConfigService.getReaderConfig("readerMode") || "double";
+        : ConfigService.getReaderConfig("readerMode") || "double"
+    );
     return (
       <div className="progress-panel">
         <p className="progress-text" style={{ marginTop: 10 }}>

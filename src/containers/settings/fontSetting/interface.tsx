@@ -22,4 +22,6 @@ export interface SettingInfoState {
   expandedFamily: string;
   downloadingId: string;
   downloadProgress: number;
+  // Font files the server offers, by their path in the font list
+  serverFonts: string[];
 }

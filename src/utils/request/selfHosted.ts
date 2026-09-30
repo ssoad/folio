@@ -1,20 +1,37 @@
 import { ConfigService } from "../../assets/lib/kookit-extra-browser.min";
 import i18n from "../../i18n";
 import { decryptSecret, encryptSecret } from "../ai";
-import TokenService from "../storage/tokenService";
 
-// Talks to the Pro services of a self-hosted Koodo Reader server
-// (httpserver/pro.go). Responses use the official API's {code, msg, data}
-// envelope, so callers treat both the same way.
+// Talks to the Folio server (httpserver/pro.go), which provides every service
+// beyond reading: AI, voices, OCR, metadata, credential encryption,
+// cloud-drive sign-in and downloadable assets. Responses use a
+// {code, msg, data} envelope.
 
-// vault: the server encrypts data-source credentials (older servers lack it)
-export type SelfHostedFeature = "ai" | "tts" | "ocr" | "metadata" | "vault";
+// vault: encrypts data-source credentials; assets: fonts, dictionaries and
+// backgrounds to download. Older servers lack some of them.
+export type SelfHostedFeature =
+  | "ai"
+  | "tts"
+  | "ocr"
+  | "metadata"
+  | "vault"
+  | "assets";
 
 export interface SelfHostedConfig {
   url: string;
   // Encrypted with safeStorage on desktop
   token: string;
   features: Record<SelfHostedFeature, boolean>;
+  // Cloud drives the server can sign in to
+  drives?: string[];
+  // Google Drive picker settings, empty when not configured
+  googlePicker?: { appId: string; apiKey: string };
+}
+
+interface SelfHostedStatus {
+  features: Record<SelfHostedFeature, boolean>;
+  drives?: string[];
+  googlePicker?: { appId: string; apiKey: string };
 }
 
 export interface SelfHostedResponse<T = any> {
@@ -48,17 +65,12 @@ export const isSelfHostedConnected = () => getSelfHostedConfig() !== null;
 export const hasSelfHostedFeature = (feature: SelfHostedFeature) =>
   !!getSelfHostedConfig()?.features?.[feature];
 
-// Pro features are available with a Koodo Pro account or a connected
-// self-hosted server that provides them
-export const canUseProFeature = (
-  isAuthed: boolean,
-  feature?: SelfHostedFeature
-) =>
-  isAuthed ||
-  (feature ? hasSelfHostedFeature(feature) : isSelfHostedConnected());
+// Pro features come from the connected server; without a feature name,
+// any connected server counts
+export const canUseProFeature = (feature?: SelfHostedFeature) =>
+  feature ? hasSelfHostedFeature(feature) : isSelfHostedConnected();
 
-// Sync to storage the user runs themselves. OAuth drives (Google Drive,
-// OneDrive, ...) need the official token service, so they stay account-only.
+// Storage the user runs themselves; the server only encrypts the login
 const OWN_STORAGE_DRIVES = [
   "webdav",
   "s3compatible",
@@ -68,16 +80,20 @@ const OWN_STORAGE_DRIVES = [
   "sftp",
   "smb",
   "mega",
-  "icloud",
 ];
 
-// Book and cover files sync with a Koodo login or a connected self-hosted server
-export const canSyncCloudFiles = async () =>
-  (await TokenService.getToken("is_authed")) === "yes" ||
-  isSelfHostedConnected();
+export const isOAuthDrive = (drive: string) =>
+  !OWN_STORAGE_DRIVES.includes(drive);
 
-export const canUseDrive = (isAuthed: boolean, drive: string) =>
-  isAuthed || (isSelfHostedConnected() && OWN_STORAGE_DRIVES.includes(drive));
+// Book and cover files sync once a server is connected
+export const canSyncCloudFiles = async () => isSelfHostedConnected();
+
+// Own storage needs the credential encryption; cloud drives need the server
+// to have an OAuth app for them
+export const canUseDrive = (drive: string) =>
+  isOAuthDrive(drive)
+    ? !!getSelfHostedConfig()?.drives?.includes(drive)
+    : hasSelfHostedFeature("vault");
 
 export const normalizeServerUrl = (url: string) => {
   const trimmed = url.trim().replace(/\/+$/, "");
@@ -135,10 +151,14 @@ const call = <T>(
   return request<T>(config, path, init);
 };
 
-const fetchStatus = async (url: string, token: string) => {
-  const response = await request<{
-    features: Record<SelfHostedFeature, boolean>;
-  }>({ url, token }, "/pro/v1/status");
+const fetchStatus = async (
+  url: string,
+  token: string
+): Promise<SelfHostedStatus> => {
+  const response = await request<SelfHostedStatus>(
+    { url, token },
+    "/pro/v1/status"
+  );
   if (response.code !== 200 || !response.data) {
     throw new Error(
       response.code === 401
@@ -146,7 +166,7 @@ const fetchStatus = async (url: string, token: string) => {
         : response.msg || i18n.t("Connection failed")
     );
   }
-  return response.data.features;
+  return response.data;
 };
 
 const syncAIModel = (config: SelfHostedConfig | null) => {
@@ -187,15 +207,17 @@ const syncAIModel = (config: SelfHostedConfig | null) => {
 
 export const connectSelfHostedServer = async (url: string, token: string) => {
   const normalized = normalizeServerUrl(url);
-  const features = await fetchStatus(normalized, token.trim());
+  const status = await fetchStatus(normalized, token.trim());
   const config: SelfHostedConfig = {
     url: normalized,
     token: await encryptSecret(token.trim()),
-    features,
+    features: status.features,
+    drives: status.drives || [],
+    googlePicker: status.googlePicker,
   };
   ConfigService.setItem(CONFIG_KEY, JSON.stringify(config));
   syncAIModel(config);
-  return features;
+  return status.features;
 };
 
 export const disconnectSelfHostedServer = () => {
@@ -211,11 +233,16 @@ export const refreshSelfHostedStatus = async () => {
     return null;
   }
   try {
-    const features = await fetchStatus(config.url, config.token);
-    const updated = { ...config, features };
+    const status = await fetchStatus(config.url, config.token);
+    const updated: SelfHostedConfig = {
+      ...config,
+      features: status.features,
+      drives: status.drives || [],
+      googlePicker: status.googlePicker,
+    };
     ConfigService.setItem(CONFIG_KEY, JSON.stringify(updated));
     syncAIModel(updated);
-    return features;
+    return status.features;
   } catch (error) {
     console.warn("Self-hosted server status check failed:", error);
     return config.features;
@@ -281,6 +308,81 @@ export const selfHostedDecryptToken = (encryptedToken: string) =>
     method: "POST",
     body: { encrypted_token: encryptedToken },
   });
+
+// ── Cloud-drive sign-in ──────────────────────────────────────────────────────
+
+// Opened in the browser; the server redirects to the provider and shows the
+// code to paste back into the app on its callback page
+export const getSelfHostedAuthorizeUrl = (drive: string) => {
+  const config = getSelfHostedConfig();
+  return config
+    ? `${config.url}/pro/v1/oauth/${encodeURIComponent(drive)}/authorize`
+    : "";
+};
+
+export interface OAuthTokens {
+  access_token: string;
+  refresh_token: string;
+  expires_in: number;
+}
+
+export const selfHostedOAuthToken = (drive: string, code: string) =>
+  call<OAuthTokens>("/pro/v1/oauth/token", {
+    method: "POST",
+    body: { provider: drive, code },
+  });
+
+export const selfHostedOAuthRefresh = (drive: string, refreshToken: string) =>
+  call<OAuthTokens>("/pro/v1/oauth/refresh", {
+    method: "POST",
+    body: { provider: drive, refresh_token: refreshToken },
+  });
+
+// Google Drive picker page for the desktop app; the token goes in the
+// fragment, which browsers don't send to the server
+export const getSelfHostedPickerUrl = (accessToken: string) => {
+  const config = getSelfHostedConfig();
+  return config
+    ? `${config.url}/pro/v1/oauth/google/picker#access_token=${encodeURIComponent(accessToken)}`
+    : "";
+};
+
+// ── Downloadable assets ──────────────────────────────────────────────────────
+
+export type AssetKind = "fonts" | "dicts" | "backgrounds";
+
+// Paths of the files the server offers, e.g. "/EB_Garamond/EBGaramond-VF.ttf"
+export const getSelfHostedAssetCatalog = async (): Promise<
+  Record<AssetKind, string[]>
+> => {
+  const empty = { fonts: [], dicts: [], backgrounds: [] };
+  if (!hasSelfHostedFeature("assets")) {
+    return empty;
+  }
+  const response = await call<Record<AssetKind, string[]>>(
+    "/pro/v1/assets/catalog"
+  );
+  return response.code === 200 && response.data
+    ? { ...empty, ...response.data }
+    : empty;
+};
+
+// Streams an asset file; the caller reads the body for progress
+export const fetchSelfHostedAsset = async (kind: AssetKind, path: string) => {
+  const config = getSelfHostedConfig();
+  if (!config) {
+    throw new Error(i18n.t("No self-hosted server connected"));
+  }
+  const token = await decryptSecret(config.token);
+  const encodedPath = path
+    .split("/")
+    .filter(Boolean)
+    .map(encodeURIComponent)
+    .join("/");
+  return fetch(`${config.url}/pro/v1/assets/${kind}/${encodedPath}`, {
+    headers: { Authorization: "Bearer " + token },
+  });
+};
 
 // Same contract as system OCR (parseWithSystemOCR): page image in, text out
 export const selfHostedOcr = async (imageBase64: string) => {

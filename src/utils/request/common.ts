@@ -1,14 +1,8 @@
 import axios from "axios";
 import toast from "react-hot-toast";
 import i18n from "../../i18n";
-import { ConfigService } from "../../assets/lib/kookit-extra-browser.min";
 import { AIChatMessage, streamChat } from "../ai";
-import { reloadManager } from "../common";
-import { resetReaderRequest } from "./reader";
-import { resetUserRequest } from "./user";
-import { resetThirdpartyRequest } from "./thirdparty";
 import { isElectron } from "react-device-detect";
-import TokenService from "../storage/tokenService";
 // Folio releases are published on GitHub; pre-releases are the developer channel
 const RELEASES_API = "https://api.github.com/repos/ssoad/folio/releases";
 export interface UpdateLog {
@@ -81,40 +75,6 @@ export const uploadFile = async (url: string, file: any) => {
       });
   });
 };
-export const handleExitApp = async () => {
-  // Without a Koodo login there is no session to end: a 401 comes from a
-  // feature that needs the official service, and clearing the tokens here
-  // would also wipe the data sources set up with a self-hosted server
-  if ((await TokenService.getToken("is_authed")) !== "yes") {
-    toast.error(i18n.t("This feature needs a Koodo account"), {
-      id: "koodo-account-required",
-    });
-    return;
-  }
-  toast.error(i18n.t("Authorization failed, please login again"));
-  await handleClearToken();
-  //路由到login页面
-  reloadManager();
-};
-export const handleClearToken = async () => {
-  await TokenService.deleteToken("is_authed");
-  await TokenService.deleteToken("access_token");
-  await TokenService.deleteToken("refresh_token");
-  let dataSourceList = ConfigService.getAllListConfig("dataSourceList") || [];
-  for (let i = 0; i < dataSourceList.length; i++) {
-    let targetDrive = dataSourceList[i];
-    await TokenService.setToken(targetDrive + "_token", "");
-  }
-  ConfigService.removeItem("defaultSyncOption");
-  ConfigService.removeItem("dataSourceList");
-  ConfigService.setReaderConfig("dictService", "");
-  ConfigService.setReaderConfig("transService", "");
-  ConfigService.setReaderConfig("aiService", "");
-  resetReaderRequest();
-  resetUserRequest();
-  resetThirdpartyRequest();
-};
-
 // Kept for existing callers; new code should use streamChat from utils/ai directly
 export const chatStream = async (
   url: string,
@@ -135,20 +95,6 @@ export const chatStream = async (
     { messages, signal },
     onMessage
   );
-};
-export const getNotification = async () => {
-  let deviceUuid = await TokenService.getFingerprint();
-  const res = await axios.post(
-    "https://api.koodoreader.com/api/get_notification",
-    {
-      device_uuid: deviceUuid,
-    }
-  );
-  // {
-  // 	"result": "ok",
-  // 	"unread": 0
-  // }
-  return res;
 };
 export const parseWithSystemOCR = async (imageBase64: string) => {
   if (!isElectron) {

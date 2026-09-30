@@ -20,7 +20,7 @@ export const generalSettingList = [
   {
     isElectron: true,
     title: "Disable screen blanking",
-    desc: "When Koodo is running, your computer won't enter sleep mode",
+    desc: "When Folio is running, your computer won't enter sleep mode",
     propName: "isPreventSleep",
   },
   {
@@ -48,14 +48,14 @@ export const generalSettingList = [
   {
     isElectron: true,
     title: "Open book without adding it to library",
-    desc: "When opening books in the file manager with Koodo, the opened books won't be added to the library",
+    desc: "When opening books in the file manager with Folio, the opened books won't be added to the library",
     propName: "isPreventAdd",
   },
 
   {
     isElectron: false,
     title: "Auto precache books after import",
-    desc: "Pre-cache books after import to increase opening speed, Koodo will generate a precache version of the original book and save it into your library",
+    desc: "Pre-cache books after import to increase opening speed, Folio will generate a precache version of the original book and save it into your library",
     propName: "isPrecacheBook",
   },
   {
@@ -129,7 +129,7 @@ export const dataSettingList = [
   {
     isElectron: false,
     title: "Auto sync reading progress with KOReader",
-    desc: "Clicking the sync button will sync reading progress between Koodo Reader and KOReader with KOReader sync server.",
+    desc: "Clicking the sync button will sync reading progress between Folio and KOReader with KOReader sync server.",
     propName: "isEnableKoReaderSync",
   },
 ];
@@ -327,7 +327,7 @@ export const syncSettingList = [
   {
     isElectron: false,
     title: "Disable automatic sync",
-    desc: "By default, Koodo Reader will automatically synchronize your data when you open the app and exit reading",
+    desc: "By default, Folio will automatically synchronize your data when you open the app and exit reading",
     propName: "isDisableAutoSync",
   },
   {
@@ -335,12 +335,6 @@ export const syncSettingList = [
     title: "Auto download cloud books",
     desc: "To reduce storage usage, only the book metadata is downloaded by default, and the book files are not downloaded. After enabling this option, all book files will be downloaded during synchronization",
     propName: "autoOffline",
-  },
-  {
-    isElectron: false,
-    title: "Enable Koodo Sync",
-    desc: "Enable this option to increase synchronization speed. Your reading progress, notes, highlights, bookmarks, and other reading-related data will be encrypted, stored and synced via our cloud service, your books and covers will still be synced by your added data sources. Turning off this option will remove the above data from our cloud.",
-    propName: "isEnableKoodoSync",
   },
   {
     isElectron: false,
@@ -406,7 +400,7 @@ export const readingSettingList = [
   {
     isElectron: false,
     title: "No popup when selecting texts",
-    desc: "Turn it on when you want Koodo to work with other third-party translation service, right clicking on the selected text will trigger popup again",
+    desc: "Turn it on when you want Folio to work with other third-party translation service, right clicking on the selected text will trigger popup again",
     propName: "isDisablePopup",
   },
   {

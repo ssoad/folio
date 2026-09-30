@@ -16,16 +16,24 @@ const {
   session,
 } = require("electron");
 const path = require("path");
-// Keep using the data folder from before the Folio rename, so an existing
-// library, settings and window state carry over. Must run before anything
-// reads userData (electron-store below).
+// One-time migration: move the data folder of the app Folio was forked from
+// to Folio's own, so an existing library, settings and window state carry
+// over. Must run before anything reads userData (electron-store below).
 {
+  const fs = require("fs");
   const appData = app.getPath("appData");
+  const userData = app.getPath("userData");
   const legacyDir = ["koodo-reader", "Koodo Reader"]
     .map((name) => path.join(appData, name))
-    .find((dir) => require("fs").existsSync(dir));
-  if (legacyDir) {
-    app.setPath("userData", legacyDir);
+    .find((dir) => fs.existsSync(dir));
+  if (legacyDir && !fs.existsSync(userData)) {
+    try {
+      fs.renameSync(legacyDir, userData);
+    } catch (error) {
+      // Moving failed (e.g. across volumes): keep using the old folder
+      console.error("Data folder migration failed:", error);
+      app.setPath("userData", legacyDir);
+    }
   }
 }
 const { pathToFileURL } = require("url");
@@ -225,7 +233,7 @@ if (process.platform != "darwin" && process.argv.length >= 2) {
   filePath = process.argv[1];
   // Check argv for a deep link URL (cold start)
   for (const arg of process.argv) {
-    if (arg.startsWith("koodo-reader://")) {
+    if (arg.startsWith("folio://")) {
       pendingDeepLink = arg;
       break;
     }
@@ -274,7 +282,7 @@ if (!singleInstance) {
       mainWin.focus();
     }
     // Handle deep link passed via second-instance argv
-    const deepLink = argv.find((arg) => arg.startsWith("koodo-reader://"));
+    const deepLink = argv.find((arg) => arg.startsWith("folio://"));
     if (deepLink) {
       handleCallback(deepLink);
     }
@@ -2065,7 +2073,7 @@ app.on("open-file", (e, pathToFile) => {
   filePath = pathToFile;
 });
 // Register protocol handler
-app.setAsDefaultProtocolClient("koodo-reader");
+app.setAsDefaultProtocolClient("folio");
 const serializeArg = (arg) => {
   if (arg === null) return "null";
   if (arg === undefined) return "undefined";
@@ -2106,7 +2114,7 @@ app.on("open-url", (event, url) => {
 const handleCallback = (url) => {
   try {
     // 检查 URL 是否有效
-    if (!url.startsWith("koodo-reader://")) {
+    if (!url.startsWith("folio://")) {
       console.error("Invalid URL format:", url);
       return;
     }

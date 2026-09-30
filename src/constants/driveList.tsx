@@ -6,7 +6,6 @@ export const driveList = [
     isPro: true,
     support: ["desktop", "browser", "phone"],
     scoped: false,
-    needExtension: true,
   },
   {
     label: "S3 Compatible",
@@ -15,7 +14,6 @@ export const driveList = [
     isPro: true,
     support: ["desktop", "browser", "phone"],
     scoped: false,
-    needExtension: true,
   },
   {
     label: "Docker",
@@ -47,14 +45,6 @@ export const driveList = [
     icon: "icon-dropbox",
     isPro: true,
     support: ["desktop", "browser", "phone"],
-    scoped: true,
-  },
-  {
-    label: "iCloud",
-    value: "icloud",
-    icon: "icon-icloud",
-    isPro: true,
-    support: ["desktop", "phone"],
     scoped: true,
   },
   {
@@ -178,7 +168,7 @@ export const driveInputConfig: DriveInputConfig = {
       value: "dir",
       type: "text",
       required: true,
-      example: "KoodoReader",
+      example: "Folio",
     },
     {
       label: "Username",
@@ -256,7 +246,7 @@ export const driveInputConfig: DriveInputConfig = {
       value: "dir",
       type: "text",
       required: false,
-      example: "KoodoReader",
+      example: "Folio",
     },
     {
       label: "Username",
@@ -297,7 +287,7 @@ export const driveInputConfig: DriveInputConfig = {
       value: "dir",
       type: "text",
       required: false,
-      example: "KoodoReader",
+      example: "Folio",
     },
     {
       label: "Username",
@@ -332,14 +322,14 @@ export const driveInputConfig: DriveInputConfig = {
       value: "bucketName",
       type: "text",
       required: true,
-      example: "koodo-reader-bucket",
+      example: "folio-bucket",
     },
     {
       label: "Path",
       value: "dir",
       type: "text",
       required: false,
-      example: "KoodoReader",
+      example: "Folio",
     },
     {
       label: "AccessKeyId",

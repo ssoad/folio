@@ -80,7 +80,7 @@ class SelfHostedSetting extends React.Component<
         </div>
         <p className="self-hosted-setting-desc">
           {this.props.t(
-            "Use Pro features through your own Koodo Reader server: AI with your own model, AI voices, OCR, book metadata and sync to your own storage."
+            "Use Pro features through your own Folio server: AI with your own model, AI voices, OCR, book metadata and sync to your own storage."
           )}
         </p>
 

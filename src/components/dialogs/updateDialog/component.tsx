@@ -14,7 +14,6 @@ import { sleep } from "../../../utils/common";
 import {
   checkDeveloperUpdate,
   checkStableUpdate,
-  handleClearToken,
 } from "../../../utils/request/common";
 import { ConfigService } from "../../../assets/lib/kookit-extra-browser.min";
 import toast from "react-hot-toast";
@@ -62,10 +61,7 @@ class UpdateInfo extends React.Component<UpdateInfoProps, UpdateInfoState> {
         return;
       }
       if (compareVersions(newVersion, packageInfo.version) > 0) {
-        if (
-          ConfigService.getReaderConfig("isDisableUpdate") !== "yes" ||
-          this.props.isAuthed
-        ) {
+        if (ConfigService.getReaderConfig("isDisableUpdate") !== "yes") {
           this.setState({ updateLog: res });
           this.props.handleNewDialog(true);
         } else {
@@ -113,34 +109,14 @@ class UpdateInfo extends React.Component<UpdateInfoProps, UpdateInfoState> {
                 )}
               </div>
             </div>
-            {(this.props.isAuthed &&
-              this.state.updateLog.skippable === "yes") ||
-            !this.props.isAuthed ? (
-              <div
-                className="setting-close-container"
-                onClick={() => {
-                  this.handleClose();
-                }}
-              >
-                <span className="icon-close setting-close"></span>
-              </div>
-            ) : (
-              <div
-                className="update-log-out-button"
-                style={{}}
-                onClick={async () => {
-                  await handleClearToken();
-                  this.props.handleFetchAuthed();
-                  this.props.handleFetchDataSourceList();
-                  this.props.handleFetchDefaultSyncOption();
-                  this.props.handleLoginOptionList([]);
-                  toast.success(this.props.t("Log out successful"));
-                  this.handleClose();
-                }}
-              >
-                {this.props.t("Exit Pro")}
-              </div>
-            )}
+            <div
+              className="setting-close-container"
+              onClick={() => {
+                this.handleClose();
+              }}
+            >
+              <span className="icon-close setting-close"></span>
+            </div>
             <div className="update-dialog-info" style={{ height: 420 }}>
               <div className="new-version-animation">
                 <Lottie

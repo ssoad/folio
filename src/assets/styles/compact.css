@@ -1,0 +1,538 @@
+/*
+ * Compact layout for phones and narrow windows. `is-compact` is set on
+ * <html> by utils/responsive below 768px. Many layouts position themselves
+ * with inline styles sized for the desktop sidebar, so rules here use
+ * !important to override them.
+ */
+
+:root {
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+  --compact-bar-height: 56px;
+  --drawer-width: min(84vw, 300px);
+}
+
+/* Only shown in compact mode */
+.header-drawer-button,
+.sidebar-backdrop,
+.reader-sheet-backdrop,
+.reader-compact-toolbar {
+  display: none;
+}
+
+/* Touch screens: no tap flash, no long-press callouts on controls */
+@media (pointer: coarse) {
+  html {
+    -webkit-tap-highlight-color: transparent;
+  }
+  button,
+  [class*="-button"],
+  [class*="-icon"] {
+    -webkit-touch-callout: none;
+  }
+}
+
+/* ── App shell ───────────────────────────────────────────────────────────── */
+
+.is-compact body {
+  overscroll-behavior: none;
+}
+
+/* Sidebar becomes a drawer */
+.is-compact .sidebar {
+  width: var(--drawer-width) !important;
+  z-index: 60;
+  /* Offsets rather than padding: the sidebar's children are absolute */
+  top: var(--safe-top);
+  bottom: var(--safe-bottom);
+  box-sizing: border-box;
+  transform: translateX(-100%);
+  transition: transform 0.22s ease;
+  box-shadow: none;
+}
+.is-compact.drawer-open .sidebar {
+  transform: translateX(0);
+  box-shadow: var(--shadow-lg, 0 10px 40px rgba(0, 0, 0, 0.35));
+}
+.is-compact .sidebar .side-menu-container-parent {
+  width: 100% !important;
+  height: calc(100% - 76px - 64px) !important;
+}
+.is-compact .sidebar .side-menu-about {
+  bottom: 0 !important;
+}
+.is-compact .sidebar .side-menu-selector {
+  height: 44px;
+}
+.is-compact .sidebar-backdrop {
+  display: block;
+  position: fixed;
+  inset: 0;
+  z-index: 59;
+  background: rgba(0, 0, 0, 0.45);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.22s ease;
+}
+.is-compact.drawer-open .sidebar-backdrop {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* Header: menu button, full-width search, toolbar icons */
+.is-compact .header {
+  margin-left: 0 !important;
+  height: calc(var(--compact-bar-height) + var(--safe-top));
+  padding: var(--safe-top) calc(8px + var(--safe-right)) 0
+    calc(4px + var(--safe-left));
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  position: relative;
+  z-index: 4;
+}
+.is-compact .header-drawer-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  border: 0;
+  border-radius: var(--radius-md, 10px);
+  background: transparent;
+  color: var(--text);
+  font-size: 20px;
+  cursor: pointer;
+}
+.is-compact .header-search-container {
+  position: static !important;
+  margin: 0 !important;
+  width: auto !important;
+  flex: 1;
+  min-width: 0;
+}
+.is-compact .setting-icon-parrent {
+  position: static !important;
+  margin: 0 !important;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  height: auto;
+}
+.is-compact .setting-icon-container {
+  width: 40px;
+  height: 40px;
+  margin-left: 4px;
+}
+.is-compact .header-report-container {
+  display: none;
+}
+
+/* Import: a floating button */
+.is-compact .import-from-local {
+  position: fixed !important;
+  top: auto !important;
+  left: auto !important;
+  right: calc(16px + var(--safe-right));
+  bottom: calc(16px + var(--safe-bottom));
+  margin: 0 !important;
+  width: auto !important;
+  min-width: 128px;
+  height: 52px;
+  line-height: 52px;
+  border-radius: 26px;
+  z-index: 30;
+  box-shadow: var(--shadow-lg, 0 8px 24px rgba(0, 0, 0, 0.3));
+}
+.is-compact .import-from-cloud {
+  display: none;
+}
+.is-compact .drag-section {
+  width: 100% !important;
+}
+
+/* ── Library lists ───────────────────────────────────────────────────────── */
+
+.is-compact .book-list-container-parent,
+.is-compact .note-list-container-parent,
+.is-compact .card-list-container-parent,
+.is-compact .empty-page-container {
+  left: 0 !important;
+  width: 100% !important;
+  top: calc(var(--compact-bar-height) + var(--safe-top) + 44px) !important;
+  height: calc(
+    100% - var(--compact-bar-height) - var(--safe-top) - 44px
+  ) !important;
+  padding: 0 calc(8px + var(--safe-right)) 0 calc(8px + var(--safe-left));
+  box-sizing: border-box;
+}
+.is-compact .empty-page-container {
+  top: calc(var(--compact-bar-height) + var(--safe-top)) !important;
+  height: calc(100% - var(--compact-bar-height) - var(--safe-top)) !important;
+}
+.is-compact .book-list-container-parent {
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+/* Filters and view switcher move under the header */
+.is-compact .book-list-header {
+  left: 0 !important;
+  width: 100% !important;
+  bottom: auto !important;
+  top: calc(var(--compact-bar-height) + var(--safe-top));
+  height: 44px;
+  padding: 0 calc(8px + var(--safe-right)) 0 calc(8px + var(--safe-left));
+  box-sizing: border-box;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.is-compact .book-list-header::-webkit-scrollbar {
+  display: none;
+}
+.is-compact .book-card-scale-slider {
+  display: none;
+}
+.is-compact .book-list-total-page {
+  display: none;
+}
+/* Room for the floating Import button below the last row */
+.is-compact .book-list-item-box,
+.is-compact .note-list-container-parent > :last-child,
+.is-compact .card-list-container {
+  padding-bottom: calc(88px + var(--safe-bottom));
+}
+/* Covers: three to a row on phones, four on small tablets */
+.is-compact .book-list-item-box {
+  --card-scale: 0.8 !important;
+  justify-content: space-evenly;
+}
+@media (min-width: 520px) {
+  .is-compact .book-list-item-box {
+    --card-scale: 0.95 !important;
+  }
+}
+/* List view: title and progress on the first line, author below */
+.is-compact .book-list-item-container {
+  margin: 8px 4px;
+}
+.is-compact .book-item-list-title {
+  display: flex !important;
+  flex-wrap: wrap;
+  align-content: center;
+  column-gap: 8px;
+}
+.is-compact .book-item-list-subtitle {
+  float: none;
+  flex: 1;
+  min-width: 0;
+  width: auto !important;
+  height: auto;
+}
+.is-compact .book-item-list-subtitle-text {
+  -webkit-line-clamp: 2;
+}
+.is-compact .book-item-list-percentage {
+  float: none;
+  height: auto;
+  width: auto;
+  order: 2;
+}
+.is-compact .book-item-list-author {
+  float: none;
+  order: 3;
+  width: 100%;
+  height: auto;
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+.is-compact .card-list-item {
+  width: 100% !important;
+}
+.is-compact .booklist-delete-container {
+  left: auto !important;
+  position: static !important;
+}
+
+/* ── Dialogs ─────────────────────────────────────────────────────────────── */
+
+/* Small dialogs: centred, fitting the screen */
+.is-compact .add-dialog-container,
+.is-compact .delete-dialog-container,
+.is-compact .new-version,
+.is-compact .download-desk-container {
+  width: calc(100vw - 32px) !important;
+  max-width: 420px;
+  left: 50% !important;
+  top: 50% !important;
+  transform: translate(-50%, -50%);
+  height: auto !important;
+  min-height: 0;
+  max-height: calc(100vh - 32px);
+  overflow-y: auto;
+  animation: none;
+}
+
+/* Larger dialogs: sheets from the bottom */
+.is-compact .backup-page-container,
+.is-compact .edit-dialog-container,
+.is-compact .sort-dialog-container.annotation-dialog-container,
+.is-compact .popup-option-dialog-container {
+  position: fixed !important;
+  left: 0 !important;
+  right: 0 !important;
+  top: auto !important;
+  bottom: 0 !important;
+  width: 100% !important;
+  max-height: calc(100% - 48px - var(--safe-top));
+  height: auto !important;
+  min-height: 40vh;
+  overflow-y: auto;
+  border-radius: 16px 16px 0 0 !important;
+  padding-bottom: var(--safe-bottom);
+  box-sizing: border-box;
+  transform: none;
+  animation: compact-sheet-in 0.22s ease-out;
+}
+@keyframes compact-sheet-in {
+  from {
+    transform: translateY(24px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+/* Positioned menus next to toolbar icons */
+.is-compact .sort-dialog-container:not(.annotation-dialog-container) {
+  left: auto !important;
+  right: calc(8px + var(--safe-right)) !important;
+  top: calc(var(--compact-bar-height) + var(--safe-top)) !important;
+  max-width: calc(100vw - 16px);
+}
+.is-compact .action-dialog-container {
+  max-width: calc(100vw - 16px);
+}
+
+/* Settings: full screen, sections as a scrolling tab strip */
+.is-compact .setting-dialog-container {
+  position: fixed !important;
+  inset: 0;
+  left: 0 !important;
+  top: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  border-radius: 0 !important;
+  flex-direction: column;
+  padding-top: var(--safe-top);
+  padding-bottom: var(--safe-bottom);
+  box-sizing: border-box;
+  animation: none;
+}
+.is-compact .setting-dialog-sidebar {
+  width: 100% !important;
+  min-width: 0 !important;
+  height: auto !important;
+  flex-direction: row;
+  align-items: center;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 8px 56px 8px 8px !important;
+  gap: 4px;
+  scrollbar-width: none;
+  border-bottom: 1px solid var(--border);
+}
+.is-compact .setting-dialog-sidebar::-webkit-scrollbar {
+  display: none;
+}
+.is-compact .setting-dialog-sidebar-title,
+.is-compact .setting-dialog-sidebar-divider {
+  display: none;
+}
+.is-compact .setting-dialog-sidebar-group {
+  display: flex;
+  flex-shrink: 0;
+  gap: 4px;
+}
+.is-compact .setting-dialog-sidebar-item {
+  margin: 0;
+  padding: 8px 12px;
+  flex-shrink: 0;
+}
+.is-compact .setting-dialog-main {
+  height: auto;
+  flex: 1;
+  min-height: 0;
+}
+.is-compact .setting-dialog-main-header {
+  font-size: 20px;
+  padding: 14px 16px 6px;
+}
+.is-compact .setting-dialog-container .setting-close-container {
+  z-index: 110;
+  border-radius: 50%;
+  background: var(--surface);
+  top: calc(8px + var(--safe-top)) !important;
+  right: 8px !important;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.is-compact .setting-dialog-container .setting-dialog-new-title {
+  margin-left: 16px;
+  width: calc(100% - 32px);
+  line-height: 1.4;
+  min-height: 40px;
+  align-items: center;
+  gap: 12px;
+}
+
+/* ── Reader ──────────────────────────────────────────────────────────────── */
+
+/* Taps on the page drive the reader; the hover strips are for mice */
+.is-compact .left-panel,
+.is-compact .right-panel,
+.is-compact .top-panel,
+.is-compact .bottom-panel {
+  display: none !important;
+}
+/* Width and left come from getPageWidth (utils/common) */
+.is-compact .html-viewer-page {
+  top: calc(40px + var(--safe-top)) !important;
+  bottom: calc(40px + var(--safe-bottom)) !important;
+}
+
+/* Top and bottom bars span the screen */
+.is-compact .operation-panel-container,
+.is-compact .progress-panel-container {
+  width: 100% !important;
+  left: 0 !important;
+  margin-left: 0 !important;
+  transition: transform 0.22s ease;
+}
+.is-compact .operation-panel-container {
+  top: var(--safe-top) !important;
+}
+.is-compact .operation-panel-container:not(.is-open) {
+  transform: translateY(calc(-100% - 20px - var(--safe-top))) !important;
+}
+.is-compact .progress-panel-container {
+  top: auto !important;
+  bottom: calc(52px + var(--safe-bottom));
+}
+.is-compact .progress-panel-container:not(.is-open) {
+  transform: translateY(calc(100% + 80px)) !important;
+}
+.is-compact .book-operation-panel,
+.is-compact .progress-panel {
+  width: 100% !important;
+  left: 0 !important;
+  border-radius: 0 !important;
+  box-sizing: border-box;
+}
+.is-compact .book-operation-panel {
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+/* Contents from the left and settings from the right, over a backdrop */
+.is-compact .navigation-panel-container,
+.is-compact .setting-panel-container {
+  width: min(88vw, 360px) !important;
+  top: var(--safe-top) !important;
+  height: calc(100% - var(--safe-top) - var(--safe-bottom)) !important;
+  z-index: 40;
+  box-sizing: border-box;
+  transition: transform 0.22s ease;
+}
+.is-compact .navigation-panel-container:not(.is-open) {
+  transform: translateX(-105%) !important;
+}
+.is-compact .setting-panel-container:not(.is-open) {
+  transform: translateX(105%) !important;
+}
+.is-compact .navigation-panel-container > *,
+.is-compact .setting-panel-container > * {
+  width: 100% !important;
+}
+.is-compact .reader-sheet-backdrop {
+  display: block;
+  position: fixed;
+  inset: 0;
+  z-index: 39;
+  background: rgba(0, 0, 0, 0.4);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.22s ease;
+}
+.is-compact .reader-sheet-backdrop.is-open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* Bottom toolbar: contents, search, settings */
+.is-compact .reader-compact-toolbar {
+  display: flex;
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 16;
+  height: calc(52px + var(--safe-bottom));
+  padding: 0 var(--safe-right) var(--safe-bottom) var(--safe-left);
+  box-sizing: border-box;
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  transform: translateY(100%);
+  transition: transform 0.22s ease;
+}
+.is-compact .reader-compact-toolbar.is-open {
+  transform: translateY(0);
+}
+.reader-compact-toolbar button {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font-size: 11px;
+  cursor: pointer;
+}
+.reader-compact-toolbar button span {
+  font-size: 18px;
+  color: var(--text);
+}
+
+/* Text selection popup: full width above the keyboard-safe area */
+.is-compact .popup-box-container {
+  width: calc(100vw - 16px) !important;
+  max-width: 500px;
+  left: 50% !important;
+  transform: translateX(-50%);
+}
+
+/* ── System bars (Android app, notched phones) ────────────────────────────── */
+
+/* The page's clock/progress line and footer are positioned by the reader
+   engine; `translate` moves them clear of the status and navigation bars
+   without touching their own positioning. env() is 0 on desktops. */
+.header-container,
+.footer-time {
+  translate: 0 var(--safe-top);
+}
+.footer-container,
+.previous-chapter-single-container,
+.next-chapter-single-container {
+  translate: 0 calc(-1 * var(--safe-bottom));
+}
