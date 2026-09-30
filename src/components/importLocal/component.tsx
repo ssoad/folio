@@ -987,6 +987,22 @@ class ImportLocal extends React.Component<ImportLocalProps, ImportLocalState> {
                         : {}
                     }
                   >
+                    {/* Same picker as the main button; single or several books */}
+                    <div
+                      className="more-option-item"
+                      onClick={(event) => {
+                        event.stopPropagation(); // Prevent triggering the Dropzone
+                        this.toggleMoreOptions();
+                        const picker = document.querySelector(
+                          ".import-from-local .import-book-box"
+                        ) as HTMLElement | null;
+                        picker?.click();
+                      }}
+                    >
+                      <span>
+                        <Trans>Import files</Trans>
+                      </span>
+                    </div>
                     <div
                       className="more-option-item"
                       onClick={async (event) => {

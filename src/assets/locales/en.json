@@ -1408,5 +1408,6 @@
   "Report an issue": "Report an issue",
   "The Google Drive picker isn't set up on your server. Add PRO_OAUTH_GOOGLE_APP_ID and PRO_OAUTH_GOOGLE_API_KEY to its configuration": "The Google Drive picker isn't set up on your server. Add PRO_OAUTH_GOOGLE_APP_ID and PRO_OAUTH_GOOGLE_API_KEY to its configuration",
   "Menu": "Menu",
-  "Contents": "Contents"
+  "Contents": "Contents",
+  "Import files": "Import files"
 }
