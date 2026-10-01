@@ -15,6 +15,7 @@ import {
   ConfigService,
 } from "../../assets/lib/kookit-extra-browser.min";
 import CoverUtil from "../../utils/file/coverUtil";
+import ImportIcon from "./importIcons";
 import { renderPdfFirstPage } from "../../utils/file/pdfCover";
 import { Readability } from "@mozilla/readability";
 import {
@@ -965,7 +966,7 @@ class ImportLocal extends React.Component<ImportLocalProps, ImportLocalState> {
             {...getRootProps()}
             style={
               this.props.isCollapsed && document.body.clientWidth < 950
-                ? { width: "42px" }
+                ? { width: "42px", minWidth: "42px" }
                 : {}
             }
           >
@@ -977,18 +978,20 @@ class ImportLocal extends React.Component<ImportLocalProps, ImportLocalState> {
                   this.toggleMoreOptions();
                 }}
               >
-                <span className="dropdown-triangle"></span>
+                <ImportIcon name="chevron" size={16} />
                 {this.state.isMoreOptionsVisible && (
                   <div
                     className="more-options-dropdown"
-                    onMouseLeave={this.toggleMoreOptions}
+                    onMouseLeave={() =>
+                      this.setState({ isMoreOptionsVisible: false })
+                    }
                     style={
                       this.state.width < 950
                         ? {
-                            bottom: "calc(100% + 5px)",
+                            // Opens upwards from the bottom of the screen
+                            bottom: "calc(100% + 8px)",
                             top: "unset",
-                            right: "unset",
-                            left: "-110px",
+                            marginTop: 0,
                           }
                         : {}
                     }
@@ -1005,7 +1008,8 @@ class ImportLocal extends React.Component<ImportLocalProps, ImportLocalState> {
                         picker?.click();
                       }}
                     >
-                      <span>
+                      <ImportIcon name="file" className="more-option-icon" />
+                      <span className="more-option-text">
                         <Trans>Import files</Trans>
                       </span>
                     </div>
@@ -1101,6 +1105,7 @@ class ImportLocal extends React.Component<ImportLocalProps, ImportLocalState> {
                         }
                       }}
                     >
+                      <ImportIcon name="folder" className="more-option-icon" />
                       <span className="more-option-text">
                         <Trans>Import folder</Trans>
                       </span>
@@ -1113,14 +1118,7 @@ class ImportLocal extends React.Component<ImportLocalProps, ImportLocalState> {
                             directory: "",
                           } as React.InputHTMLAttributes<HTMLInputElement>)}
                           multiple
-                          style={{
-                            position: "absolute",
-                            width: "100%",
-                            height: "45px",
-                            opacity: 0,
-                            marginLeft: "-20px",
-                            cursor: "pointer",
-                          }}
+                          className="more-option-input"
                           onChange={async (e) => {
                             const files = e.target.files;
                             if (!files || files.length === 0) {
@@ -1153,6 +1151,7 @@ class ImportLocal extends React.Component<ImportLocalProps, ImportLocalState> {
                       className="more-option-item"
                       onClick={this.handleCloudImport}
                     >
+                      <ImportIcon name="cloud" className="more-option-icon" />
                       <span className="more-option-text">
                         <Trans>From cloud storage</Trans>
                       </span>
@@ -1161,6 +1160,7 @@ class ImportLocal extends React.Component<ImportLocalProps, ImportLocalState> {
                       className="more-option-item"
                       onClick={this.handleOPDSImport}
                     >
+                      <ImportIcon name="catalog" className="more-option-icon" />
                       <span className="more-option-text">
                         <Trans>From OPDS</Trans>
                       </span>
@@ -1169,6 +1169,7 @@ class ImportLocal extends React.Component<ImportLocalProps, ImportLocalState> {
                       className="more-option-item"
                       onClick={this.handleURLImport}
                     >
+                      <ImportIcon name="link" className="more-option-icon" />
                       <span className="more-option-text">
                         <Trans>From URL</Trans>
                       </span>
@@ -1178,6 +1179,7 @@ class ImportLocal extends React.Component<ImportLocalProps, ImportLocalState> {
                         className="more-option-item"
                         onClick={this.handleAutoImport}
                       >
+                        <ImportIcon name="sync" className="more-option-icon" />
                         <span className="more-option-text">
                           <Trans>Auto import folder</Trans>
                         </span>
@@ -1187,17 +1189,20 @@ class ImportLocal extends React.Component<ImportLocalProps, ImportLocalState> {
                 )}
               </div>
             )}
-            <div className="animation-mask-local"></div>
-            {this.props.isCollapsed && this.state.width < 950 ? (
-              <span
-                className="icon-folder"
-                style={{ fontSize: "15px", fontWeight: 500 }}
-              ></span>
-            ) : (
-              <span>
-                <Trans>Import</Trans>
-              </span>
-            )}
+            <span
+              className={
+                this.props.isCollapsed && this.state.width < 950
+                  ? "import-from-local-label is-icon-only"
+                  : "import-from-local-label"
+              }
+            >
+              <ImportIcon name="plus" size={18} />
+              {this.props.isCollapsed && this.state.width < 950 ? null : (
+                <span>
+                  <Trans>Import</Trans>
+                </span>
+              )}
+            </span>
 
             {!isElectron ? (
               <input

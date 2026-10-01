@@ -103,7 +103,8 @@
     position: fixed !important;
     left: 15px;
     top: calc(100vh - 80px) !important;
-    width: 138px;
+    right: auto !important;
+    min-width: 138px;
     padding: 0px !important;
   }
   .header-report-container {
@@ -210,7 +211,7 @@
 
 
 /* Too narrow for the status chips next to the toolbar icons */
-@media screen and (max-width: 860px) {
+@media screen and (max-width: 1100px) {
   .header-report-container {
     display: none;
   }

@@ -137,7 +137,7 @@
   position: fixed !important;
   top: auto !important;
   left: auto !important;
-  right: calc(16px + var(--safe-right));
+  right: calc(16px + var(--safe-right)) !important;
   bottom: calc(16px + var(--safe-bottom));
   margin: 0 !important;
   width: auto !important;
