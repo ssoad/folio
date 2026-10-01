@@ -46,10 +46,26 @@ Folio server you run yourself.
 ## Server
 
 Everything beyond reading local books comes from the Folio server in
-[`httpserver/`](./httpserver). Run it with Docker, then open
-**Settings → Server** in the app and enter its address and access token.
-See the [server guide](./httpserver/README.md) for AI, voices, cloud drives
-and downloadable assets.
+[`httpserver/`](./httpserver). One Docker image runs the web app and the
+server together:
+
+```bash
+cp folio.env.example folio.env   # fill in AI, voices, admin, ...
+docker compose up -d --build
+```
+
+- `http://localhost`: the web app
+- `http://localhost/admin`: the admin panel (users, packages, promo codes,
+  access requests). The first-admin setup code is in
+  `docker compose logs folio`, or set `ADMIN_EMAIL` and `ADMIN_PASSWORD`.
+- In the desktop or Android app, open **Settings → Server**, enter the same
+  address and sign in or create an account.
+
+Data lives in `./folio-data` (back up `folio-data/data`). Add
+`--profile tts` for local Kokoro voices or `--profile ai` for Ollama. Put
+the container behind HTTPS when it's reachable from the internet. See the
+[server guide](./httpserver/README.md) for AI, voices, cloud drives and
+downloadable assets.
 
 ## Develop
 

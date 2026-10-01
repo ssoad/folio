@@ -379,3 +379,18 @@ func TestEndedPlanFallsBackToDefault(t *testing.T) {
 		t.Fatalf("after Pro ended: %v", got)
 	}
 }
+
+func TestClientIPTrustsOnlyLocalProxy(t *testing.T) {
+	proxied := httptest.NewRequest(http.MethodGet, "/", nil)
+	proxied.RemoteAddr = "127.0.0.1:5000"
+	proxied.Header.Set("X-Real-IP", "203.0.113.9")
+	if got := clientIP(proxied); got != "203.0.113.9" {
+		t.Fatalf("behind the local proxy: %s", got)
+	}
+	direct := httptest.NewRequest(http.MethodGet, "/", nil)
+	direct.RemoteAddr = "198.51.100.4:6000"
+	direct.Header.Set("X-Real-IP", "203.0.113.9")
+	if got := clientIP(direct); got != "198.51.100.4" {
+		t.Fatalf("spoofed header from a remote client: %s", got)
+	}
+}

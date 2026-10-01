@@ -62,7 +62,7 @@ limits, for your own devices.
 
 | Variable | Description |
 |---|---|
-| `ENABLE_PRO_SERVER` | `true` to enable |
+| `ENABLE_PRO_SERVER` | `true` to enable (on in the Docker image) |
 | `PRO_ACCESS_TOKEN` | Optional owner token (every feature, no limits), at least 16 characters. A Docker secret named by `PRO_ACCESS_TOKEN_FILE` (default `pro_access_token`) takes precedence. |
 | `PRO_DB_PATH` | Accounts database, default `./data/folio.db` |
 | `ADMIN_EMAIL`, `ADMIN_PASSWORD` | Create or reset this admin at startup (otherwise use the setup code from the log) |
@@ -88,22 +88,41 @@ Generate secrets with `openssl rand -hex 32`. Put the server behind HTTPS
 (Caddy, Nginx, Traefik) when it is reachable from the internet: sign-in
 passwords and tokens travel in requests.
 
-Example:
+### Docker
+
+The image at the repository root (`Dockerfile`) builds the web app and this
+server and serves them together on port 80 with Caddy: `/pro`, `/admin`,
+`/opds` and the file server go to the server, everything else is the web app. Use
+[`docker-compose.yml`](../docker-compose.yml) with a `folio.env` made from
+[`folio.env.example`](../folio.env.example):
 
 ```bash
-docker run -d -p 8080:8080 \
-  -e ENABLE_PRO_SERVER=true \
+docker compose up -d --build
+docker compose logs folio        # setup code for the first admin
+```
+
+| Volume | Holds |
+|---|---|
+| `/app/data` | Accounts database and vault key. Back it up. |
+| `/app/assets` | Downloadable fonts, dictionaries, backgrounds |
+| `/app/uploads` | File-server data (`ENABLE_HTTP_SERVER=true`) |
+
+Or without Compose:
+
+```bash
+docker run -d -p 80:80 \
   -e PRO_PUBLIC_URL=https://folio.example.com \
-  -e ADMIN_EMAIL=you@example.com -e ADMIN_PASSWORD='a long password' \
   -e PRO_TOKEN_KEY=$(openssl rand -hex 32) \
   -e PRO_AI_BASE_URL=https://openrouter.ai/api/v1 \
   -e PRO_AI_API_KEY=sk-or-... \
   -e PRO_AI_MODEL=anthropic/claude-opus-5 \
-  -e PRO_TTS_BASE_URL=http://kokoro:8880/v1 \
-  -v /opt/folio-assets:/app/assets \
-  -v /opt/folio-data:/app/data \
+  -v folio-data:/app/data -v folio-assets:/app/assets \
   ghcr.io/ssoad/folio
 ```
+
+The server trusts `X-Real-IP` only from the bundled proxy (loopback), for
+sign-in rate limiting. The file server (`ENABLE_HTTP_SERVER=true`) refuses to
+start without `SERVER_PASSWORD` or a `my_secret` Docker secret.
 
 ### Cloud drives
 

@@ -1,51 +1,48 @@
-version: "3.8"
+# Folio: the web app and the Folio server in one container.
+#
+#   cp folio.env.example folio.env    # then edit it
+#   docker compose up -d --build
+#
+# Open http://localhost for the web app and http://localhost/admin for the
+# admin panel (the first-admin setup code is in `docker compose logs folio`).
+# In the desktop or Android app, set Settings → Server to the same address.
+#
+# Optional local AI services, started with their profile:
+#   docker compose --profile tts up -d   # Kokoro voices   → PRO_TTS_BASE_URL=http://kokoro:8880/v1
+#   docker compose --profile ai up -d    # Ollama models   → PRO_AI_BASE_URL=http://ollama:11434/v1
 
 services:
   folio:
     build: .
+    image: ghcr.io/ssoad/folio:latest
     container_name: folio
     restart: unless-stopped
+    env_file:
+      - path: folio.env
+        required: false
     ports:
-      - "80:80"
-      - "8080:8080"
-    environment:
-      - SERVER_USERNAME=${SERVER_USERNAME:-admin}
-      - SERVER_PASSWORD=${SERVER_PASSWORD:-securePass123}
-      - ENABLE_HTTP_SERVER=false
-      # Self-hosted Pro services on port 8080 (see httpserver/README.md)
-      - ENABLE_PRO_SERVER=${ENABLE_PRO_SERVER:-false}
-      # Optional owner token with every feature; users sign in with accounts
-      - PRO_ACCESS_TOKEN=${PRO_ACCESS_TOKEN:-}
-      - PRO_TOKEN_KEY=${PRO_TOKEN_KEY:-}
-      # First admin for /admin (or use the setup code printed in the log)
-      - ADMIN_EMAIL=${ADMIN_EMAIL:-}
-      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-}
-      - PRO_AI_BASE_URL=${PRO_AI_BASE_URL:-}
-      - PRO_AI_API_KEY=${PRO_AI_API_KEY:-}
-      - PRO_AI_MODEL=${PRO_AI_MODEL:-}
-      - PRO_TTS_BASE_URL=${PRO_TTS_BASE_URL:-}
-      - PRO_TTS_API_KEY=${PRO_TTS_API_KEY:-}
-      # Address the server is reached at, needed for cloud-drive sign-in
-      - PRO_PUBLIC_URL=${PRO_PUBLIC_URL:-}
-      # Cloud drives: the OAuth app you registered with each provider
-      - PRO_OAUTH_GOOGLE_CLIENT_ID=${PRO_OAUTH_GOOGLE_CLIENT_ID:-}
-      - PRO_OAUTH_GOOGLE_CLIENT_SECRET=${PRO_OAUTH_GOOGLE_CLIENT_SECRET:-}
-      - PRO_OAUTH_GOOGLE_APP_ID=${PRO_OAUTH_GOOGLE_APP_ID:-}
-      - PRO_OAUTH_GOOGLE_API_KEY=${PRO_OAUTH_GOOGLE_API_KEY:-}
-      - PRO_OAUTH_MICROSOFT_CLIENT_ID=${PRO_OAUTH_MICROSOFT_CLIENT_ID:-}
-      - PRO_OAUTH_MICROSOFT_CLIENT_SECRET=${PRO_OAUTH_MICROSOFT_CLIENT_SECRET:-}
-      - PRO_OAUTH_DROPBOX_CLIENT_ID=${PRO_OAUTH_DROPBOX_CLIENT_ID:-}
-      - PRO_OAUTH_DROPBOX_CLIENT_SECRET=${PRO_OAUTH_DROPBOX_CLIENT_SECRET:-}
+      # Web app, plus the server (/pro, /admin, /opds, file server) behind it
+      - "${FOLIO_PORT:-80}:80"
+      # KOReader progress sync, when ENABLE_KOREADER_SERVER=true
+      # - "7200:7200"
     volumes:
-      # 使用主机目录（推荐）
-      - /opt/uploads:/app/uploads
-      # Fonts, dictionaries and backgrounds the app can download
-      - /opt/folio-assets:/app/assets
       # Accounts database: users, packages, promo codes, settings. Back it up.
-      - /opt/folio-data:/app/data
-      # 或者使用命名卷
-      # - uploads_data:/app/uploads
-# 如果使用命名卷，取消注释以下内容
-# volumes:
-#   uploads_data:
-#     driver: local
+      - ./folio-data/data:/app/data
+      # Fonts, dictionaries and backgrounds the app can download
+      - ./folio-data/assets:/app/assets
+      # Books and sync data of the file server (ENABLE_HTTP_SERVER=true)
+      - ./folio-data/uploads:/app/uploads
+
+  kokoro:
+    profiles: ["tts"]
+    image: ghcr.io/remsky/kokoro-fastapi-cpu:latest
+    container_name: folio-kokoro
+    restart: unless-stopped
+
+  ollama:
+    profiles: ["ai"]
+    image: ollama/ollama:latest
+    container_name: folio-ollama
+    restart: unless-stopped
+    volumes:
+      - ./folio-data/ollama:/root/.ollama

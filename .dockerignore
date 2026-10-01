@@ -1,0 +1,17 @@
+# Only what the image builds from; dependencies are installed inside it
+node_modules
+build
+dist
+android
+.git
+.github
+.claude
+.vscode
+*.log
+folio-data
+folio.env
+httpserver/data
+httpserver/uploads
+httpserver/assets
+httpserver/httpserver
+httpserver/httpserver-*

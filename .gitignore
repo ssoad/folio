@@ -39,3 +39,9 @@ kookit-extra.js
 kookit-extra.mjs
 kookit-extra-browser.js
 kookit-extra-browser.mjs
+
+# Docker
+folio.env
+/folio-data
+my_secret.txt
+pro_token_key.txt

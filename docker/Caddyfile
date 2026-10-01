@@ -1,0 +1,32 @@
+# Serves the Folio web app and puts the Folio server behind the same port:
+# the API (/pro), the admin panel (/admin), the file server (/upload,
+# /download, /delete, /list) and the OPDS catalog (/opds). The server also
+# listens on :8080 directly.
+{
+	admin off
+	auto_https off
+	servers {
+		# Honour X-Forwarded-* from a TLS proxy in front (Traefik, Nginx, ...)
+		trusted_proxies static private_ranges
+	}
+}
+
+:80 {
+	encode zstd gzip
+
+	@server path /pro/* /admin /admin/* /opds /opds/* /upload /download /delete /list
+	handle @server {
+		reverse_proxy 127.0.0.1:8080 {
+			# The real client, for the server's sign-in rate limits
+			header_up X-Real-IP {client_ip}
+			# Stream AI replies as they arrive
+			flush_interval -1
+		}
+	}
+
+	handle {
+		root * /usr/share/caddy
+		header /static/* Cache-Control "public, max-age=31536000, immutable"
+		file_server
+	}
+}

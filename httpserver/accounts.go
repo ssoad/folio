@@ -18,6 +18,7 @@ import (
 	"html/template"
 	"io"
 	"log"
+	"net"
 	"net/http"
 	"net/url"
 	"os"
@@ -331,10 +332,18 @@ func (l *attemptLimiter) clear(key string) {
 	delete(l.attempts, key)
 }
 
+// The client's address. Behind the image's Caddy every request comes from
+// loopback, so the X-Real-IP it sets is used then (and only then: anyone else
+// could send the header)
 func clientIP(r *http.Request) string {
-	host := r.RemoteAddr
-	if i := strings.LastIndex(host, ":"); i > 0 {
-		host = host[:i]
+	host, _, err := net.SplitHostPort(r.RemoteAddr)
+	if err != nil {
+		host = r.RemoteAddr
+	}
+	if ip := net.ParseIP(host); ip != nil && ip.IsLoopback() {
+		if real := strings.TrimSpace(r.Header.Get("X-Real-IP")); net.ParseIP(real) != nil {
+			return real
+		}
 	}
 	return host
 }

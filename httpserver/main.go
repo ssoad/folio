@@ -59,17 +59,17 @@ func init() {
 		password = os.Getenv("SERVER_PASSWORD")
 		source = "environment variable (less secure)"
 	}
-	if password == "" {
-		password = "securePass123"
-		source = "default"
+	// No built-in default: a well-known password would open the file server
+	// to anyone
+	if password == "" && serverEnabled {
+		log.Fatal("ENABLE_HTTP_SERVER=true needs a password: set SERVER_PASSWORD or a my_secret Docker secret")
 	}
-	switch source {
-	case "Docker Secret":
-		log.Println("Using password from Docker Secret")
-	case "environment variable (less secure)":
-		log.Println("Warning: Using password from environment variable (less secure)")
-	default:
-		log.Println("Warning: Using default password. Set Docker Secret or SERVER_PASSWORD environment variable for production.")
+	if serverEnabled {
+		if source == "Docker Secret" {
+			log.Println("Using password from Docker Secret")
+		} else {
+			log.Println("Warning: Using password from environment variable (less secure)")
+		}
 	}
 
 	credentials.username = getEnv("SERVER_USERNAME", "admin")
