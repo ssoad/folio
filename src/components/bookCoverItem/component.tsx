@@ -3,6 +3,7 @@ import "./bookCoverItem.css";
 import { BookCoverProps } from "./interface";
 import ActionDialog from "../dialogs/actionDialog";
 import { withRouter } from "react-router-dom";
+import { isCustomCover } from "../../utils/file/pdfCover";
 import EmptyCover from "../emptyCover";
 import { Trans } from "react-i18next";
 import toast from "react-hot-toast";
@@ -141,7 +142,8 @@ const BookCoverItem: React.FC<BookCoverProps> = (props) => {
         >
           {!isCoverExist ||
           (props.book.format === "PDF" &&
-            ConfigService.getReaderConfig("isDisablePDFCover") === "yes") ? (
+            ConfigService.getReaderConfig("isDisablePDFCover") === "yes" &&
+            !isCustomCover(props.book.key)) ? (
             <div
               className="book-item-image"
               style={{ width: "120px", height: "170px" }}

@@ -13,6 +13,11 @@ import { MetadataResult } from "../metadataDialog/interface";
 import { trimSpecialCharacters } from "../../../utils/common";
 import { analyzeBookTitle } from "../../../utils/request/reader";
 import { canUseProFeature } from "../../../utils/request/selfHosted";
+import BookUtil from "../../../utils/file/bookUtil";
+import {
+  renderPdfFirstPage,
+  setCustomCover,
+} from "../../../utils/file/pdfCover";
 declare var window: any;
 
 class EditDialog extends React.Component<EditDialogProps, EditDialogState> {
@@ -36,6 +41,8 @@ class EditDialog extends React.Component<EditDialogProps, EditDialogState> {
       pendingPublishedDate: "",
       pendingCover: "",
       isAnalyzing: false,
+      coverSource: "",
+      isRenderingCover: false,
     };
   }
 
@@ -80,6 +87,7 @@ class EditDialog extends React.Component<EditDialogProps, EditDialogState> {
       pendingDescription: metadata.description || "",
       pendingPublishedDate: metadata.publishedDate || "",
       pendingCover: metadata.cover || "",
+      coverSource: metadata.cover ? "custom" : this.state.coverSource,
       coverPreview: metadata.cover
         ? metadata.cover.replace(/^http:/, "https:")
         : this.state.coverPreview,
@@ -128,9 +136,42 @@ class EditDialog extends React.Component<EditDialogProps, EditDialogState> {
     const reader = new FileReader();
     reader.onload = (ev) => {
       const base64 = ev.target?.result as string;
-      this.setState({ coverPreview: base64 });
+      this.setState({
+        coverPreview: base64,
+        pendingCover: "",
+        coverSource: "custom",
+      });
     };
     reader.readAsDataURL(file);
+    // Picking the same file again should still fire onChange
+    e.target.value = "";
+  };
+
+  handleUseFirstPage = async () => {
+    if (this.state.isRenderingCover) return;
+    const book = this.props.currentBook;
+    this.setState({ isRenderingCover: true });
+    try {
+      const buffer = await BookUtil.fetchBook(
+        book.key,
+        book.format.toLowerCase(),
+        true,
+        book.path
+      );
+      const cover =
+        buffer instanceof ArrayBuffer ? await renderPdfFirstPage(buffer) : "";
+      if (!cover) {
+        toast.error(this.props.t("Couldn't read the first page"));
+        return;
+      }
+      this.setState({
+        coverPreview: cover,
+        pendingCover: "",
+        coverSource: "firstPage",
+      });
+    } finally {
+      this.setState({ isRenderingCover: false });
+    }
   };
 
   handleSelectBookPath = async () => {
@@ -161,6 +202,12 @@ class EditDialog extends React.Component<EditDialogProps, EditDialogState> {
       this.props.currentBook.cover = coverPreview;
       await CoverUtil.addCover(this.props.currentBook);
       this.props.handleRefreshBookCover(this.props.currentBook.key);
+      if (this.state.coverSource) {
+        setCustomCover(
+          this.props.currentBook.key,
+          this.state.coverSource === "custom"
+        );
+      }
     } else if (pendingCover) {
       if (pendingCover.startsWith("http")) {
         let response = await fetch(pendingCover);
@@ -170,6 +217,7 @@ class EditDialog extends React.Component<EditDialogProps, EditDialogState> {
       this.props.currentBook.cover = pendingCover;
       await CoverUtil.addCover(this.props.currentBook);
       this.props.handleRefreshBookCover(this.props.currentBook.key);
+      setCustomCover(this.props.currentBook.key, true);
     }
 
     await DatabaseService.updateRecord(this.props.currentBook, "books");
@@ -264,6 +312,25 @@ class EditDialog extends React.Component<EditDialogProps, EditDialogState> {
               style={{ display: "none" }}
               onChange={this.handleCoverSelect}
             />
+            <div className="edit-dialog-cover-actions">
+              <span
+                className="change-location-button"
+                onClick={() => this.coverInputRef.current?.click()}
+              >
+                <Trans>Choose image</Trans>
+              </span>
+              {this.props.currentBook.format === "PDF" && (
+                <span
+                  className="change-location-button"
+                  onClick={this.handleUseFirstPage}
+                  style={
+                    this.state.isRenderingCover ? { opacity: 0.6 } : undefined
+                  }
+                >
+                  <Trans>Use first page</Trans>
+                </span>
+              )}
+            </div>
           </div>
 
           {/* Book name */}

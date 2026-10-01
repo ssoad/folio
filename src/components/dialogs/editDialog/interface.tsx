@@ -26,4 +26,8 @@ export interface EditDialogState {
   pendingPublishedDate: string;
   pendingCover: string;
   isAnalyzing: boolean;
+  // Where a newly chosen cover came from: an image or metadata the user
+  // picked ("custom") or the PDF's first page ("firstPage")
+  coverSource: "" | "custom" | "firstPage";
+  isRenderingCover: boolean;
 }

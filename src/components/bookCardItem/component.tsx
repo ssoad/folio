@@ -3,6 +3,7 @@ import "./bookCardItem.css";
 import { BookCardProps } from "./interface";
 import ActionDialog from "../dialogs/actionDialog";
 import { withRouter } from "react-router-dom";
+import { isCustomCover } from "../../utils/file/pdfCover";
 import EmptyCover from "../emptyCover";
 import { ConfigService } from "../../assets/lib/kookit-extra-browser.min";
 import { useBookItem } from "../bookItem/useBookItem";
@@ -106,7 +107,8 @@ const BookCardItem: React.FC<BookCardProps> = (props) => {
         >
           {!isCoverExist ||
           (props.book.format === "PDF" &&
-            ConfigService.getReaderConfig("isDisablePDFCover") === "yes") ? (
+            ConfigService.getReaderConfig("isDisablePDFCover") === "yes" &&
+            !isCustomCover(props.book.key)) ? (
             <div
               style={{
                 width:

@@ -146,6 +146,7 @@ class DeleteDialog extends React.Component<
           ConfigService.deleteListConfig(key, "deletedBooks");
           ConfigService.deleteFromAllMapConfig(key, "shelfList");
           ConfigService.deleteListConfig(key, "recentBooks");
+          ConfigService.deleteListConfig(key, "customCoverBooks");
           ConfigService.deleteObjectConfig(key, "recordLocation");
           ConfigService.deleteObjectConfig(key, "pdfCrop");
           ConfigService.deleteObjectConfig(key, "readingTime");

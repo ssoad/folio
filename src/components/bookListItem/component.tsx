@@ -3,6 +3,7 @@ import "./bookListItem.css";
 import { BookItemProps } from "./interface";
 import { Trans } from "react-i18next";
 import { withRouter } from "react-router-dom";
+import { isCustomCover } from "../../utils/file/pdfCover";
 import EmptyCover from "../emptyCover";
 import ActionDialog from "../dialogs/actionDialog";
 import toast from "react-hot-toast";
@@ -75,7 +76,8 @@ const BookListItem: React.FC<BookItemProps> = (props) => {
       >
         {!isCoverExist ||
         (props.book.format === "PDF" &&
-          ConfigService.getReaderConfig("isDisablePDFCover") === "yes") ? (
+          ConfigService.getReaderConfig("isDisablePDFCover") === "yes" &&
+            !isCustomCover(props.book.key)) ? (
           <div
             className="book-item-list-cover"
             onClick={() => {

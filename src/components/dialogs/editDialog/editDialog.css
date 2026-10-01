@@ -129,6 +129,11 @@
   padding: 8px;
   text-align: center;
 }
+.edit-dialog-cover-actions {
+  display: flex;
+  gap: 6px;
+  margin-top: 6px;
+}
 /* Book path row */
 .edit-dialog-path-row {
   display: flex;

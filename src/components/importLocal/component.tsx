@@ -15,6 +15,7 @@ import {
   ConfigService,
 } from "../../assets/lib/kookit-extra-browser.min";
 import CoverUtil from "../../utils/file/coverUtil";
+import { renderPdfFirstPage } from "../../utils/file/pdfCover";
 import { Readability } from "@mozilla/readability";
 import {
   calculateFileMD5,
@@ -563,6 +564,11 @@ class ImportLocal extends React.Component<ImportLocalProps, ImportLocalState> {
         file_content,
         rendition
       );
+      // The engine covers PDFs with their first page; render it here when
+      // it couldn't
+      if (result && extension === "pdf" && !result.cover) {
+        result.cover = await renderPdfFirstPage(file_content);
+      }
 
       if (
         ConfigService.getReaderConfig("isPrecacheBook") === "yes" &&
