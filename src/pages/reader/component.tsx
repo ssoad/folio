@@ -699,6 +699,10 @@ class Reader extends React.Component<ReaderProps, ReaderState> {
                     onChange={(event) => {
                       this.setState({ scale: event.target.value });
                     }}
+                    onTouchEnd={() => {
+                      this.props.handleScale(this.state.scale);
+                      this.props.renderBookFunc();
+                    }}
                     onMouseUp={() => {
                       this.props.handleScale(this.state.scale);
                       this.props.renderBookFunc();

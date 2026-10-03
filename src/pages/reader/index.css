@@ -7,7 +7,7 @@
 }
 .view-area {
   height: 100%;
-  touch-action: none;
+  touch-action: pan-y pinch-zoom;
   position: relative;
 }
 

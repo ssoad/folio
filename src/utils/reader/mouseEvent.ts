@@ -537,6 +537,7 @@ export const bindHtmlEvent = (
   const touchSetting = ConfigService.getReaderConfig("isTouch");
   if (touchSetting === "yes" || (touchSetting !== "no" && isTouchDevice())) {
     const mc = new Hammer(doc);
+    mc.get('pinch').set({ enable: true });
     mc.on("panleft panright panup pandown", async (event: any) => {
       if (readerMode === "scroll") {
         return;
@@ -546,6 +547,23 @@ export const bindHtmlEvent = (
       await gesture(rendition, event.type);
       handleLocation(key, rendition);
       setTimeout(() => (lock = false), throttleTime);
+    });
+    
+    let lastPinchTime = 0;
+    mc.on("pinchin pinchout", (event: any) => {
+      const currentTime = Date.now();
+      if (currentTime - lastPinchTime < 300) return;
+      lastPinchTime = currentTime;
+      
+      let scale = parseFloat(ConfigService.getReaderConfig("scale") || "1");
+      if (event.type === "pinchin") {
+        scale = Math.max(0.5, scale - 0.1);
+      } else {
+        scale = Math.min(4, scale + 0.1);
+      }
+      ConfigService.setReaderConfig("scale", scale + "");
+      handleScale(scale + "");
+      renderBookFunc();
     });
   }
 

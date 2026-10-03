@@ -484,9 +484,10 @@
   position: relative !important;
   bottom: auto;
   height: auto !important;
-  display: flex;
-  align-items: center;
-  padding: 0 12px 0 14px;
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  padding: 0 12px 0 14px !important;
   box-sizing: border-box;
 }
 .is-compact .progress-panel .progress-text {
@@ -1017,4 +1018,16 @@
    stuck on screen over whatever opened next */
 .is-compact .react-tooltip {
   display: none !important;
+}
+
+.is-compact .image-operation {
+  width: 90%;
+  left: 5%;
+  bottom: calc(20px + var(--safe-bottom));
+  display: flex;
+  justify-content: space-around;
+  box-sizing: border-box;
+}
+.is-compact .image-operation span {
+  margin: 10px;
 }
