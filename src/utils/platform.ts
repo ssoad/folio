@@ -3,7 +3,8 @@
 // Phones and narrow windows get the compact layout (see utils/responsive)
 export const COMPACT_MAX_WIDTH = 768;
 
-export const isCompact = () => window.innerWidth <= COMPACT_MAX_WIDTH;
+export const isCompact = () =>
+  window.innerWidth <= COMPACT_MAX_WIDTH || isNativeApp() || isTouchDevice();
 
 // The Android app (Capacitor)
 export const isNativeApp = () =>
@@ -35,4 +36,4 @@ export const exitWebReader = (setFinished: () => void) => {
 // Two pages side by side don't fit a phone: show one; the saved preference
 // still applies on wider screens
 export const effectiveReaderMode = (mode: string) =>
-  mode === "double" && isCompact() ? "single" : mode;
+  mode === "double" && window.innerWidth <= COMPACT_MAX_WIDTH ? "single" : mode;
