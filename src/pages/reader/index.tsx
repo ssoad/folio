@@ -16,6 +16,7 @@ import {
   handleFetchAuthed,
   handleFetchUserInfo,
   handleBackgroundColor,
+  handlePopupOptionDialog,
 } from "../../store/actions";
 import { connect } from "react-redux";
 import { stateType } from "../../store";
@@ -61,6 +62,7 @@ const actionCreator = {
   handleAnnotationDialog,
   handleFetchUserInfo,
   handleBackgroundColor,
+  handlePopupOptionDialog,
 };
 export default connect(
   mapStateToProps,

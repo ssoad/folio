@@ -242,7 +242,7 @@ class ContentList extends React.Component<ContentListProps, ContentListState> {
     }
     if (
       nextProps.currentChapterIndex !== this.props.currentChapterIndex &&
-      this.props.htmlBook
+      nextProps.htmlBook?.flattenChapters
     ) {
       let chapter = _.find(nextProps.htmlBook.flattenChapters, {
         label: nextProps.currentChapter,

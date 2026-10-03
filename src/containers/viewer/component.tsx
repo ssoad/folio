@@ -1,4 +1,5 @@
 import React from "react";
+import { isCompact, isNativeApp, isTouchDevice } from "../../utils/platform";
 import { ViewerProps, ViewerState } from "./interface";
 import { withRouter } from "react-router-dom";
 import BookUtil from "../../utils/file/bookUtil";
@@ -33,6 +34,7 @@ import {
   getZipEntries,
   isReadingAidMode,
   isReadingRawPDF,
+  isSameRect,
   saveOcrCache,
   throttle,
 } from "../../utils/common";
@@ -50,6 +52,19 @@ import {
 import { isElectron } from "react-device-detect";
 declare var window: any;
 let lock = false; //prevent from clicking too fasts
+
+// The reader is dark with the dark background, or with no background of its
+// own under the dark app theme (as components/background paints it). PDFs
+// need to know, since their pages can't take the theme's text colour.
+const isReaderDark = () => {
+  const backgroundColor = ConfigService.getReaderConfig("backgroundColor");
+  if (backgroundColor) return backgroundColor === "rgba(44,47,49,1)";
+  const skin = ConfigService.getReaderConfig("appSkin");
+  return (
+    skin === "night" ||
+    (skin === "system" && ConfigService.getReaderConfig("isOSNight") === "yes")
+  );
+};
 
 class Viewer extends React.Component<ViewerProps, ViewerState> {
   private resizeHandler: (() => void) | null = null;
@@ -109,7 +124,13 @@ class Viewer extends React.Component<ViewerProps, ViewerState> {
       this.props.handleOpenMenu(true);
     }
     this.props.handleRenderBookFunc(this.handleRenderBook);
+    let lastWindowWidth = window.innerWidth;
     this.resizeHandler = throttle(() => {
+      const newWidth = window.innerWidth;
+      if (newWidth === lastWindowWidth) {
+        return;
+      }
+      lastWindowWidth = newWidth;
       this.setState(
         getPageWidth(
           this.props.readerMode,
@@ -303,11 +324,7 @@ class Viewer extends React.Component<ViewerProps, ViewerState> {
             ? ConfigService.getReaderConfig("fullTranslationMode")
             : "no",
         textOrientation: ConfigService.getReaderConfig("textOrientation"),
-        isDarkMode:
-          ConfigService.getReaderConfig("backgroundColor") ===
-          "rgba(44,47,49,1)"
-            ? "yes"
-            : "no",
+        isDarkMode: isReaderDark() ? "yes" : "no",
         backgroundColor: ConfigService.getReaderConfig("backgroundColor"),
         isMobile: "no",
         isIndent: ConfigService.getReaderConfig("isIndent"),
@@ -608,6 +625,9 @@ class Viewer extends React.Component<ViewerProps, ViewerState> {
       let doc = docs[i];
       if (!doc) continue;
       doc.addEventListener("click", () => {
+        // On touch screens a tap on the page shows or hides the bars
+        // (utils/reader/mouseEvent); closing them here too would undo that
+        if (isCompact() || isTouchDevice()) return;
         this.props.handleLeaveReader("left");
         this.props.handleLeaveReader("right");
         this.props.handleLeaveReader("top");
@@ -623,21 +643,78 @@ class Viewer extends React.Component<ViewerProps, ViewerState> {
         }
 
         if (this.state.isDisablePopup) {
-          if (doc!.getSelection()!.toString().trim().length === 0) {
-            let rect = doc!
-              .getSelection()!
-              .getRangeAt(0)
-              .getBoundingClientRect();
+          const sel = doc?.getSelection();
+          if (sel && sel.rangeCount > 0 && sel.toString().trim().length === 0) {
+            let rect = sel.getRangeAt(0).getBoundingClientRect();
             this.setState({ rect });
           }
         }
         if (this.state.isDisablePopup) return;
         let selection = doc!.getSelection();
-        if (!selection || selection.rangeCount === 0) return;
+        if (
+          !selection ||
+          selection.rangeCount === 0 ||
+          selection.toString().trim().length === 0
+        ) {
+          if (this.props.isOpenMenu && this.props.menuMode === "menu") {
+            this.props.handleOpenMenu(false);
+            this.props.handleMenuMode("");
+            this.setState({ rect: null });
+          }
+          return;
+        }
 
         var rect = selection.getRangeAt(0).getBoundingClientRect();
-        this.setState({ rect });
+        if (!isSameRect(this.state.rect, rect)) {
+          this.setState({ rect });
+        }
       });
+      // Touch screens: a long press selects text and cancels the pointer,
+      // so there's no pointerup; open the popup once the selection settles
+      // (and move it when the handles are dragged)
+      if (isCompact() || isTouchDevice()) {
+        let selectionTimer = 0;
+        doc.addEventListener("selectionchange", () => {
+          window.clearTimeout(selectionTimer);
+          selectionTimer = window.setTimeout(() => {
+            if (this.state.isDisablePopup) return;
+            // If already in a sub-mode (note, dict, trans, assistant), do not overwrite rect or reopen menu
+            if (
+              this.props.isOpenMenu &&
+              this.props.menuMode !== "menu" &&
+              this.props.menuMode !== ""
+            ) {
+              return;
+            }
+            const selection = doc!.getSelection();
+            if (
+              !selection ||
+              selection.rangeCount === 0 ||
+              selection.toString().trim().length === 0
+            ) {
+              if (this.props.isOpenMenu && this.props.menuMode === "menu") {
+                this.props.handleOpenMenu(false);
+                this.props.handleMenuMode("");
+                this.setState({ rect: null });
+              }
+              return;
+            }
+            if (isReadingRawPDF(this.props.currentBook)) {
+              const id =
+                doc!.defaultView?.frameElement?.getAttribute("id") || "";
+              this.setState({
+                chapterDocIndex: id ? parseInt(id.split("-").reverse()[0]) : 0,
+              });
+            }
+            const newRect = selection.getRangeAt(0).getBoundingClientRect();
+            if (!isSameRect(this.state.rect, newRect)) {
+              this.setState({
+                rect: newRect,
+              });
+            }
+          }, 350);
+        });
+      }
       doc.addEventListener("contextmenu", (event) => {
         if (isReadingRawPDF(this.props.currentBook)) {
           let ownerDoc = (event.target as HTMLElement).ownerDocument;
@@ -646,7 +723,14 @@ class Viewer extends React.Component<ViewerProps, ViewerState> {
           let chapterDocIndex = id ? parseInt(id.split("-").reverse()[0]) : 0;
           this.setState({ chapterDocIndex });
         }
-        if (document.location.href.indexOf("localhost") === -1) {
+        // Folio's own popup replaces the system menu. The localhost check
+        // keeps the browser's menu for debugging in the dev server; the
+        // Android app is served from https://localhost too, so it's
+        // excluded from that.
+        if (
+          isNativeApp() ||
+          document.location.href.indexOf("localhost") === -1
+        ) {
           event.preventDefault();
         }
 
@@ -656,13 +740,20 @@ class Viewer extends React.Component<ViewerProps, ViewerState> {
           !doc!.getSelection() ||
           doc!.getSelection()!.toString().trim().length === 0
         ) {
+          if (this.props.isOpenMenu && this.props.menuMode === "menu") {
+            this.props.handleOpenMenu(false);
+            this.props.handleMenuMode("");
+            this.setState({ rect: null });
+          }
           return;
         }
         let selection = doc!.getSelection();
 
         if (!selection || selection.rangeCount === 0) return;
         var rect = selection.getRangeAt(0).getBoundingClientRect();
-        this.setState({ rect });
+        if (!isSameRect(this.state.rect, rect)) {
+          this.setState({ rect });
+        }
       });
     }
   };

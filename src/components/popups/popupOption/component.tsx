@@ -18,7 +18,7 @@ import {
   searchInTheBook,
 } from "../../../utils/reader/mouseEvent";
 import copy from "copy-text-to-clipboard";
-import { getIframeDoc } from "../../../utils/reader/docUtil";
+import { clearIframeSelection, getIframeDoc } from "../../../utils/reader/docUtil";
 import { isReadingRawPDF, openExternalUrl } from "../../../utils/common";
 import { createHighlight } from "../../../utils/reader/noteUtil";
 import { Tooltip } from "react-tooltip";
@@ -49,17 +49,22 @@ class PopupOption extends React.Component<PopupOptionProps> {
       if (!doc) continue;
       const sel = doc.getSelection();
       if (!sel || sel.rangeCount === 0 || !sel.toString().trim()) continue;
-      copied = doc.execCommand("copy");
+      try {
+        copied = doc.execCommand("copy");
+      } catch (e) {}
     }
     if (!copied) {
-      copy(text);
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).catch(() => {
+          copy(text);
+        });
+      } else {
+        copy(text);
+      }
     }
     this.props.handleOpenMenu(false);
-    for (let i = 0; i < docs.length; i++) {
-      let doc = docs[i];
-      if (!doc) continue;
-      doc.getSelection()?.empty();
-    }
+    this.props.handleMenuMode("");
+    clearIframeSelection(format);
     toast.success(this.props.t("Copying successful"));
   };
   handleTrans = () => {
@@ -88,6 +93,7 @@ class PopupOption extends React.Component<PopupOptionProps> {
         this.props.handleOpenMenu(false);
         this.props.handleFetchNotes();
         this.props.handleMenuMode("");
+        clearIframeSelection(this.props.currentBook.format);
       },
     });
   };
@@ -166,10 +172,15 @@ class PopupOption extends React.Component<PopupOptionProps> {
         );
         break;
     }
+    this.props.handleOpenMenu(false);
+    this.props.handleMenuMode("");
+    clearIframeSelection(this.props.currentBook.format);
   };
   handleSearchBook = () => {
     searchInTheBook("", this.props.currentBook.format, true);
     this.props.handleOpenMenu(false);
+    this.props.handleMenuMode("");
+    clearIframeSelection(this.props.currentBook.format);
   };
 
   handleSpeak = () => {
@@ -179,6 +190,9 @@ class PopupOption extends React.Component<PopupOptionProps> {
       msg.voice = window.speechSynthesis.getVoices()[0];
       window.speechSynthesis.speak(msg);
     }
+    this.props.handleOpenMenu(false);
+    this.props.handleMenuMode("");
+    clearIframeSelection(this.props.currentBook.format);
   };
 
   handleReadFromHere = () => {
@@ -191,6 +205,8 @@ class PopupOption extends React.Component<PopupOptionProps> {
     this.props.handleSpeechAutoStart(true);
     this.props.handleSpeechDialog(true);
     this.props.handleOpenMenu(false);
+    this.props.handleMenuMode("");
+    clearIframeSelection(this.props.currentBook.format);
   };
 
   handleAssistant = () => {
@@ -204,7 +220,9 @@ class PopupOption extends React.Component<PopupOptionProps> {
 
   handleOpenPopupOptionDialog = () => {
     this.props.handleOpenMenu(false);
+    this.props.handleMenuMode("");
     this.props.handlePopupOptionDialog(true);
+    clearIframeSelection(this.props.currentBook.format);
   };
 
   handleOptionClick = (optionKey: PopupOptionKey) => {
@@ -244,6 +262,65 @@ class PopupOption extends React.Component<PopupOptionProps> {
     }
   };
 
+  getOptionLabel = (key: PopupOptionKey | "setting", title: string): string => {
+    const t = this.props.t;
+    const isEn = !navigator.language || navigator.language.startsWith("en");
+    if (isEn) {
+      switch (key) {
+        case "copy":
+          return "Copy";
+        case "highlight":
+          return "Highlight";
+        case "note":
+          return "Note";
+        case "translation":
+          return "Translate";
+        case "dict":
+          return "Dictionary";
+        case "search-book":
+          return "In Book";
+        case "browser":
+          return "Web";
+        case "speaker":
+          return "Speak";
+        case "speech-start":
+          return "Read";
+        case "assistant":
+          return "Ask AI";
+        case "setting":
+          return "More";
+        default:
+          return title;
+      }
+    }
+    switch (key) {
+      case "copy":
+        return t("Copy");
+      case "highlight":
+        return t("Highlight");
+      case "note":
+        return t("Note");
+      case "translation":
+        return t("Translate");
+      case "dict":
+        return t("Dictionary");
+      case "search-book":
+        return t("Search in the Book");
+      case "browser":
+        return t("Search on the Internet");
+      case "speaker":
+        return t("Speak the text");
+      case "speech-start":
+        return t("Read from here");
+      case "assistant":
+        return t("Ask AI");
+      case "setting":
+        return t("More");
+      default:
+        return t(title);
+    }
+  };
+
   render() {
     const popupOptionKeys = getEnabledPopupOptionKeys().filter((item) => {
       return !(
@@ -257,41 +334,71 @@ class PopupOption extends React.Component<PopupOptionProps> {
         {popupOptionKeys.map((itemKey) => {
           const item = popupOptionMap[itemKey];
           return (
-            <div
+            <button
+              type="button"
               key={item.key}
-              className={item.name + "-option"}
-              onClick={() => {
+              className={`menu-option-btn ${item.name}-option`}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
                 this.handleOptionClick(item.key);
               }}
+              onPointerDown={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+              }}
+              onTouchStart={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+              }}
+              data-tooltip-id="option-tooltip"
+              data-tooltip-content={this.props.t(item.title)}
+              title={this.props.t(item.title)}
+              aria-label={this.props.t(item.title)}
             >
-              <span
-                data-tooltip-id="option-tooltip"
-                data-tooltip-content={this.props.t(item.title)}
-              >
+              <span className={`menu-icon-badge ${item.name}-badge`}>
                 <span
                   className={`icon-${item.icon} ${item.name}-icon`}
                   style={{ pointerEvents: "none" }}
                 ></span>
               </span>
-            </div>
+              <span className="menu-item-label">
+                {this.getOptionLabel(item.key, item.title)}
+              </span>
+            </button>
           );
         })}
-        <div
-          className="setting-option"
-          onClick={() => {
+        <button
+          type="button"
+          className="menu-option-btn setting-option"
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
             this.handleOpenPopupOptionDialog();
           }}
+          onPointerDown={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+          }}
+          onTouchStart={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+          }}
+          data-tooltip-id="option-tooltip"
+          data-tooltip-content={this.props.t("Customize popup menu")}
+          title={this.props.t("Customize popup menu")}
+          aria-label={this.props.t("Customize popup menu")}
         >
-          <span
-            data-tooltip-id="option-tooltip"
-            data-tooltip-content={this.props.t("Customize popup menu")}
-          >
+          <span className="menu-icon-badge setting-badge">
             <span
               className="icon-setting setting-icon"
-              style={{ color: "#8a8f9f", fontSize: "20px" }}
+              style={{ pointerEvents: "none" }}
             ></span>
           </span>
-        </div>
+          <span className="menu-item-label">
+            {this.getOptionLabel("setting", "Customize popup menu")}
+          </span>
+        </button>
       </div>
     );
   }

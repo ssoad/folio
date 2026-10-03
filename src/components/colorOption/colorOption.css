@@ -1,82 +1,140 @@
 .color-option-container {
   width: 100%;
-  margin-left: 0;
-  padding-bottom: 0;
-  flex-shrink: 0;
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
   display: flex;
   flex-direction: row;
   align-items: center;
+  justify-content: space-between;
   gap: 8px;
 }
+
+/* Style Tabs: Segmented Control Track */
 .note-highlight-style-tabs {
   display: flex;
   flex-wrap: nowrap;
-  gap: 2px;
+  gap: 3px;
   margin: 0;
-  padding: 0;
+  padding: 2px;
   list-style: none;
   flex-shrink: 0;
+  background: var(--hover-bg);
+  border-radius: 9px;
+  box-sizing: border-box;
 }
+
 .note-highlight-style-tab {
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 50%;
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
   cursor: pointer;
-  padding: 2px;
-  opacity: 0.5;
-  transition:
-    border-color 0.15s,
-    opacity 0.15s;
+  padding: 0;
+  opacity: 0.65;
+  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
   box-sizing: border-box;
-  border: 2px solid transparent;
+  border: 1px solid transparent;
+  background: transparent;
 }
+
+.note-highlight-style-tab:hover {
+  opacity: 1;
+  background: rgba(0, 0, 0, 0.04);
+}
+
 .note-highlight-style-tab.active-note-highlight-tab {
   opacity: 1;
+  background: var(--surface);
+  border-color: rgba(0, 0, 0, 0.08);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
 }
+
+[data-theme="dark"] .note-highlight-style-tab.active-note-highlight-tab {
+  background: var(--surface-raised);
+  border-color: rgba(255, 255, 255, 0.12);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+}
+
 .note-highlight-style-preview {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 18px;
-  height: 18px;
-  font-size: 10px;
+  width: 22px;
+  height: 22px;
+  font-size: 11px;
   font-weight: 600;
   box-sizing: border-box;
-  border: 2px solid transparent;
+  border-radius: 4px;
+  color: var(--text-color);
+  user-select: none;
 }
+
+/* Vertical divider between style tabs and color swatches */
+.note-highlight-divider {
+  width: 1px;
+  height: 20px;
+  background: var(--border);
+  opacity: 0.8;
+  flex-shrink: 0;
+  margin: 0 2px;
+}
+
+/* Color Swatches Container */
 .note-highlight-color-container {
   display: flex;
   flex-wrap: nowrap;
-  gap: 4px;
+  gap: 8px;
   margin: 0;
   padding: 0;
   list-style: none;
   flex: 1;
   justify-content: flex-end;
+  align-items: center;
 }
+
+/* Individual Color Swatch */
 .note-highlight-color-item {
   width: 24px;
   height: 24px;
   border-radius: 50%;
   cursor: pointer;
   box-sizing: border-box;
-  border: 2px solid transparent;
-  transition: border-color 0.15s;
-  padding: 2px;
-  background-clip: content-box;
+  position: relative;
+  transition: transform 0.15s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.12);
+  flex-shrink: 0;
 }
+
+.note-highlight-color-item:hover {
+  transform: scale(1.12);
+}
+
+.note-highlight-color-item:active {
+  transform: scale(0.92);
+}
+
+/* Active Highlight Color Ring */
 .note-highlight-color-item.active-note-highlight-color {
-  border-color: currentColor;
+  box-shadow:
+    0 0 0 2px var(--surface-raised),
+    0 0 0 4px var(--accent),
+    inset 0 0 0 1px rgba(0, 0, 0, 0.15);
+  transform: scale(1.12);
 }
+
+/* Note Edit Mode inside PopupNote */
 .color-option-container-edit {
-  position: absolute;
-  top: calc(100% - 110px);
-  width: calc(100% - 60px);
-  margin-left: 0;
+  position: static;
+  width: 100%;
+  margin: 0;
   justify-content: flex-start;
 }
+
 .color-option-container-edit .note-highlight-color-container {
   justify-content: flex-start;
   flex: 0 1 auto;
 }
+

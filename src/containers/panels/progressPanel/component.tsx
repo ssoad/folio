@@ -61,6 +61,9 @@ class ProgressPanel extends React.Component<
     }
   }
   handleLocation = () => {
+    if (!this.props.htmlBook || !this.props.htmlBook.rendition) {
+      return;
+    }
     let position = this.props.htmlBook.rendition.getPosition();
     ConfigService.setObjectConfig(
       this.props.currentBook.key,
@@ -73,6 +76,9 @@ class ProgressPanel extends React.Component<
     }, 1000);
   };
   handleCurrentChapterIndex = (rendition) => {
+    if (!rendition || !this.props.htmlBook?.flattenChapters) {
+      return;
+    }
     let position = rendition.getPosition();
 
     let href = position.chapterHref;
@@ -85,6 +91,7 @@ class ProgressPanel extends React.Component<
     this.setState({ targetChapterIndex: chapterIndex + 1 });
   };
   async handlePageNum(rendition) {
+    if (!rendition) return;
     let pageInfo = await rendition.getProgress();
     if (!pageInfo) {
       return;
@@ -95,17 +102,18 @@ class ProgressPanel extends React.Component<
     });
   }
   onProgressChange = async (event: any) => {
+    if (!this.props.htmlBook?.rendition) return;
     const percentage = event.target.value / 100;
     this.setState({ currentPercentage: event.target.value });
     await this.props.htmlBook.rendition.goToPercentage(percentage);
   };
   nextChapter = async () => {
-    if (this.props.htmlBook.flattenChapters.length > 0) {
+    if (this.props.htmlBook?.flattenChapters?.length > 0) {
       await this.props.htmlBook.rendition.nextChapter();
     }
   };
   prevChapter = async () => {
-    if (this.props.htmlBook.flattenChapters.length > 0) {
+    if (this.props.htmlBook?.flattenChapters?.length > 0) {
       await this.props.htmlBook.rendition.prevChapter();
     }
   };
@@ -125,6 +133,15 @@ class ProgressPanel extends React.Component<
     );
     return (
       <div className="progress-panel">
+        {/* Phones: one short line instead of the two rows below */}
+        <p className="progress-compact-label">
+          <Trans>Page</Trans>{" "}
+          {this.state.currentPage *
+            (readerMode === "double" && this.props.currentBook.format !== "PDF"
+              ? 2
+              : 1)}{" "}
+          / {this.state.totalPage} · {this.state.currentPercentage}%
+        </p>
         <p className="progress-text" style={{ marginTop: 10 }}>
           <span>
             <Trans>Progress</Trans>: {this.state.currentPercentage}
@@ -132,7 +149,7 @@ class ProgressPanel extends React.Component<
           </span>
         </p>
 
-        <p className="progress-text" style={{ marginTop: 0 }}>
+        <p className="progress-text progress-jump" style={{ marginTop: 0 }}>
           <Trans>Pages</Trans>
           <input
             type="text"
@@ -203,9 +220,10 @@ class ProgressPanel extends React.Component<
               }
             }}
           />
-          <span>/ {this.props.htmlBook.flattenChapters.length}</span>
+          <span>/ {this.props.htmlBook?.flattenChapters?.length || 0}</span>
         </p>
         <div
+          className="progress-slider-row"
           style={{
             display: "flex",
             justifyContent: "space-between",

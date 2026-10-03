@@ -15,6 +15,7 @@ import {
   TEXT_SIZE_STEP,
 } from "../../../utils/common";
 import FontUtil from "../../../utils/file/fontUtil";
+import { setDrawingMode } from "../../../utils/reader/mouseEvent";
 
 class AnnotationDialog extends React.Component<
   AnnotationDialogProps,
@@ -221,6 +222,11 @@ class AnnotationDialog extends React.Component<
     this.props.htmlBook.rendition.applyAnnotationConfig({
       isDrawing: "no",
     });
+    setDrawingMode(
+      false,
+      this.props.currentBook.format,
+      this.props.currentBook.key
+    );
   };
   render() {
     const {

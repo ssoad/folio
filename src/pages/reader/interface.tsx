@@ -36,6 +36,7 @@ export interface ReaderProps {
   renderBookFunc: () => void;
   handleFetchAuthed: () => void;
   handleFetchUserInfo: () => Promise<any>;
+  handlePopupOptionDialog: (isOpenPopupOptionDialog: boolean) => void;
 }
 
 export interface ReaderState {

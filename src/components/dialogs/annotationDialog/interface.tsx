@@ -1,3 +1,4 @@
+import BookModel from "../../../models/Book";
 export interface AnnotationDialogProps {
   isAnnotationOpen: boolean;
   isSettingLocked: boolean;
@@ -5,6 +6,7 @@ export interface AnnotationDialogProps {
   handleAnnotationDialog: (isAnnotationOpen: boolean) => void;
   t: (title: string) => string;
   htmlBook: any;
+  currentBook: BookModel;
 }
 
 export interface AnnotationDialogState {

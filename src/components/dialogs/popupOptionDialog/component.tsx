@@ -12,6 +12,12 @@ import {
   POPUP_OPTION_LIMIT,
   savePopupOptionSettingList,
 } from "../../../constants/popupList";
+import { NATIVE_BACK_EVENT } from "../../../utils/native";
+
+const isPhoneWidth = () =>
+  window.innerWidth <= 576 ||
+  document.body.classList.contains("is-compact") ||
+  document.documentElement.classList.contains("is-compact");
 
 class PopupOptionDialog extends React.Component<
   PopupOptionDialogProps,
@@ -23,6 +29,26 @@ class PopupOptionDialog extends React.Component<
       popupOptionList: getPopupOptionSettingList(),
     };
   }
+
+  componentDidMount() {
+    window.addEventListener(NATIVE_BACK_EVENT, this.handleNativeBack, {
+      capture: true,
+    });
+  }
+
+  componentWillUnmount() {
+    window.removeEventListener(
+      NATIVE_BACK_EVENT,
+      this.handleNativeBack,
+      { capture: true } as any
+    );
+  }
+
+  handleNativeBack = (e: Event) => {
+    e.preventDefault();
+    e.stopImmediatePropagation();
+    this.handleClose();
+  };
 
   handleClose = () => {
     this.props.handlePopupOptionDialog(false);
@@ -64,96 +90,118 @@ class PopupOptionDialog extends React.Component<
   };
 
   render() {
-    return (
-      <div
-        className="backup-page-container popup-option-dialog-container"
-        onDragEnter={(event) => {
-          event.preventDefault();
-          event.stopPropagation();
-        }}
-      >
-        <div className="backup-dialog-title">
-          {this.props.t("Customize popup menu")}
-        </div>
-        <div className="import-dialog-option">
-          <ReactSortable<PopupOptionDialogItem>
-            list={this.state.popupOptionList}
-            setList={(popupOptionList) => {
-              this.setState({ popupOptionList });
-              savePopupOptionSettingList(
-                popupOptionList as unknown as PopupOptionDialogState["popupOptionList"]
-              );
-              this.props.handlePopupOptionUpdate(Date.now());
-            }}
-            animation={200}
-            delayOnTouchStart={true}
-            delay={2}
-            scroll={true}
-            scrollSensitivity={140}
-            scrollSpeed={20}
-            bubbleScroll={true}
-            handle=".popup-option-dialog-drag"
-          >
-            {this.state.popupOptionList.map((item) => {
-              return (
-                <div
-                  key={item.key}
-                  className="cloud-drive-item popup-option-dialog-item"
-                  style={item.enabled ? {} : { opacity: 0.6 }}
-                >
-                  <span
-                    className={`icon-${item.icon} popup-option-dialog-item-icon`}
-                  ></span>
-                  <span className="popup-option-dialog-item-label">
-                    {this.props.t(item.title)}
-                  </span>
-                  <span
-                    className="single-control-switch popup-option-dialog-switch"
-                    onClick={() => {
-                      this.handleToggleOption(item.key);
-                    }}
-                  >
-                    <span
-                      className="single-control-button"
-                      style={
-                        item.enabled
-                          ? {
-                              transform: "translateX(20px)",
-                              transition: "transform 0.5s ease",
-                              bottom: "0px",
-                            }
-                          : {
-                              transform: "translateX(0px)",
-                              transition: "transform 0.5s ease",
-                              bottom: "0px",
-                            }
-                      }
-                    ></span>
-                  </span>
-                  <span className="icon-menu popup-option-dialog-drag"></span>
-                </div>
-              );
-            })}
-          </ReactSortable>
-        </div>
-        <div className="popup-option-dialog-tip popup-option-dialog-limit">
-          {this.props.t("You can enable up to {{count}} options", {
-            count: POPUP_OPTION_LIMIT,
-          })}
-        </div>
-        <div className="import-dialog-back-button">
-          {this.props.t("Drag to sort")}
-        </div>
+    const isPhone = isPhoneWidth();
 
+    return (
+      <>
         <div
-          className="backup-page-close-icon"
-          onClick={() => {
+          className="popup-option-dialog-backdrop"
+          onClick={this.handleClose}
+          onPointerDown={(event) => {
+            event.stopPropagation();
             this.handleClose();
           }}
+        />
+        <div
+          className="popup-option-dialog-container"
+          onDragEnter={(event) => {
+            event.preventDefault();
+            event.stopPropagation();
+          }}
         >
-          <span className="icon-close backup-close-icon"></span>
+          {isPhone && <div className="popup-sheet-grabber" />}
+          <div className="popup-option-dialog-header">
+            <div className="popup-option-dialog-title">
+              {this.props.t("Customize popup menu")}
+            </div>
+            <button
+              type="button"
+              className="popup-option-dialog-close"
+              onClick={this.handleClose}
+              aria-label={this.props.t("Close")}
+            >
+              <span className="icon-close"></span>
+            </button>
+          </div>
+
+          <div className="popup-option-dialog-list">
+            <ReactSortable<PopupOptionDialogItem>
+              list={this.state.popupOptionList}
+              setList={(popupOptionList) => {
+                this.setState({ popupOptionList });
+                savePopupOptionSettingList(
+                  popupOptionList as unknown as PopupOptionDialogState["popupOptionList"]
+                );
+                this.props.handlePopupOptionUpdate(Date.now());
+              }}
+              animation={200}
+              delayOnTouchStart={true}
+              delay={2}
+              scroll={true}
+              scrollSensitivity={140}
+              scrollSpeed={20}
+              bubbleScroll={true}
+              handle=".popup-option-dialog-drag-handle"
+            >
+              {this.state.popupOptionList.map((item) => {
+                return (
+                  <div
+                    key={item.key}
+                    className={`popup-option-dialog-item ${
+                      item.enabled ? "is-enabled" : "is-disabled"
+                    }`}
+                    onClick={() => this.handleToggleOption(item.key)}
+                  >
+                    <div className="popup-option-dialog-item-left">
+                      <div className="popup-option-dialog-item-icon-box">
+                        <span
+                          className={`icon-${item.icon} popup-option-dialog-item-icon`}
+                        ></span>
+                      </div>
+                      <span className="popup-option-dialog-item-label">
+                        {this.props.t(item.title)}
+                      </span>
+                    </div>
+
+                    <div
+                      className="popup-option-dialog-item-right"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <div
+                        className={`popup-option-dialog-switch ${
+                          item.enabled ? "is-enabled" : ""
+                        }`}
+                        onClick={() => this.handleToggleOption(item.key)}
+                        role="switch"
+                        aria-checked={item.enabled}
+                      >
+                        <div className="popup-option-dialog-switch-knob" />
+                      </div>
+                      <div
+                        className="popup-option-dialog-drag-handle"
+                        title={this.props.t("Drag to sort")}
+                      >
+                        <span className="icon-menu popup-option-dialog-drag"></span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </ReactSortable>
+          </div>
+
+          <div className="popup-option-dialog-footer">
+            <span className="popup-option-dialog-limit-tip">
+              {this.props.t("You can enable up to {{count}} options", {
+                count: POPUP_OPTION_LIMIT,
+              })}
+            </span>
+            <span className="popup-option-dialog-sort-tip">
+              {this.props.t("Drag to sort")}
+            </span>
+          </div>
         </div>
-      </div>
+      </>
     );
   }
 }

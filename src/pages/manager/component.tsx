@@ -63,7 +63,14 @@ class Manager extends React.Component<ManagerProps, ManagerState> {
         }
       );
     }
-    if (nextProps.books && nextProps.books.length === 1 && !this.props.books) {
+    // Leave the empty page once books arrive: the first import, or the
+    // library loading after the list rendered empty (slow storage on phones)
+    if (
+      nextProps.books &&
+      nextProps.books.length > 0 &&
+      (!this.props.books || this.props.books.length === 0) &&
+      this.props.location.pathname === "/manager/empty"
+    ) {
       this.props.history.push("/manager/home");
     }
     if (this.props.mode !== nextProps.mode) {

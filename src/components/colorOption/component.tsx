@@ -36,6 +36,7 @@ class ColorOption extends React.Component<ColorProps> {
   render() {
     const { styleType, color } = this.props.highlight;
     const presetColors = KookitConfig.HighlightPresetColors[styleType];
+    const t = this.props.t || ((s: string) => s);
 
     return (
       <div
@@ -45,26 +46,37 @@ class ColorOption extends React.Component<ColorProps> {
             : "color-option-container"
         }
       >
-        <ul className="note-highlight-style-tabs">
+        <ul className="note-highlight-style-tabs" role="tablist">
           {KookitConfig.HighlightStyleTypes.map((item) => {
             const previewColor =
               item.value === styleType
                 ? color
                 : KookitConfig.HighlightPresetColors[item.value][0];
+            const isActive = styleType === item.value;
             return (
               <li
                 key={item.value}
                 className={
-                  styleType === item.value
+                  isActive
                     ? "note-highlight-style-tab active-note-highlight-tab"
                     : "note-highlight-style-tab"
                 }
-                onClick={() => this.handleStyleType(item.value)}
-                style={
-                  styleType === item.value
-                    ? { borderColor: "currentColor" }
-                    : {}
-                }
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  this.handleStyleType(item.value);
+                }}
+                onPointerDown={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                }}
+                onTouchStart={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                }}
+                title={t(item.label || item.value)}
+                role="tab"
+                aria-selected={isActive}
               >
                 <span
                   className="note-highlight-style-preview"
@@ -74,7 +86,7 @@ class ColorOption extends React.Component<ColorProps> {
                       previewColor
                     ),
                     ...(item.value === "background"
-                      ? { borderRadius: "50%" }
+                      ? { borderRadius: "4px" }
                       : {}),
                   }}
                 >
@@ -84,19 +96,38 @@ class ColorOption extends React.Component<ColorProps> {
             );
           })}
         </ul>
-        <ul className="note-highlight-color-container">
-          {presetColors.map((presetColor, index) => (
-            <li
-              key={presetColor}
-              className={
-                presetColors.indexOf(color) === index
-                  ? "note-highlight-color-item active-note-highlight-color"
-                  : "note-highlight-color-item"
-              }
-              style={{ backgroundColor: presetColor }}
-              onClick={() => this.handlePresetColor(index)}
-            />
-          ))}
+        <div className="note-highlight-divider" />
+        <ul className="note-highlight-color-container" role="radiogroup">
+          {presetColors.map((presetColor, index) => {
+            const isActive = presetColors.indexOf(color) === index;
+            return (
+              <li
+                key={presetColor}
+                className={
+                  isActive
+                    ? "note-highlight-color-item active-note-highlight-color"
+                    : "note-highlight-color-item"
+                }
+                style={{ backgroundColor: presetColor }}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  this.handlePresetColor(index);
+                }}
+                onPointerDown={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                }}
+                onTouchStart={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                }}
+                title={t("Highlight")}
+                role="radio"
+                aria-checked={isActive}
+              />
+            );
+          })}
         </ul>
       </div>
     );

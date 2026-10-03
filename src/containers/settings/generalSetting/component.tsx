@@ -189,18 +189,21 @@ class GeneralSetting extends React.Component<
       <>
         {this.renderSwitchOption(generalSettingList)}
 
-        <div className="setting-dialog-new-title">
-          <Trans>Reset main window's position</Trans>
+        {/* Only the desktop app has a window to move */}
+        {isElectron && (
+          <div className="setting-dialog-new-title">
+            <Trans>Reset main window's position</Trans>
 
-          <span
-            className="change-location-button"
-            onClick={() => {
-              this.handleResetMainPosition();
-            }}
-          >
-            <Trans>Reset</Trans>
-          </span>
-        </div>
+            <span
+              className="change-location-button"
+              onClick={() => {
+                this.handleResetMainPosition();
+              }}
+            >
+              <Trans>Reset</Trans>
+            </span>
+          </div>
+        )}
 
         <div className="setting-dialog-new-title">
           <Trans>Language</Trans>

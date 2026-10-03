@@ -181,6 +181,41 @@ export const READER_CHROME_TOGGLE_EVENT = "folio-reader-chrome-toggle";
 // Asks the reader's top bar to leave the book (Android back button)
 export const READER_EXIT_EVENT = "folio-reader-exit";
 const TAP_TURN_ZONE = 0.3;
+const TAP_MAX_MOVE = 10;
+const TAP_MAX_TIME = 350;
+const tapBoundDocs = new WeakSet<Document>();
+
+// The drawing layer (fabric canvases on every PDF page) takes every touch,
+// so on touch screens it would stop the page from scrolling even when
+// nobody is drawing. It only takes touches while drawing mode is on.
+const PASSIVE_DRAWING_CLASS = "folio-not-drawing";
+const PASSIVE_DRAWING_STYLE = `html.${PASSIVE_DRAWING_CLASS} .canvas-container,
+html.${PASSIVE_DRAWING_CLASS} .canvas-container canvas {
+  pointer-events: none !important;
+  touch-action: auto !important;
+}`;
+let isDrawingMode = false;
+const applyDrawingMode = (doc: Document) => {
+  if (!doc?.documentElement) return;
+  if (!doc.getElementById("folio-drawing-mode")) {
+    const style = doc.createElement("style");
+    style.id = "folio-drawing-mode";
+    style.textContent = PASSIVE_DRAWING_STYLE;
+    (doc.head || doc.documentElement).appendChild(style);
+  }
+  doc.documentElement.classList.toggle(PASSIVE_DRAWING_CLASS, !isDrawingMode);
+};
+export const setDrawingMode = (
+  isDrawing: boolean,
+  format: string,
+  bookKey: string
+) => {
+  isDrawingMode = isDrawing;
+  if (!(isCompact() || isTouchDevice())) return;
+  for (const doc of getIframeDoc(format, bookKey)) {
+    if (doc) applyDrawingMode(doc);
+  }
+};
 const handleReaderTap = async (
   event: MouseEvent,
   rendition: any,
@@ -514,10 +549,55 @@ export const bindHtmlEvent = (
     });
   }
 
-  if (isCompact() || isTouchDevice()) {
-    doc.addEventListener("click", (event: MouseEvent) =>
-      handleReaderTap(event, rendition, doc, readerMode, key)
+  if (isCompact() || isTouchDevice()) applyDrawingMode(doc);
+  if ((isCompact() || isTouchDevice()) && !tapBoundDocs.has(doc)) {
+    // The engine renders again on resize and page changes; one listener per
+    // document, or a tap would toggle the bars twice
+    tapBoundDocs.add(doc);
+    // Some pages (PDF canvases) never get a click after a touch, so taps
+    // are read from the touch itself; the click that may follow is ignored
+    let touchStart: { x: number; y: number; time: number } | null = null;
+    let lastTouchTap = 0;
+    doc.addEventListener(
+      "touchstart",
+      (event: TouchEvent) => {
+        const touch = event.touches.length === 1 ? event.touches[0] : null;
+        touchStart = touch
+          ? { x: touch.clientX, y: touch.clientY, time: Date.now() }
+          : null;
+      },
+      { passive: true }
     );
+    doc.addEventListener(
+      "touchend",
+      (event: TouchEvent) => {
+        const start = touchStart;
+        touchStart = null;
+        const touch = event.changedTouches[0];
+        if (!start || !touch) return;
+        const moved = Math.hypot(
+          touch.clientX - start.x,
+          touch.clientY - start.y
+        );
+        // Swipes, scrolls and long presses (text selection) aren't taps
+        if (moved > TAP_MAX_MOVE || Date.now() - start.time > TAP_MAX_TIME) {
+          return;
+        }
+        lastTouchTap = Date.now();
+        handleReaderTap(
+          { clientX: touch.clientX, target: event.target } as MouseEvent,
+          rendition,
+          doc,
+          readerMode,
+          key
+        );
+      },
+      { passive: true }
+    );
+    doc.addEventListener("click", (event: MouseEvent) => {
+      if (Date.now() - lastTouchTap < 700) return;
+      handleReaderTap(event, rendition, doc, readerMode, key);
+    });
   }
 
   doc.addEventListener(

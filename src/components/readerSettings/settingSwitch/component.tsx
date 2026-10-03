@@ -1,4 +1,5 @@
 import React from "react";
+import { isCompact } from "../../../utils/platform";
 import { SettingSwitchProps, SettingSwitchState } from "./interface";
 import { Trans } from "react-i18next";
 import { ConfigService } from "../../../assets/lib/kookit-extra-browser.min";
@@ -190,20 +191,23 @@ class SettingSwitch extends React.Component<
   render() {
     return (
       <>
-        <div style={{ marginTop: "20px", textAlign: "center" }}>
-          <span
-            style={{
-              textDecoration: "underline",
-              cursor: "pointer",
-              textAlign: "center",
-            }}
-          >
-            <Trans>
-              The audiobook feature has been moved to the bottom right of the
-              book page
-            </Trans>
-          </span>
-        </div>
+        {/* Phones have a Listen button in the reader's toolbar instead */}
+        {!isCompact() && (
+          <div style={{ marginTop: "20px", textAlign: "center" }}>
+            <span
+              style={{
+                textDecoration: "underline",
+                cursor: "pointer",
+                textAlign: "center",
+              }}
+            >
+              <Trans>
+                The audiobook feature has been moved to the bottom right of the
+                book page
+              </Trans>
+            </span>
+          </div>
+        )}
         <div className="single-control-switch-container" key="isCustomBookCSS">
           <span className="single-control-switch-title">
             <Trans>Custom book style (CSS)</Trans>

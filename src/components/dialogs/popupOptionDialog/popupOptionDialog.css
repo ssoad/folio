@@ -1,50 +1,226 @@
-.popup-option-dialog-container {
-  height: 520px;
-  top: calc(50% - 260px);
+/* Backdrop overlay */
+.popup-option-dialog-backdrop {
+  position: fixed !important;
+  inset: 0 !important;
+  width: 100vw;
+  height: 100vh;
+  z-index: 39 !important;
+  background: var(--overlay, rgba(0, 0, 0, 0.32));
+  pointer-events: auto;
+  animation: backdropFadeIn 0.2s ease-out;
 }
 
+/* Dialog Container - Desktop default (clean modal) */
+.popup-option-dialog-container {
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 480px;
+  max-width: calc(100vw - 32px);
+  max-height: 85vh;
+  background: var(--surface, #1e1e1e);
+  color: var(--text-color, #e0e0e0);
+  border-radius: 28px;
+  box-shadow: 0 16px 44px rgba(0, 0, 0, 0.45);
+  border: 1px solid var(--border, rgba(255, 255, 255, 0.08));
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  z-index: 40 !important;
+  box-sizing: border-box;
+}
+
+/* Mobile Bottom Sheet (Managed by compact.css now, but keep empty media query for safety or just remove) */
+
+/* Header */
+.popup-option-dialog-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 20px 12px 20px;
+  border-bottom: 1px solid var(--border, rgba(255, 255, 255, 0.08));
+  flex-shrink: 0;
+  position: relative;
+}
+
+.popup-option-dialog-title {
+  font-size: 18px;
+  font-weight: 500;
+  color: var(--text-color, #f0f0f0);
+  letter-spacing: -0.2px;
+}
+
+.popup-option-dialog-close {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-color, #bbb);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 15px;
+  transition: background-color 0.15s ease, color 0.15s ease;
+  padding: 0;
+}
+
+.popup-option-dialog-close:hover,
+.popup-option-dialog-close:active {
+  background: rgba(255, 255, 255, 0.16);
+  color: #fff;
+}
+
+/* Options Scrollable List */
+.popup-option-dialog-list {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 12px 16px;
+  overscroll-behavior: contain;
+}
+
+/* List Item */
 .popup-option-dialog-item {
-  gap: 12px;
-  padding-right: 15px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  margin-bottom: 2px;
+  border-radius: 12px;
+  background: transparent;
+  transition: background-color 0.15s ease, opacity 0.2s ease;
+  user-select: none;
+  cursor: pointer;
+}
+
+.popup-option-dialog-item:hover {
+  background: rgba(128, 128, 128, 0.05);
+}
+
+.popup-option-dialog-item:active {
+  background: rgba(128, 128, 128, 0.1);
+}
+
+.popup-option-dialog-item.is-disabled {
+  opacity: 0.5;
+}
+
+.popup-option-dialog-item-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.popup-option-dialog-item-icon-box {
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
 }
 
 .popup-option-dialog-item-icon {
-  width: 28px;
-  font-size: 22px;
-  text-align: center;
-  flex-shrink: 0;
+  font-size: 20px;
+  color: var(--text-color, #e0e0e0);
 }
 
 .popup-option-dialog-item-label {
-  width: calc(100% - 120px);
-  font-size: 15px;
-  line-height: 1.5;
-  font-weight: 500;
-  text-overflow: ellipsis;
+  font-size: 16px;
+  font-weight: 400;
+  color: var(--text-color, #e0e0e0);
   overflow: hidden;
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.popup-option-dialog-switch {
+.popup-option-dialog-item-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
   flex-shrink: 0;
+  margin-left: 12px;
+}
+
+/* Toggle Switch */
+.popup-option-dialog-switch {
+  position: relative;
+  width: 52px;
+  height: 32px;
+  border-radius: 16px;
+  background: var(--border, rgba(120, 120, 128, 0.4));
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background-color 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  display: inline-flex;
+  align-items: center;
+  box-sizing: border-box;
+}
+
+.popup-option-dialog-switch.is-enabled {
+  background: var(--color-primary, #5c9ee6);
+}
+
+.popup-option-dialog-switch-knob {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #ffffff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  transform: translateX(4px);
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.popup-option-dialog-switch.is-enabled .popup-option-dialog-switch-knob {
+  transform: translateX(24px);
+}
+
+/* Drag Handle */
+.popup-option-dialog-drag-handle {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  cursor: grab;
+  color: var(--text-secondary, #888);
+  touch-action: none;
+}
+
+.popup-option-dialog-drag-handle:active {
+  cursor: grabbing;
+  color: var(--color-primary, #6cb2ff);
 }
 
 .popup-option-dialog-drag {
   font-size: 18px;
-  cursor: grab;
+}
+
+/* Footer */
+.popup-option-dialog-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 20px calc(14px + var(--safe-bottom)) 20px;
+  border-top: 1px solid var(--border, rgba(255, 255, 255, 0.08));
+  background: rgba(0, 0, 0, 0.1);
+  font-size: 12.5px;
+  color: var(--text-secondary, #999);
   flex-shrink: 0;
 }
 
-.popup-option-dialog-drag:active {
-  cursor: grabbing;
+.popup-option-dialog-limit-tip {
+  font-weight: 400;
 }
 
-.popup-option-dialog-tip {
-  position: absolute;
-  bottom: 20px;
-  font-size: 13px;
-}
-
-.popup-option-dialog-limit {
-  left: 20px;
+.popup-option-dialog-sort-tip {
+  font-weight: 500;
+  color: var(--color-primary, #6cb2ff);
 }

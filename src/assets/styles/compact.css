@@ -280,8 +280,7 @@
 /* Larger dialogs: sheets from the bottom */
 .is-compact .backup-page-container,
 .is-compact .edit-dialog-container,
-.is-compact .sort-dialog-container.annotation-dialog-container,
-.is-compact .popup-option-dialog-container {
+.is-compact .sort-dialog-container.annotation-dialog-container {
   position: fixed !important;
   left: 0 !important;
   right: 0 !important;
@@ -333,6 +332,7 @@
   padding-bottom: var(--safe-bottom);
   box-sizing: border-box;
   animation: none;
+  z-index: 100 !important;
 }
 .is-compact .setting-dialog-sidebar {
   width: 100% !important;
@@ -396,17 +396,51 @@
 
 /* ── Reader ──────────────────────────────────────────────────────────────── */
 
-/* Taps on the page drive the reader; the hover strips are for mice */
+/* Taps on the page drive the reader; the hover strips are for mice, and
+   the floating chapter, listen, AI and draw buttons only fade in on hover,
+   so on a touch screen they'd be invisible but still tappable. Phones get
+   those actions in the bottom toolbar instead. */
 .is-compact .left-panel,
 .is-compact .right-panel,
 .is-compact .top-panel,
-.is-compact .bottom-panel {
+.is-compact .bottom-panel,
+.is-compact .previous-chapter-single-container,
+.is-compact .reader-float-actions {
   display: none !important;
 }
 /* Width and left come from getPageWidth (utils/common) */
 .is-compact .html-viewer-page {
   top: calc(40px + var(--safe-top)) !important;
   bottom: calc(40px + var(--safe-bottom)) !important;
+}
+/* PDFs and comics: the page runs edge to edge, leaving only the page
+   number line at the bottom; their chapter line is just a page index */
+.is-compact.is-fixed-reading .html-viewer-page {
+  top: var(--safe-top) !important;
+  bottom: calc(24px + var(--safe-bottom)) !important;
+}
+.is-compact.is-fixed-reading .header-container {
+  display: none !important;
+}
+/* Text books in the app: the status bar hides while reading, but the
+   camera cutout stays, and its inset is what --safe-top reports then. The
+   chapter line sits just below it and the page right under that; fixed, so
+   nothing jumps when the bars (and the status bar) come back. */
+.is-native.is-compact .html-viewer-page {
+  top: calc(var(--safe-top) + 30px) !important;
+  bottom: calc(30px + var(--safe-bottom)) !important;
+}
+.is-native.is-compact .header-container {
+  translate: 0 calc(var(--safe-top) - 10px);
+}
+/* The page number line, just above the gesture bar */
+.is-native.is-compact .footer-container {
+  translate: 0 calc(8px - var(--safe-bottom));
+}
+/* PDFs and comics in the app: full width, and from just below the camera
+   cutout down to the page number line */
+.is-native.is-compact.is-fixed-reading .html-viewer-page {
+  top: var(--safe-top) !important;
 }
 
 /* Top and bottom bars span the screen */
@@ -427,8 +461,66 @@
   top: auto !important;
   bottom: calc(52px + var(--safe-bottom));
 }
+/* Clear of the toolbar and the navigation bar, or its top edge peeks out */
 .is-compact .progress-panel-container:not(.is-open) {
-  transform: translateY(calc(100% + 80px)) !important;
+  transform: translateY(calc(100% + 72px + var(--safe-bottom))) !important;
+}
+/* The status bar shows with the bars: give it the top bar's background, so
+   its icons sit on the bar instead of over the page and its chapter line */
+.is-compact .operation-panel-container.is-open::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 100%;
+  height: var(--safe-top);
+  background: var(--panel-bg, var(--surface));
+}
+
+/* Progress: one row, the page caption then the slider (the page and
+   chapter boxes are for wide windows; Contents jumps to chapters on
+   phones) */
+.is-compact .progress-panel {
+  position: relative !important;
+  bottom: auto;
+  height: auto !important;
+  display: flex;
+  align-items: center;
+  padding: 0 12px 0 14px;
+  box-sizing: border-box;
+}
+.is-compact .progress-panel .progress-text {
+  display: none;
+}
+.is-compact .progress-compact-label {
+  display: block;
+  flex: none;
+  margin: 0;
+  font-size: 12px;
+  line-height: 16px;
+  color: var(--muted);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.is-compact .progress-slider-row {
+  flex: 1;
+  min-width: 0;
+  height: 44px;
+  width: auto !important;
+  margin-left: 6px !important;
+}
+.is-compact .progress-panel-container {
+  height: auto !important;
+}
+
+/* The panels' content is taller than their boxes, so sliding the box away
+   can leave a line showing: hide them once they've slid out */
+.is-compact .operation-panel-container:not(.is-open),
+.is-compact .progress-panel-container:not(.is-open) {
+  visibility: hidden;
+  transition:
+    transform 0.22s ease,
+    visibility 0s linear 0.22s;
 }
 .is-compact .book-operation-panel,
 .is-compact .progress-panel {
@@ -440,6 +532,155 @@
 .is-compact .book-operation-panel {
   overflow-x: auto;
   scrollbar-width: none;
+}
+
+/* Zoom, crop and text conversion: under the top bar, only while the bars
+   are shown (there's no hover on a phone) */
+.is-compact .reader-quick-tools {
+  position: fixed !important;
+  /* Below the top bar (90px) */
+  top: calc(var(--safe-top) + 98px) !important;
+  right: calc(8px + var(--safe-right)) !important;
+  width: auto !important;
+  gap: 2px;
+  padding: 2px;
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  box-shadow:
+    0 0 0 1px var(--border),
+    var(--shadow-md);
+  color: var(--text) !important;
+  opacity: 0 !important;
+  pointer-events: none;
+  transform: translateY(-6px);
+  transition:
+    opacity 0.2s ease,
+    transform 0.2s ease !important;
+  z-index: 15 !important;
+}
+.is-compact .reader-quick-tools.is-open {
+  opacity: 1 !important;
+  pointer-events: auto;
+  transform: none;
+}
+/* Their popovers (convert to text, crop) open under the row */
+.is-compact .reader-tool-popover {
+  position: fixed !important;
+  top: calc(var(--safe-top) + 152px) !important;
+  right: calc(8px + var(--safe-right)) !important;
+  left: auto !important;
+  max-width: calc(100vw - 16px);
+  z-index: 15;
+}
+/* The grid icon opens every panel at once, which is the desktop layout */
+.is-compact .reader-quick-tools > .reader-setting-icon-container:last-child {
+  display: none;
+}
+
+/* The status bar already shows the time; the page's own clock would sit
+   under the edge of the page */
+.is-compact .footer-time {
+  display: none !important;
+}
+
+/* Search in the sheet: the close button sits beside the title, not over
+   the search box */
+.is-compact .navigation-search-title {
+  height: 38px !important;
+  margin: 6px 52px 8px !important;
+  width: auto !important;
+}
+.is-compact .nav-close-icon {
+  top: 6px;
+  right: 8px;
+  z-index: 2;
+}
+
+/* Contents sheet: cover beside the title, a full-width search, the tabs,
+   then the list filling the rest (the desktop panel is a fixed 299px
+   layout with absolute positions) */
+.is-compact .navigation-panel {
+  display: flex;
+  flex-direction: column;
+  width: 100% !important;
+}
+.is-compact .navigation-header {
+  position: relative;
+  flex: none;
+  width: 100% !important;
+  height: auto;
+  display: grid;
+  grid-template-columns: 64px minmax(0, 1fr);
+  grid-template-rows: auto auto 1fr;
+  column-gap: 14px;
+  padding: 16px 16px 0;
+  box-sizing: border-box;
+  border-bottom: 1px solid var(--border);
+}
+.is-compact .navigation-header .book-cover {
+  float: none;
+  position: static;
+  grid-row: 1 / span 3;
+  width: 64px;
+  height: 86px;
+  border-radius: var(--radius-sm);
+  object-fit: cover;
+  overflow: hidden;
+}
+.is-compact .navigation-header .book-title,
+.is-compact .navigation-header .book-arthur {
+  position: static;
+  width: auto;
+  height: auto;
+  margin: 0;
+  line-height: 1.35;
+}
+.is-compact .navigation-header .book-title {
+  align-self: end;
+  font-size: 16px;
+}
+.is-compact .navigation-header .book-arthur {
+  font-size: 14px;
+  color: var(--muted);
+}
+.is-compact .navigation-header .reading-duration {
+  position: static;
+  align-self: start;
+  font-size: 13px;
+  color: var(--faint);
+}
+/* The lock pins the panel open beside the page, which needs a wide screen */
+.is-compact .nav-lock-icon,
+.is-compact .setting-panel-container .lock-icon {
+  display: none;
+}
+.is-compact .navigation-search-box {
+  position: static;
+  grid-column: 1 / -1;
+  margin-top: 14px;
+}
+.is-compact .navigation-search-box .header-search-box {
+  width: 100% !important;
+}
+.is-compact .navigation-navigation {
+  position: static;
+  grid-column: 1 / -1;
+  margin-top: 10px;
+  justify-content: space-between;
+}
+.is-compact .navigation-navigation .book-bookmark-title {
+  flex: 1;
+  max-width: none;
+  margin: 0;
+  padding: 10px 0;
+  font-size: 14px;
+}
+.is-compact .navigation-body-parent {
+  position: relative;
+  top: 0;
+  flex: 1;
+  min-height: 0;
+  height: auto;
 }
 
 /* Contents from the left and settings from the right, over a backdrop */
@@ -513,13 +754,230 @@
   font-size: 18px;
   color: var(--text);
 }
+.reader-compact-toolbar button.is-active,
+.reader-compact-toolbar button.is-active span {
+  color: var(--accent);
+}
+.reader-compact-toolbar .reader-compact-toolbar-text-icon {
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 18px;
+  letter-spacing: 0.02em;
+}
 
-/* Text selection popup: full width above the keyboard-safe area */
+/* Drawing tools sit above the toolbar, across the screen */
+.is-compact .annotation-dialog-container {
+  position: fixed !important;
+  left: calc(8px + var(--safe-left)) !important;
+  right: calc(8px + var(--safe-right)) !important;
+  bottom: calc(60px + var(--safe-bottom)) !important;
+  top: auto !important;
+  width: auto !important;
+  max-height: 45vh;
+  height: auto !important;
+  z-index: 17;
+}
+
+/* Selection menu (highlight colours, note, translate, ...): a card across
+   the bottom of the screen, so it never covers the selected text */
+.is-compact .popup-menu-container {
+  position: fixed !important;
+  left: 0 !important;
+  right: 0 !important;
+  top: auto !important;
+  bottom: 0 !important;
+  z-index: 30;
+  display: flex !important;
+  justify-content: center;
+  pointer-events: none;
+}
+.is-compact .popup-menu-container[style*="display: none"] {
+  display: none !important;
+}
+.is-compact .popup-menu-container .popup-menu-card {
+  pointer-events: auto;
+}
+.is-compact .popup-menu-card .popup-color-box {
+  padding: 10px 14px 8px;
+  width: 100% !important;
+}
+.is-compact .popup-menu-card .popup-menu-box {
+  width: 100% !important;
+  padding: 0;
+}
+.is-compact .popup-menu-container .menu-list {
+  width: 100%;
+  padding: 12px 10px 16px;
+  gap: 12px 6px;
+  grid-template-columns: repeat(5, 1fr);
+  align-items: stretch;
+}
+.is-compact .menu-option-btn {
+  width: 100%;
+  height: 64px;
+  padding: 4px 2px;
+  justify-content: flex-start;
+  gap: 6px;
+  border-radius: 12px;
+}
+.is-compact .menu-icon-badge {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+}
+.is-compact .menu-icon-badge [class^="icon-"],
+.is-compact .menu-icon-badge [class*=" icon-"] {
+  font-size: 20px;
+}
+.is-compact .menu-item-label {
+  display: block;
+  font-size: 11.5px;
+  font-weight: 500;
+  line-height: 1.25;
+  color: var(--text-color);
+  text-align: center;
+  width: 100%;
+  max-width: 64px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  letter-spacing: -0.1px;
+  user-select: none;
+}
+.is-compact .note-highlight-style-tab {
+  width: 32px;
+  height: 32px;
+}
+.is-compact .note-highlight-style-preview {
+  width: 24px;
+  height: 24px;
+  font-size: 12px;
+}
+.is-compact .note-highlight-color-item {
+  width: 28px;
+  height: 28px;
+}
+.is-compact .note-highlight-color-container {
+  gap: 12px;
+}
+
+/* Text selection popup / Note sheet on mobile: true bottom sheet */
 .is-compact .popup-box-container {
-  width: calc(100vw - 16px) !important;
-  max-width: 500px;
+  position: fixed !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  top: auto !important;
+  width: 100vw !important;
+  max-width: 100vw !important;
+  transform: none !important;
+  border-radius: 28px 28px 0 0 !important;
+  box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.2) !important;
+  background: var(--surface, #1e1e1e) !important;
+  border: none !important;
+  padding-top: 18px !important;
+  padding-bottom: calc(16px + var(--safe-bottom)) !important;
+  z-index: 35 !important;
+  overflow: hidden;
+  box-sizing: border-box;
+  animation: sheetSlideUp 0.25s cubic-bezier(0.2, 0, 0, 1) forwards !important;
+}
+
+.is-compact .popup-option-dialog-container {
+  position: fixed !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  top: auto !important;
+  width: 100vw !important;
+  max-width: 100vw !important;
+  max-height: 85vh !important;
+  transform: none !important;
+  border-radius: 28px 28px 0 0 !important;
+  box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.2) !important;
+  background: var(--surface, #1e1e1e) !important;
+  border: none !important;
+  padding-top: 18px !important;
+  padding-bottom: 0 !important;
+  z-index: 40 !important;
+  overflow: hidden;
+  box-sizing: border-box;
+  animation: sheetSlideUp 0.25s cubic-bezier(0.2, 0, 0, 1) forwards !important;
+}
+
+.is-compact .popup-menu-container .popup-menu-card {
+  width: 100vw !important;
+  max-width: 100vw !important;
+  border-radius: 28px 28px 0 0 !important;
+  background: var(--surface, #1e1e1e) !important;
+  border: none !important;
+  box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.2) !important;
+  padding-top: 24px !important;
+  padding-bottom: calc(16px + var(--safe-bottom)) !important;
+  animation: sheetSlideUp 0.25s cubic-bezier(0.2, 0, 0, 1) forwards !important;
+}
+
+/* Material 3 Drag Handle */
+.is-compact .popup-sheet-grabber {
+  position: absolute !important;
+  top: 10px !important;
   left: 50% !important;
-  transform: translateX(-50%);
+  transform: translateX(-50%) !important;
+  width: 32px !important;
+  height: 4px !important;
+  border-radius: 2px !important;
+  background: rgba(128, 128, 128, 0.6) !important;
+  z-index: 50 !important;
+  pointer-events: none;
+}
+.is-compact .popup-sheet-grabber::before {
+  display: none !important;
+}
+
+@keyframes sheetSlideUp {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+.is-compact .popup-close {
+  display: none !important;
+}
+
+.is-compact .popup-box-backdrop {
+  position: fixed !important;
+  inset: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  background: rgba(0, 0, 0, 0.32) !important;
+  z-index: 34 !important;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  animation: backdropFadeIn 0.25s ease forwards;
+}
+
+.is-compact .drag-background {
+  position: fixed !important;
+  inset: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  background: rgba(0, 0, 0, 0.32) !important;
+  z-index: 9 !important;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  animation: backdropFadeIn 0.25s ease forwards;
+}
+
+@keyframes backdropFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 /* ── System bars (Android app, notched phones) ────────────────────────────── */
@@ -535,4 +993,10 @@
 .previous-chapter-single-container,
 .next-chapter-single-container {
   translate: 0 calc(-1 * var(--safe-bottom));
+}
+
+/* Hover tooltips: a tap counts as a hover on touch screens, so they'd stay
+   stuck on screen over whatever opened next */
+.is-compact .react-tooltip {
+  display: none !important;
 }

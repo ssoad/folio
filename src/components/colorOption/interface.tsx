@@ -7,4 +7,5 @@ export interface ColorProps {
   isEdit: boolean;
   handleHighlight: (value: HighlightValue) => void;
   handleDigest: () => void;
+  t?: (key: string) => string;
 }

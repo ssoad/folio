@@ -137,9 +137,16 @@ class NavigationPanel extends React.Component<
       });
     }
   }
-  componentDidMount() {
+  async componentDidMount() {
     this.props.handleFetchBookmarks();
     window.addEventListener(NAV_TAB_TOGGLE_EVENT, this.handleNavTabToggle);
+    if (this.props.currentBook.key) {
+      const [cover, isCoverExist] = await Promise.all([
+        CoverUtil.getCover(this.props.currentBook),
+        CoverUtil.isCoverExist(this.props.currentBook),
+      ]);
+      this.setState({ cover, isCoverExist });
+    }
   }
 
   componentWillUnmount() {

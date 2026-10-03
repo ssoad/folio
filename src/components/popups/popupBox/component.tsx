@@ -4,10 +4,11 @@ import PopupNote from "../popupNote";
 import PopupTrans from "../popupTrans";
 import PopupDict from "../popupDict";
 import { PopupBoxProps, PopupBoxStates } from "./interface";
-import { getIframeDoc } from "../../../utils/reader/docUtil";
+import { clearIframeSelection, getIframeDoc } from "../../../utils/reader/docUtil";
 import PopupAssist from "../popupAssist";
 import { isElectron } from "react-device-detect";
 import { ConfigService } from "../../../assets/lib/kookit-extra-browser.min";
+import { NATIVE_BACK_EVENT } from "../../../utils/native";
 
 const SNAP_THRESHOLD_PX = 50;
 const RIGHT_SNAP_THRESHOLD_PX = 50;
@@ -176,9 +177,17 @@ class PopupBox extends React.Component<PopupBoxProps, PopupBoxStates> {
     document.addEventListener("pointercancel", this.handleResizeEnd);
     document.addEventListener("pointercancel", this.handleDragEnd);
     window.addEventListener("resize", this.handleWindowResize);
+    window.addEventListener(NATIVE_BACK_EVENT, this.handleNativeBack, {
+      capture: true,
+    });
   }
 
   componentWillUnmount(): void {
+    window.removeEventListener(
+      NATIVE_BACK_EVENT,
+      this.handleNativeBack,
+      { capture: true } as any
+    );
     document.removeEventListener("pointermove", this.handleResizeMove);
     document.removeEventListener("pointermove", this.handleDragMove);
     document.removeEventListener("pointerup", this.handleResizeEnd);
@@ -190,6 +199,14 @@ class PopupBox extends React.Component<PopupBoxProps, PopupBoxStates> {
       cancelAnimationFrame(this.resizeFrame);
     }
   }
+
+  handleNativeBack = (e: Event) => {
+    if (!this.state.isDockedRight) {
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      this.handleClose();
+    }
+  };
 
   // Size and position are stored as the user left them; they are fitted to the
   // window at render time, so re-render when the window changes size
@@ -426,12 +443,7 @@ class PopupBox extends React.Component<PopupBoxProps, PopupBoxStates> {
     this.props.handleOpenMenu(false);
     this.props.handleNoteKey("");
     this.props.handleMenuMode("");
-    let docs = getIframeDoc(this.props.currentBook.format);
-    for (let i = 0; i < docs.length; i++) {
-      let doc = docs[i];
-      if (!doc) continue;
-      doc.getSelection()?.empty();
-    }
+    clearIframeSelection(this.props.currentBook.format);
   }
   render() {
     const { isNearRight, isDockedRight } = this.state;
@@ -557,9 +569,12 @@ class PopupBox extends React.Component<PopupBoxProps, PopupBoxStates> {
         </div>
         {!isDockedRight && (
           <div
-            className="drag-background"
-            onClick={() => {
-              this.handleClose();
+            className="popup-box-backdrop drag-background"
+            onClick={this.handleClose}
+            onPointerDown={(e) => {
+              if (e.target === e.currentTarget) {
+                this.handleClose();
+              }
             }}
           ></div>
         )}

@@ -10,6 +10,7 @@ const mapStateToProps = (state: stateType) => {
     isSettingLocked: state.reader.isSettingLocked,
     isDockedRight: state.reader.isDockedRight,
     htmlBook: state.reader.htmlBook,
+    currentBook: state.book.currentBook,
   };
 };
 const actionCreator = {

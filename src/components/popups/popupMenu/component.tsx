@@ -1,10 +1,10 @@
 import React from "react";
 import "./popupMenu.css";
-import { isReadingRawPDF } from "../../../utils/common";
+import { isReadingRawPDF, isSameRect } from "../../../utils/common";
 import PopupOption from "../popupOption";
 import ColorOption from "../../colorOption";
 import { PopupMenuProps, PopupMenuStates } from "./interface";
-import { getIframeDoc } from "../../../utils/reader/docUtil";
+import { clearIframeSelection, getIframeDoc } from "../../../utils/reader/docUtil";
 import {
   ConfigService,
   HighlightUtil,
@@ -43,13 +43,32 @@ class PopupMenu extends React.Component<PopupMenuProps, PopupMenuStates> {
     };
   }
   UNSAFE_componentWillReceiveProps(nextProps: PopupMenuProps) {
-    if (nextProps.rect !== this.props.rect) {
+    if (!nextProps.rect && this.props.rect) {
+      this.setState({ rect: null });
+      if (this.props.isOpenMenu && this.props.menuMode === "menu") {
+        this.props.handleOpenMenu(false);
+        this.props.handleMenuMode("");
+      }
+      return;
+    }
+    if (nextProps.rect && !isSameRect(this.props.rect, nextProps.rect)) {
       this.setState(
         {
           rect: nextProps.rect,
         },
         () => {
-          this.openMenu();
+          if (
+            this.props.isOpenMenu &&
+            this.props.menuMode !== "menu" &&
+            this.props.menuMode !== ""
+          ) {
+            return;
+          }
+          if (this.props.isOpenMenu && this.props.menuMode === "menu") {
+            this.showMenu();
+          } else if (!this.props.isOpenMenu) {
+            this.openMenu();
+          }
         }
       );
     }
@@ -61,12 +80,9 @@ class PopupMenu extends React.Component<PopupMenuProps, PopupMenuStates> {
   showMenu = () => {
     let rect = this.state.rect;
     if (!rect) return;
-    this.setState({ isRightEdge: false }, () => {
-      let { posX, posY } = this.getHtmlPosition(rect);
-      this.props.handleOpenMenu(true);
-      let popupMenu = document.querySelector(".popup-menu-container");
-      popupMenu?.setAttribute("style", `left:${posX}px;top:${posY}px`);
-    });
+    let { posX, posY } = this.getHtmlPosition(rect);
+    this.setState({ isRightEdge: false, posX, posY });
+    this.props.handleOpenMenu(true);
   };
   getHtmlPosition(rect: any) {
     let pageSize = this.props.rendition.getPageSize(this.props.chapterDocIndex);
@@ -155,16 +171,12 @@ class PopupMenu extends React.Component<PopupMenuProps, PopupMenuStates> {
       }
     }
     this.props.handleChangeDirection(false);
-    if (this.props.isOpenMenu) {
-      this.props.handleMenuMode("");
-      this.props.handleOpenMenu(false);
-      this.props.handleNoteKey("");
-    }
-    if (!sel) return;
-    if (sel.isCollapsed) {
-      this.props.isOpenMenu && this.props.handleOpenMenu(false);
-      this.props.handleMenuMode("menu");
-      this.props.handleNoteKey("");
+    if (!sel || sel.isCollapsed || !sel.toString().trim()) {
+      if (this.props.isOpenMenu) {
+        this.props.handleMenuMode("");
+        this.props.handleOpenMenu(false);
+        this.props.handleNoteKey("");
+      }
       return;
     }
 
@@ -195,6 +207,7 @@ class PopupMenu extends React.Component<PopupMenuProps, PopupMenuStates> {
         this.props.handleOpenMenu(false);
         this.props.handleFetchNotes();
         this.props.handleMenuMode("");
+        clearIframeSelection(this.props.currentBook.format);
       },
     });
   };
@@ -256,24 +269,31 @@ class PopupMenu extends React.Component<PopupMenuProps, PopupMenuStates> {
     };
     const ColorProps = {
       handleDigest: this.handleDigest,
+      t: this.props.t,
     };
+    const isVisible = this.props.isOpenMenu && this.props.menuMode === "menu";
+    const containerStyle: React.CSSProperties = isVisible
+      ? {
+          left: this.state.posX !== undefined ? `${this.state.posX}px` : undefined,
+          top: this.state.posY !== undefined ? `${this.state.posY}px` : undefined,
+        }
+      : { display: "none" };
     return (
       <div>
-        <div
-          className="popup-menu-container"
-          style={this.props.isOpenMenu ? {} : { display: "none" }}
-        >
+        <div className="popup-menu-container" style={containerStyle}>
           <div
-            className="popup-menu-box"
-            style={this.props.menuMode === "menu" ? {} : { display: "none" }}
+            className="popup-menu-card"
+            onPointerDown={(e) => e.stopPropagation()}
+            onTouchStart={(e) => e.stopPropagation()}
+            onClick={(e) => e.stopPropagation()}
           >
-            <PopupOption {...(PopupProps as any)} />
-          </div>
-          <div
-            className="popup-color-box"
-            style={this.props.menuMode === "menu" ? {} : { display: "none" }}
-          >
-            <ColorOption {...(ColorProps as any)} />
+            <div className="popup-color-box">
+              <ColorOption {...(ColorProps as any)} />
+            </div>
+            <div className="popup-menu-divider" />
+            <div className="popup-menu-box">
+              <PopupOption {...(PopupProps as any)} />
+            </div>
           </div>
         </div>
       </div>

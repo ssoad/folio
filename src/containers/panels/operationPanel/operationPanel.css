@@ -2,7 +2,11 @@
   float: left;
   width: 125px;
   height: 37px;
-  background: rgba(146, 146, 146, 1);
+  background: var(--surface-raised);
+  color: var(--text);
+  box-shadow: inset 0 0 0 1px var(--border-strong) !important;
+  border-radius: var(--radius);
+  transition: background-color 0.15s;
   opacity: 1;
   margin-top: 11px;
   margin-left: 18px;
@@ -35,7 +39,11 @@
   float: left;
   width: 125px;
   height: 37px;
-  background: rgba(92, 143, 211, 0.83);
+  background: var(--accent);
+  color: var(--on-accent);
+  box-shadow: none !important;
+  border-radius: var(--radius);
+  transition: background-color 0.15s;
   opacity: 1;
   margin-top: 11px;
   margin-left: 20px;
@@ -64,7 +72,11 @@
   float: left;
   width: 125px;
   height: 37px;
-  background: rgba(94, 178, 148, 1);
+  background: var(--surface-raised);
+  color: var(--text);
+  box-shadow: inset 0 0 0 1px var(--border-strong) !important;
+  border-radius: var(--radius);
+  transition: background-color 0.15s;
   opacity: 1;
   margin-top: 11px;
   margin-left: 20px;
@@ -76,6 +88,17 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+.exit-reading-button:hover,
+.enter-fullscreen-button:hover {
+  background: var(--active-bg);
+}
+.add-bookmark-button:hover {
+  background: var(--accent-hover);
+}
+/* The Android app is always full screen */
+.is-native .enter-fullscreen-button {
+  display: none;
 }
 .enter-fullscreen-icon {
   font-size: 19px;

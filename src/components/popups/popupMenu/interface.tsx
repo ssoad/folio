@@ -32,4 +32,6 @@ export interface PopupMenuStates {
   isRightEdge: boolean;
   // cfiRange: string;
   rect: DOMRect | null;
+  posX?: number;
+  posY?: number;
 }

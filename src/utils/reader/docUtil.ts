@@ -4,32 +4,21 @@ export const getIframeDoc = (format: string, bookKey?: string) => {
   let pageArea = document.getElementById("page-area");
 
   if (!pageArea) return [];
-  let iframe = pageArea.getElementsByTagName("iframe")[0];
-  if (!iframe) return [];
-  let doc = iframe.contentDocument;
+  let iframes = Array.from(pageArea.getElementsByTagName("iframe"));
+  if (iframes.length === 0) return [];
 
-  if (!doc) {
-    return [];
+  let docs: Document[] = [];
+  for (let iframe of iframes) {
+    let doc = iframe.contentDocument;
+    if (doc) {
+      docs.push(doc);
+      let subIframes = doc.querySelectorAll("iframe");
+      subIframes.forEach((sub) => {
+        if (sub.contentDocument) docs.push(sub.contentDocument);
+      });
+    }
   }
-  const isPaginated =
-    (format === "PDF" || format?.startsWith("CB")) &&
-    !(
-      bookKey &&
-      format === "PDF" &&
-      ConfigService.getAllListConfig("convertPDFBooks").includes(bookKey)
-    );
-  if (isPaginated) {
-    let subIframes = doc.querySelectorAll("iframe");
-    return [
-      doc,
-      ...Array.from(subIframes).map((subIframe) => {
-        let subDoc = subIframe.contentDocument;
-        return subDoc;
-      }),
-    ];
-  } else {
-    return [doc];
-  }
+  return docs;
 };
 export const getIframeWin = () => {
   let pageArea = document.getElementById("page-area");
@@ -37,4 +26,20 @@ export const getIframeWin = () => {
   let iframe = pageArea.getElementsByTagName("iframe")[0];
   if (!iframe) return null;
   return iframe;
+};
+
+export const clearIframeSelection = (format: string, bookKey?: string) => {
+  const docs = getIframeDoc(format, bookKey);
+  for (let i = 0; i < docs.length; i++) {
+    const doc = docs[i];
+    if (!doc) continue;
+    try {
+      doc.getSelection()?.empty?.();
+      doc.getSelection()?.removeAllRanges?.();
+    } catch (e) {}
+  }
+  try {
+    window.getSelection()?.empty?.();
+    window.getSelection()?.removeAllRanges?.();
+  } catch (e) {}
 };

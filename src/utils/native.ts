@@ -59,6 +59,16 @@ const syncStatusBar = () => {
   );
 };
 
+// Immersive reading: the status bar hides while the reader's bars are
+// hidden, so the page has the whole screen
+let isImmersive = false;
+export const setImmersiveReading = (immersive: boolean) => {
+  if (!Capacitor.isNativePlatform() || immersive === isImmersive) return;
+  isImmersive = immersive;
+  document.documentElement.classList.toggle("is-immersive", immersive);
+  (immersive ? StatusBar.hide() : StatusBar.show()).catch(() => {});
+};
+
 // ── Books opened from other apps ─────────────────────────────────────────────
 
 const MIME_BY_EXTENSION: Record<string, string> = {

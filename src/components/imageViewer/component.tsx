@@ -10,6 +10,7 @@ import {
   matchShortcut,
 } from "../../utils/reader/shortcutUtil";
 import toast from "react-hot-toast";
+import { isCompact, isTouchDevice } from "../../utils/platform";
 declare var window: any;
 declare var ClipboardItem: any;
 
@@ -167,7 +168,9 @@ class ImageViewer extends React.Component<ImageViewerProps, ImageViewerStates> {
 
   showImage = async (event: any) => {
     event.preventDefault();
-    if (this.props.isShow) {
+    // On touch screens a tap on the page already shows or hides the bars
+    // (utils/reader/mouseEvent); closing them here too would undo that
+    if (this.props.isShow && !(isCompact() || isTouchDevice())) {
       ["left", "right", "top", "bottom"].forEach((pos) =>
         this.props.handleLeaveReader(pos)
       );

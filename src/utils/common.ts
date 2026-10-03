@@ -1,4 +1,4 @@
-﻿import Plugin from "../models/Plugin";
+import Plugin from "../models/Plugin";
 import { isCompact } from "./platform";
 import { isElectron } from "react-device-detect";
 import CryptoJS from "crypto-js";
@@ -544,10 +544,16 @@ export const getPageWidth = (
 
     return limit;
   };
-  // Phones: the page fills the screen less a small gutter; the scale setting
-  // is for wide windows
+  // Phones: PDFs and comics fill the screen edge to edge; text keeps a small
+  // gutter so lines don't touch the glass. The scale setting is for wide
+  // windows.
   if (isCompact() && readerMode !== "double") {
-    const width = findValidMultiple(document.body.clientWidth - 28);
+    const isFixedLayout = /^#\/(pdf|cbr|cbz|cbt|cb7)\//i.test(
+      window.location.hash
+    );
+    const width = findValidMultiple(
+      document.body.clientWidth - (isFixedLayout ? 0 : 28)
+    );
     return {
       pageOffset: `calc(50vw - ${width / 2}px)`,
       pageWidth: width + "px",
@@ -2080,4 +2086,15 @@ export const saveOcrCache = (
   } catch (error) {
     console.error("Failed to save ocr cache:", error);
   }
+};
+
+export const isSameRect = (r1: any, r2: any) => {
+  if (r1 === r2) return true;
+  if (!r1 || !r2) return false;
+  return (
+    Math.round(r1.left) === Math.round(r2.left) &&
+    Math.round(r1.top) === Math.round(r2.top) &&
+    Math.round(r1.width) === Math.round(r2.width) &&
+    Math.round(r1.height) === Math.round(r2.height)
+  );
 };

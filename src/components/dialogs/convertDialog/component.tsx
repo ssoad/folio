@@ -101,7 +101,7 @@ class ConvertDialog extends React.Component<
     return (
       <>
         <div
-          className="sort-dialog-container"
+          className="sort-dialog-container reader-tool-popover"
           onMouseLeave={() => {
             this.props.handleConvertDialog(false);
           }}

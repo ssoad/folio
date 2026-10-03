@@ -33,7 +33,10 @@ import {
   READER_EXIT_EVENT,
   READING_PANEL_TOGGLE_EVENT,
   searchInTheBook,
+  setDrawingMode,
+  toggleNavTab,
 } from "../../utils/reader/mouseEvent";
+import { setImmersiveReading } from "../../utils/native";
 import { isReadingRawPDF, throttle } from "../../utils/common";
 declare var window: any;
 let lock = false; //prevent from clicking too fasts
@@ -125,6 +128,12 @@ class Reader extends React.Component<ReaderProps, ReaderState> {
     };
   }
   componentDidMount() {
+    // PDFs and comics fill the phone screen edge to edge (compact.css)
+    document.documentElement.classList.toggle(
+      "is-fixed-reading",
+      /^#\/(pdf|cbr|cbz|cbt|cb7)\//i.test(window.location.hash)
+    );
+    this.syncImmersive();
     if (ConfigService.getReaderConfig("isMergeWord") === "yes") {
       document
         .querySelector("body")
@@ -209,7 +218,23 @@ class Reader extends React.Component<ReaderProps, ReaderState> {
     });
   }
 
+  componentDidUpdate() {
+    this.syncImmersive();
+  }
+  // The status bar shows with the reader's bars and hides with them
+  syncImmersive = () => {
+    setImmersiveReading(
+      !(
+        this.state.isOpenTopPanel ||
+        this.state.isOpenBottomPanel ||
+        this.state.isOpenLeftPanel ||
+        this.state.isOpenRightPanel
+      )
+    );
+  };
   componentWillUnmount() {
+    document.documentElement.classList.remove("is-fixed-reading");
+    setImmersiveReading(false);
     window.removeEventListener(
       READING_PANEL_TOGGLE_EVENT,
       this.handleReadingPanelToggle
@@ -355,14 +380,74 @@ class Reader extends React.Component<ReaderProps, ReaderState> {
     }
     const show = !(this.state.isOpenTopPanel || this.state.isOpenBottomPanel);
     this.setState({ isOpenTopPanel: show, isOpenBottomPanel: show });
+    if (!show) this.closeToolPopovers();
+  };
+  handleOpenAssistant = async () => {
+    if (!this.props.htmlBook?.rendition) return;
+    this.props.handleMenuMode("assistant");
+    this.props.handleOriginalText(
+      await this.props.htmlBook.rendition.chapterText()
+    );
+    this.props.handleOpenMenu(true);
+  };
+  // Drawing on the page: scanned PDFs only, since their text can't be
+  // highlighted
+  canDraw = () =>
+    !!this.props.currentBook &&
+    isReadingRawPDF(this.props.currentBook) &&
+    (this.props.currentBook.description || "").indexOf("scanned") > -1;
+  handleToggleDrawing = () => {
+    if (!this.props.htmlBook?.rendition) return;
+    const isDrawing = !this.props.isAnnotationOpen;
+    this.props.htmlBook.rendition.applyAnnotationConfig({
+      isDrawing: isDrawing ? "yes" : "no",
+    });
+    setDrawingMode(
+      isDrawing,
+      this.props.currentBook.format,
+      this.props.currentBook.key
+    );
+    this.props.handleAnnotationDialog(isDrawing);
+  };
+  // Phones have no hover to close the PDF tool popovers (zoom, crop, convert)
+  closeToolPopovers = () => {
+    if (this.props.isConvertOpen) this.props.handleConvertDialog(false);
+    if (this.props.isPdfCropOpen) this.props.handlePdfCropDialog(false);
+    if (this.state.isShowScale) this.setState({ isShowScale: false });
   };
   // Android back button: close the selection popup, a sheet or the bars
   // first, then leave the book
   handleBack = (event: Event) => {
+    if (event.defaultPrevented) return;
     event.preventDefault();
+    const popupBox = document.querySelector(".popup-box-container");
+    if (popupBox && getComputedStyle(popupBox).display !== "none") {
+      const closeBtn = popupBox.querySelector(".popup-close") as HTMLElement;
+      if (closeBtn) {
+        closeBtn.click();
+        return;
+      }
+      this.props.handleOpenMenu(false);
+      this.props.handleMenuMode("");
+      return;
+    }
     const popup = document.querySelector(".popup-menu-container");
     if (popup && getComputedStyle(popup).display !== "none") {
       this.props.handleOpenMenu(false);
+      return;
+    }
+    if (this.props.isOpenPopupOptionDialog) {
+      this.props.handlePopupOptionDialog(false);
+      return;
+    }
+    if (
+      this.props.isConvertOpen ||
+      this.props.isPdfCropOpen ||
+      this.state.isShowScale
+    ) {
+      this.closeToolPopovers();
+    } else if (this.props.isAnnotationOpen) {
+      this.handleToggleDrawing();
     } else if (this.state.isOpenLeftPanel || this.state.isOpenRightPanel) {
       this.closeSheets();
     } else if (this.state.isOpenTopPanel || this.state.isOpenBottomPanel) {
@@ -392,6 +477,7 @@ class Reader extends React.Component<ReaderProps, ReaderState> {
     }
   };
   handleLocation = () => {
+    if (!this.props.htmlBook?.rendition) return;
     let position = this.props.htmlBook.rendition.getPosition();
 
     ConfigService.setObjectConfig(
@@ -417,7 +503,7 @@ class Reader extends React.Component<ReaderProps, ReaderState> {
         <div
           className="previous-chapter-single-container"
           onClick={async () => {
-            if (lock) return;
+            if (lock || !this.props.htmlBook?.rendition) return;
             lock = true;
             await this.props.htmlBook.rendition.prev();
             this.handleLocation();
@@ -434,6 +520,7 @@ class Reader extends React.Component<ReaderProps, ReaderState> {
           <span className="icon-dropdown previous-chapter-single"></span>
         </div>
         <div
+          className="reader-float-actions"
           style={{
             position: "absolute",
             bottom: 10,
@@ -453,7 +540,7 @@ class Reader extends React.Component<ReaderProps, ReaderState> {
           <div
             className="next-chapter-single-container"
             onClick={async () => {
-              if (lock) return;
+              if (lock || !this.props.htmlBook?.rendition) return;
               lock = true;
               await this.props.htmlBook.rendition.next();
               this.handleLocation();
@@ -482,13 +569,7 @@ class Reader extends React.Component<ReaderProps, ReaderState> {
           {ConfigService.getReaderConfig("isDisableAI") !== "yes" && (
             <div
               className="next-chapter-single-container"
-              onClick={async () => {
-                this.props.handleMenuMode("assistant");
-                this.props.handleOriginalText(
-                  await this.props.htmlBook.rendition.chapterText()
-                );
-                this.props.handleOpenMenu(true);
-              }}
+              onClick={this.handleOpenAssistant}
               style={{
                 position: "static",
                 transform: "rotate(0deg)",
@@ -501,17 +582,10 @@ class Reader extends React.Component<ReaderProps, ReaderState> {
           )}
           {this.props.currentBook &&
             isReadingRawPDF(this.props.currentBook) &&
-            this.props.currentBook.description.indexOf("scanned") > -1 && (
+            this.canDraw() && (
               <div
                 className="next-chapter-single-container"
-                onClick={() => {
-                  this.props.htmlBook.rendition.applyAnnotationConfig({
-                    isDrawing: this.props.isAnnotationOpen ? "no" : "yes",
-                  });
-                  this.props.handleAnnotationDialog(
-                    !this.props.isAnnotationOpen
-                  );
-                }}
+                onClick={this.handleToggleDrawing}
                 style={{ position: "static", transform: "rotate(0deg)" }}
               >
                 <span
@@ -527,6 +601,10 @@ class Reader extends React.Component<ReaderProps, ReaderState> {
         </div>
 
         <div
+          className={
+            "reader-quick-tools" +
+            (this.state.isOpenTopPanel ? " is-open" : "")
+          }
           style={{
             position: "absolute",
             top: "0px",
@@ -949,7 +1027,15 @@ class Reader extends React.Component<ReaderProps, ReaderState> {
             (this.state.isOpenBottomPanel ? " is-open" : "")
           }
         >
-          <button type="button" onClick={() => this.openSheet("left")}>
+          <button
+            type="button"
+            onClick={() => {
+              // Leaves search, which shares the sheet, and shows the contents
+              this.setState({ isOpenTopPanel: false, isOpenBottomPanel: false });
+              this.closeToolPopovers();
+              toggleNavTab("contents");
+            }}
+          >
             <span className="icon-grid"></span>
             <Trans>Contents</Trans>
           </button>
@@ -957,12 +1043,55 @@ class Reader extends React.Component<ReaderProps, ReaderState> {
             type="button"
             onClick={() => {
               this.setState({ isOpenTopPanel: false, isOpenBottomPanel: false });
+              this.closeToolPopovers();
               searchInTheBook("", "", false);
             }}
           >
             <span className="icon-search"></span>
             <Trans>Search</Trans>
           </button>
+          <button
+            type="button"
+            className={this.props.isSpeechOpen ? "is-active" : ""}
+            onClick={() => {
+              this.setState({ isOpenTopPanel: false, isOpenBottomPanel: false });
+              this.props.handleSpeechDialog(!this.props.isSpeechOpen);
+            }}
+          >
+            <span className="icon-earphone"></span>
+            <Trans>Listen</Trans>
+          </button>
+          {ConfigService.getReaderConfig("isDisableAI") !== "yes" && (
+            <button
+              type="button"
+              onClick={() => {
+                this.setState({
+                  isOpenTopPanel: false,
+                  isOpenBottomPanel: false,
+                });
+                this.handleOpenAssistant();
+              }}
+            >
+              <span className="reader-compact-toolbar-text-icon">AI</span>
+              <Trans>Assistant</Trans>
+            </button>
+          )}
+          {this.canDraw() && (
+            <button
+              type="button"
+              className={this.props.isAnnotationOpen ? "is-active" : ""}
+              onClick={() => {
+                this.setState({
+                  isOpenTopPanel: false,
+                  isOpenBottomPanel: false,
+                });
+                this.handleToggleDrawing();
+              }}
+            >
+              <span className="icon-edit"></span>
+              <Trans>Draw</Trans>
+            </button>
+          )}
           <button type="button" onClick={() => this.openSheet("right")}>
             <span className="icon-setting"></span>
             <Trans>Setting</Trans>
@@ -972,12 +1101,7 @@ class Reader extends React.Component<ReaderProps, ReaderState> {
         {this.props.currentBook.key && <Viewer {...(renditionProps as any)} />}
         {this.props.isConvertOpen && <ConvertDialog />}
         {this.props.isPdfCropOpen && <PdfCropDialog />}
-        {this.props.isOpenPopupOptionDialog && (
-          <>
-            <PopupOptionDialog />
-            <div className="drag-background"></div>
-          </>
-        )}
+        {this.props.isOpenPopupOptionDialog && <PopupOptionDialog />}
         {
           <div
             style={
