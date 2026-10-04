@@ -180,6 +180,8 @@ const READING_PANEL_SHORTCUTS: Array<{
 export const READER_CHROME_TOGGLE_EVENT = "folio-reader-chrome-toggle";
 // Asks the reader's top bar to leave the book (Android back button)
 export const READER_EXIT_EVENT = "folio-reader-exit";
+// Asks the reader's top bar to bookmark the current page (phone top bar)
+export const READER_ADD_BOOKMARK_EVENT = "folio-reader-add-bookmark";
 const TAP_TURN_ZONE = 0.3;
 const TAP_MAX_MOVE = 10;
 const TAP_MAX_TIME = 350;
@@ -227,6 +229,8 @@ const handleReaderTap = async (
   // tell taps it handles
   const target = event.target as Element | null;
   if (
+    // In pen mode a tap is a dot on the page, not a request for the bars
+    isDrawingMode ||
     doc.getSelection()?.toString() ||
     target?.closest?.("a, button, input, textarea, select, audio, video")
   ) {

@@ -41,6 +41,7 @@ const mapStateToProps = (state: stateType) => {
     isSearch: state.manager.isSearch,
     isSettingOpen: state.manager.isSettingOpen,
     scale: state.reader.scale,
+    isShowBookmark: state.viewArea.isShowBookmark,
     renderBookFunc: state.book.renderBookFunc,
   };
 };

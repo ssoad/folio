@@ -10,6 +10,9 @@ export interface AnnotationDialogProps {
 }
 
 export interface AnnotationDialogState {
+  // Phones: the eraser tool, and the colour and size row
+  isErasing: boolean;
+  isPhoneOptionsOpen: boolean;
   annotationStyle: string;
   annotationBrushColor: string;
   annotationBrushWidth: number;

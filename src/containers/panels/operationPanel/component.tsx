@@ -1,5 +1,8 @@
 import React from "react";
-import { READER_EXIT_EVENT } from "../../../utils/reader/mouseEvent";
+import {
+  READER_ADD_BOOKMARK_EVENT,
+  READER_EXIT_EVENT,
+} from "../../../utils/reader/mouseEvent";
 import { exitWebReader } from "../../../utils/platform";
 import "./operationPanel.css";
 import Bookmark from "../../../models/Bookmark";
@@ -57,6 +60,7 @@ class OperationPanel extends React.Component<
   componentDidMount() {
     document.addEventListener("fullscreenchange", this.handleFullscreenChange);
     window.addEventListener(READER_EXIT_EVENT, this.handleExitEvent);
+    window.addEventListener(READER_ADD_BOOKMARK_EVENT, this.handleAddBookmark);
     this.props.htmlBook.rendition.on("page-changed", async () => {
       this.speed = Date.now() - this.timeStamp;
       this.timeStamp = Date.now();
@@ -76,6 +80,10 @@ class OperationPanel extends React.Component<
       this.handleFullscreenChange
     );
     window.removeEventListener(READER_EXIT_EVENT, this.handleExitEvent);
+    window.removeEventListener(
+      READER_ADD_BOOKMARK_EVENT,
+      this.handleAddBookmark
+    );
   }
   handleExitEvent = () => {
     this.handleExit();

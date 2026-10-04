@@ -26,6 +26,7 @@ export interface PopupMenuProps {
   handleOriginalText: (originalText: string) => void;
   handleOriginalSentence: (originalSentence: string) => void;
   handleFetchNotes: () => void;
+  handleHighlight: (highlight: HighlightValue) => void;
 }
 export interface PopupMenuStates {
   deleteKey: string;
@@ -34,4 +35,6 @@ export interface PopupMenuStates {
   rect: DOMRect | null;
   posX?: number;
   posY?: number;
+  // Phones: the full menu instead of the short pill
+  isExpanded: boolean;
 }

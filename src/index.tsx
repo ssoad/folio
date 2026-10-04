@@ -20,6 +20,7 @@ import {
 import { migrateConfig } from "./utils/common";
 import { initResponsive } from "./utils/responsive";
 import { initNative } from "./utils/native";
+import { installAnnotationCanvasRegistry } from "./utils/reader/annotationCanvas";
 initTheme();
 initSystemFont();
 migrateConfig();
@@ -35,3 +36,4 @@ ReactDOM.render(
 );
 StyleUtil.applyTheme();
 initNative();
+installAnnotationCanvasRegistry();

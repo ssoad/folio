@@ -4,7 +4,10 @@ import { isReadingRawPDF, isSameRect } from "../../../utils/common";
 import PopupOption from "../popupOption";
 import ColorOption from "../../colorOption";
 import { PopupMenuProps, PopupMenuStates } from "./interface";
-import { clearIframeSelection, getIframeDoc } from "../../../utils/reader/docUtil";
+import {
+  clearIframeSelection,
+  getIframeDoc,
+} from "../../../utils/reader/docUtil";
 import {
   ConfigService,
   HighlightUtil,
@@ -14,6 +17,11 @@ import {
   getSelectionSentence,
 } from "../../../utils/reader/mouseEvent";
 import { createHighlight } from "../../../utils/reader/noteUtil";
+import { KookitConfig } from "../../../assets/lib/kookit-extra-browser.min";
+import { copyIframeSelection } from "../../../utils/reader/docUtil";
+import { isCompact } from "../../../utils/platform";
+import PhoneIcon from "../../readerPhone/phoneIcons";
+import toast from "react-hot-toast";
 
 declare var window: any;
 
@@ -40,8 +48,126 @@ class PopupMenu extends React.Component<PopupMenuProps, PopupMenuStates> {
       deleteKey: "",
       rect: this.props.rect,
       isRightEdge: false,
+      isExpanded: false,
     };
   }
+  componentDidUpdate(prevProps: PopupMenuProps) {
+    // The next selection starts from the short pill again
+    if (
+      prevProps.isOpenMenu &&
+      !this.props.isOpenMenu &&
+      this.state.isExpanded
+    ) {
+      this.setState({ isExpanded: false });
+    }
+  }
+  // Phone pill: a colour highlights straight away and becomes the default
+  handlePillColor = async (color: string) => {
+    const value = { styleType: this.props.highlight.styleType, color };
+    this.props.handleHighlight(value);
+    this.highlightUtil.saveNoteHighlightValue(value);
+    await createHighlight({
+      currentBook: this.props.currentBook,
+      htmlBook: this.props.htmlBook,
+      chapterDocIndex: this.props.chapterDocIndex,
+      chapter: this.props.chapter,
+      color: this.highlightUtil.formatHighlightValue(value),
+      t: this.props.t,
+      onNoteClick: (event: Event) => {
+        this.props.handleNoteKey((event.target as any).dataset.key);
+        this.props.handleMenuMode("note");
+        this.props.handleOpenMenu(true);
+      },
+      onSuccess: () => {
+        this.props.handleOpenMenu(false);
+        this.props.handleFetchNotes();
+        this.props.handleMenuMode("");
+        clearIframeSelection(this.props.currentBook.format);
+      },
+    });
+  };
+  handlePillCopy = () => {
+    const format = this.props.currentBook.format;
+    const isCopied = copyIframeSelection(
+      format,
+      getSelection(format),
+      isReadingRawPDF(this.props.currentBook)
+    );
+    if (!isCopied) return;
+    this.props.handleOpenMenu(false);
+    this.props.handleMenuMode("");
+    clearIframeSelection(format);
+    toast.success(this.props.t("Copying successful"));
+  };
+  renderPill = () => {
+    const styleType = this.props.highlight.styleType;
+    const colors = (KookitConfig.HighlightPresetColors[styleType] || []).slice(
+      0,
+      4
+    );
+    // Taps act on press, before the selection in the book can collapse
+    const press =
+      (action: () => void) =>
+      (event: React.PointerEvent | React.MouseEvent) => {
+        event.preventDefault();
+        event.stopPropagation();
+        action();
+      };
+    const stop = (event: React.SyntheticEvent) => {
+      event.preventDefault();
+      event.stopPropagation();
+    };
+    return (
+      <div
+        className="popup-pill"
+        role="toolbar"
+        onTouchStart={stop}
+        onClick={stop}
+      >
+        {colors.map((color) => (
+          <button
+            type="button"
+            key={color}
+            className={
+              "popup-pill-color" +
+              (color === this.props.highlight.color ? " is-active" : "")
+            }
+            style={{ backgroundColor: color }}
+            aria-label={this.props.t("Highlight")}
+            onPointerDown={press(() => this.handlePillColor(color))}
+          />
+        ))}
+        <span className="popup-pill-divider" />
+        <button
+          type="button"
+          className="popup-pill-action"
+          aria-label={this.props.t("Note")}
+          onPointerDown={press(() => {
+            this.props.handleMenuMode("note");
+            this.props.handleOpenMenu(true);
+          })}
+        >
+          <PhoneIcon name="note" />
+        </button>
+        <button
+          type="button"
+          className="popup-pill-action"
+          aria-label={this.props.t("Copy")}
+          onPointerDown={press(this.handlePillCopy)}
+        >
+          <PhoneIcon name="copy" />
+        </button>
+        <button
+          type="button"
+          className="popup-pill-action"
+          aria-label={this.props.t("More")}
+          onPointerDown={press(() => this.setState({ isExpanded: true }))}
+        >
+          <PhoneIcon name="moreHorizontal" />
+        </button>
+      </div>
+    );
+  };
   UNSAFE_componentWillReceiveProps(nextProps: PopupMenuProps) {
     if (!nextProps.rect && this.props.rect) {
       this.setState({ rect: null });
@@ -274,27 +400,33 @@ class PopupMenu extends React.Component<PopupMenuProps, PopupMenuStates> {
     const isVisible = this.props.isOpenMenu && this.props.menuMode === "menu";
     const containerStyle: React.CSSProperties = isVisible
       ? {
-          left: this.state.posX !== undefined ? `${this.state.posX}px` : undefined,
-          top: this.state.posY !== undefined ? `${this.state.posY}px` : undefined,
+          left:
+            this.state.posX !== undefined ? `${this.state.posX}px` : undefined,
+          top:
+            this.state.posY !== undefined ? `${this.state.posY}px` : undefined,
         }
       : { display: "none" };
     return (
       <div>
         <div className="popup-menu-container" style={containerStyle}>
-          <div
-            className="popup-menu-card"
-            onPointerDown={(e) => e.stopPropagation()}
-            onTouchStart={(e) => e.stopPropagation()}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="popup-color-box">
-              <ColorOption {...(ColorProps as any)} />
+          {isCompact() && !this.state.isExpanded ? (
+            this.renderPill()
+          ) : (
+            <div
+              className="popup-menu-card"
+              onPointerDown={(e) => e.stopPropagation()}
+              onTouchStart={(e) => e.stopPropagation()}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="popup-color-box">
+                <ColorOption {...(ColorProps as any)} />
+              </div>
+              <div className="popup-menu-divider" />
+              <div className="popup-menu-box">
+                <PopupOption {...(PopupProps as any)} />
+              </div>
             </div>
-            <div className="popup-menu-divider" />
-            <div className="popup-menu-box">
-              <PopupOption {...(PopupProps as any)} />
-            </div>
-          </div>
+          )}
         </div>
       </div>
     );

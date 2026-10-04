@@ -1,0 +1,184 @@
+.display-sheet-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 44;
+  background: rgba(0, 0, 0, 0.32);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+}
+.display-sheet-backdrop.is-open {
+  opacity: 1;
+  pointer-events: auto;
+}
+.display-sheet {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 45;
+  padding: 10px calc(20px + var(--safe-right, 0px))
+    calc(16px + var(--safe-bottom, 0px)) calc(20px + var(--safe-left, 0px));
+  box-sizing: border-box;
+  background: var(--surface-raised);
+  color: var(--text);
+  border-radius: 20px 20px 0 0;
+  box-shadow:
+    0 0 0 1px var(--border),
+    var(--shadow-lg);
+  transform: translateY(105%);
+  visibility: hidden;
+  transition:
+    transform 0.24s cubic-bezier(0.2, 0, 0, 1),
+    visibility 0s linear 0.24s;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+.display-sheet.is-open {
+  transform: none;
+  visibility: visible;
+  transition: transform 0.24s cubic-bezier(0.2, 0, 0, 1);
+}
+.display-sheet-grabber {
+  width: 32px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--border-strong);
+  margin: 0 auto -4px;
+}
+.display-sheet button {
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Text size: A− value A+ */
+.display-sheet-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.display-sheet-step {
+  width: 52px;
+  height: 44px;
+  flex: none;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: var(--subtle-bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-display);
+}
+.display-sheet-step:active {
+  background: var(--active-bg);
+}
+.display-sheet-value {
+  flex: 1;
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 8px;
+}
+.display-sheet-label {
+  font-size: 14px;
+  color: var(--muted);
+}
+.display-sheet-number {
+  font-size: 16px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Themes: a row of swatches showing the page and its text */
+.display-sheet-themes {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+}
+.display-sheet-theme {
+  height: 64px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-strong);
+  background: var(--surface);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  padding: 0;
+}
+.display-sheet-theme.is-auto {
+  background: linear-gradient(135deg, #ffffff 50%, #2c2f31 50%);
+  color: var(--text);
+}
+.display-sheet-theme.is-auto .display-sheet-theme-glyph {
+  background: var(--surface-raised);
+  border-radius: 6px;
+  padding: 0 4px;
+}
+.display-sheet-theme.is-active {
+  box-shadow: 0 0 0 2px var(--accent);
+  border-color: transparent;
+}
+.display-sheet-theme-glyph {
+  font-family: var(--font-display);
+  font-size: 18px;
+  line-height: 22px;
+}
+.display-sheet-theme-name {
+  font-size: 11px;
+  opacity: 0.8;
+}
+.display-sheet-theme.is-auto .display-sheet-theme-name {
+  background: var(--surface-raised);
+  border-radius: 4px;
+  padding: 0 4px;
+  opacity: 1;
+}
+
+/* Layout: scroll or pages */
+.display-sheet-segmented {
+  display: flex;
+  padding: 3px;
+  border-radius: var(--radius-md);
+  background: var(--subtle-bg);
+}
+.display-sheet-segmented button {
+  flex: 1;
+  height: 38px;
+  border: 0;
+  border-radius: calc(var(--radius-md) - 3px);
+  background: transparent;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--muted);
+}
+.display-sheet-segmented button.is-active {
+  background: var(--surface-raised);
+  color: var(--text);
+  box-shadow: var(--shadow-sm);
+}
+
+.display-sheet-brightness {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--muted);
+}
+.display-sheet-brightness input[type="range"] {
+  flex: 1;
+  accent-color: var(--accent);
+}
+
+.display-sheet-more {
+  align-self: center;
+  border: 0;
+  background: transparent;
+  color: var(--accent) !important;
+  font-size: 14px;
+  font-weight: 500;
+  padding: 6px 12px;
+}

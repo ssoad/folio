@@ -66,3 +66,68 @@
   font-size: 13px;
 }
 
+/* Phones: the short selection pill (colours, note, copy, more) */
+.popup-pill {
+  pointer-events: auto;
+  display: flex;
+  width: max-content;
+  max-width: calc(100vw - 24px);
+  box-sizing: border-box;
+  align-self: center;
+  margin-left: auto;
+  margin-right: auto;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: calc(20px + var(--safe-bottom, 0px));
+  padding: 6px 6px 6px 12px;
+  border-radius: 999px;
+  background: var(--surface-raised);
+  color: var(--text);
+  box-shadow:
+    0 0 0 1px var(--border),
+    var(--shadow-lg);
+  animation: popup-pill-in 0.16s cubic-bezier(0.2, 0, 0, 1);
+}
+@keyframes popup-pill-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+.popup-pill button {
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.popup-pill-color {
+  width: 26px;
+  height: 26px;
+  margin: 0 3px;
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.12);
+}
+.popup-pill-color.is-active {
+  box-shadow:
+    0 0 0 2px var(--surface-raised),
+    0 0 0 4px var(--accent);
+}
+.popup-pill-divider {
+  width: 1px;
+  height: 24px;
+  margin: 0 6px;
+  background: var(--border-strong);
+}
+.popup-pill-action {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: transparent;
+  color: inherit;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.popup-pill-action:active {
+  background: var(--hover-bg, var(--subtle-bg));
+}

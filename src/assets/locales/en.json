@@ -1466,5 +1466,17 @@
   "Listen": "Listen",
   "Assistant": "Assistant",
   "Draw": "Draw",
-  "Page": "Page"
+  "Page": "Page",
+  "Display": "Display",
+  "Smaller text": "Smaller text",
+  "Larger text": "Larger text",
+  "Sepia": "Sepia",
+  "Dark": "Dark",
+  "Pen": "Pen",
+  "Eraser": "Eraser",
+  "Colour": "Colour",
+  "Undo": "Undo",
+  "Done": "Done",
+  "Smaller": "Smaller",
+  "Larger": "Larger"
 }

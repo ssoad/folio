@@ -201,3 +201,148 @@
 .annotation-text-font-select:focus {
   border-color: rgba(0, 0, 0, 0.4);
 }
+
+/* Phones: a slim floating pen toolbar at the top, and the current tool's
+   colours and sizes under it */
+.annotation-phone {
+  position: fixed;
+  top: calc(10px + var(--safe-top, 0px));
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 20;
+  width: max-content;
+  max-width: calc(100vw - 16px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+.annotation-phone button {
+  border: 0;
+  padding: 0;
+  font: inherit;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.annotation-phone-bar,
+.annotation-phone-options {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 4px;
+  border-radius: 999px;
+  background: var(--surface-raised);
+  color: var(--text);
+  box-shadow:
+    0 0 0 1px var(--border),
+    var(--shadow-lg);
+}
+.annotation-phone-tool {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: transparent;
+  color: inherit;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.annotation-phone-tool:active {
+  background: var(--hover-bg, var(--subtle-bg));
+}
+.annotation-phone-tool.is-active {
+  background: var(--accent-soft, var(--subtle-bg));
+  color: var(--accent);
+}
+.annotation-phone-done {
+  color: var(--accent);
+}
+.annotation-phone-divider {
+  width: 1px;
+  height: 22px;
+  margin: 0 4px;
+  background: var(--border-strong);
+}
+.annotation-phone-color {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.annotation-phone-color span {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  box-shadow:
+    0 0 0 2px var(--surface-raised),
+    0 0 0 3px var(--border-strong);
+}
+.annotation-phone-color:disabled {
+  opacity: 0.35;
+}
+.annotation-phone-options {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: var(--radius-lg);
+}
+.annotation-phone-colors,
+.annotation-phone-shapes,
+.annotation-phone-widths {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+}
+.annotation-phone-colors button {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.15);
+}
+.annotation-phone-colors button.is-active {
+  box-shadow:
+    0 0 0 2px var(--surface-raised),
+    0 0 0 4px var(--accent);
+}
+.annotation-phone-shapes button,
+.annotation-phone-widths button {
+  width: 40px;
+  height: 34px;
+  border-radius: var(--radius);
+  background: transparent;
+  color: inherit;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.annotation-phone-shapes button.is-active,
+.annotation-phone-widths button.is-active {
+  background: var(--accent-soft, var(--subtle-bg));
+  color: var(--accent);
+}
+.annotation-phone-widths button span {
+  display: block;
+  width: 24px;
+  border-radius: 6px;
+}
+.annotation-phone-stepper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  font-variant-numeric: tabular-nums;
+}
+.annotation-phone-stepper button {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--subtle-bg);
+  color: inherit;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}

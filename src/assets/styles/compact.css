@@ -18,7 +18,8 @@
 .header-drawer-button,
 .sidebar-backdrop,
 .reader-sheet-backdrop,
-.reader-compact-toolbar {
+.reader-compact-toolbar,
+.reader-phone-topbar {
   display: none;
 }
 
@@ -514,7 +515,70 @@
   top: var(--safe-top) !important;
 }
 
-/* Top and bottom bars span the screen */
+/* Phones use their own slim top bar (.reader-phone-topbar); the desktop
+   one, with its text buttons, stays on wide windows */
+.is-compact .operation-panel-container {
+  display: none !important;
+}
+.is-compact .reader-phone-topbar {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  position: fixed;
+  left: 0;
+  right: 0;
+  top: 0;
+  z-index: 16;
+  height: calc(56px + var(--safe-top));
+  padding: var(--safe-top) calc(4px + var(--safe-right)) 0
+    calc(4px + var(--safe-left));
+  box-sizing: border-box;
+  background: var(--panel-bg, var(--surface));
+  color: var(--text);
+  border-bottom: 1px solid var(--border);
+  transform: translateY(-100%);
+  visibility: hidden;
+  transition:
+    transform 0.22s cubic-bezier(0.2, 0, 0, 1),
+    visibility 0s linear 0.22s;
+}
+.is-compact .reader-phone-topbar.is-open {
+  transform: none;
+  visibility: visible;
+  transition: transform 0.22s cubic-bezier(0.2, 0, 0, 1);
+}
+.reader-phone-icon-button {
+  width: 44px;
+  height: 44px;
+  flex: none;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: inherit;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.reader-phone-icon-button:active {
+  background: var(--hover-bg, var(--subtle-bg));
+}
+.reader-phone-icon-button.is-active {
+  color: var(--accent);
+}
+.reader-phone-title {
+  flex: 1;
+  min-width: 0;
+  padding: 0 6px;
+  font-size: 16px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* The progress line spans the screen */
 .is-compact .operation-panel-container,
 .is-compact .progress-panel-container {
   width: 100% !important;
@@ -530,22 +594,11 @@
 }
 .is-compact .progress-panel-container {
   top: auto !important;
-  bottom: calc(64px + var(--safe-bottom));
+  bottom: calc(56px + var(--safe-bottom));
 }
 /* Clear of the toolbar and the navigation bar, or its top edge peeks out */
 .is-compact .progress-panel-container:not(.is-open) {
   transform: translateY(calc(100% + 84px + var(--safe-bottom))) !important;
-}
-/* The status bar shows with the bars: give it the top bar's background, so
-   its icons sit on the bar instead of over the page and its chapter line */
-.is-compact .operation-panel-container.is-open::before {
-  content: "";
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 100%;
-  height: var(--safe-top);
-  background: var(--panel-bg, var(--surface));
 }
 
 /* Progress: one row, the page caption then the slider (the page and
@@ -577,9 +630,17 @@
 .is-compact .progress-slider-row {
   flex: 1;
   min-width: 0;
-  height: 44px;
+  height: 40px;
   width: auto !important;
-  margin-left: 6px !important;
+  margin-left: 10px !important;
+}
+/* Chapter jumps are in Contents; the line is just the slider */
+.is-compact .progress-slider-row .previous-chapter,
+.is-compact .progress-slider-row .next-chapter {
+  display: none !important;
+}
+.is-compact .progress-slider-row .input-progress {
+  width: 100% !important;
 }
 .is-compact .progress-panel-container {
   height: auto !important;
@@ -609,6 +670,7 @@
 .is-compact .progress-panel {
   border-bottom: none;
   border-top: 1px solid var(--border);
+  background: var(--panel-bg, var(--surface)) !important;
 }
 .is-compact .book-operation-panel {
   overflow-x: auto;
@@ -619,8 +681,8 @@
    are shown (there's no hover on a phone) */
 .is-compact .reader-quick-tools {
   position: fixed !important;
-  /* Below the top bar (90px) */
-  top: calc(var(--safe-top) + 98px) !important;
+  /* Under the top bar's More button */
+  top: calc(var(--safe-top) + 60px) !important;
   right: calc(8px + var(--safe-right)) !important;
   width: auto !important;
   gap: 2px;
@@ -647,7 +709,7 @@
 /* Their popovers (convert to text, crop) open under the row */
 .is-compact .reader-tool-popover {
   position: fixed !important;
-  top: calc(var(--safe-top) + 152px) !important;
+  top: calc(var(--safe-top) + 114px) !important;
   right: calc(8px + var(--safe-right)) !important;
   left: auto !important;
   max-width: calc(100vw - 16px);
@@ -807,13 +869,13 @@
   right: 0;
   bottom: 0;
   z-index: 16;
-  height: calc(64px + var(--safe-bottom));
-  padding: 4px var(--safe-right) var(--safe-bottom) var(--safe-left);
+  height: calc(56px + var(--safe-bottom));
+  padding: 0 calc(8px + var(--safe-right)) var(--safe-bottom)
+    calc(8px + var(--safe-left));
   box-sizing: border-box;
-  background: var(--surface);
-  border-top: 1px solid var(--border);
+  background: var(--panel-bg, var(--surface));
   transform: translateY(100%);
-  transition: transform 0.22s ease;
+  transition: transform 0.22s cubic-bezier(0.2, 0, 0, 1);
 }
 .is-compact .reader-compact-toolbar.is-open {
   transform: translateY(0);
@@ -821,38 +883,65 @@
 .reader-compact-toolbar button {
   flex: 1;
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 4px;
   border: 0;
   background: transparent;
-  color: var(--text-muted, var(--muted));
-  font-size: 11px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-}
-.reader-compact-toolbar button span {
-  font-size: 20px;
   color: var(--text);
-  padding: 4px 16px;
-  border-radius: 16px;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.reader-compact-toolbar button svg {
+  box-sizing: content-box;
+  padding: 7px 16px;
+  border-radius: 18px;
+  transition: background-color 0.15s;
+}
+.reader-compact-toolbar button:active svg {
+  background: var(--hover-bg, var(--subtle-bg));
 }
 .reader-compact-toolbar button.is-active {
-  color: var(--text);
-  font-weight: 600;
+  color: var(--accent);
 }
-.reader-compact-toolbar button.is-active span {
-  color: var(--on-accent, #fff);
-  background: var(--accent);
+.reader-compact-toolbar button.is-active svg {
+  background: var(--accent-soft, var(--subtle-bg));
 }
-.reader-compact-toolbar .reader-compact-toolbar-text-icon {
-  font-size: 14px;
-  font-weight: 700;
-  line-height: 20px;
-  letter-spacing: 0.02em;
+
+/* Landscape phones: height is scarce, so the bottom bar is one row (the
+   progress line on the left, the actions on the right) and the top bar is
+   shorter */
+@media (orientation: landscape) and (max-height: 600px) {
+  .is-compact .reader-phone-topbar {
+    height: calc(48px + var(--safe-top));
+  }
+  .is-compact .reader-quick-tools {
+    top: calc(var(--safe-top) + 52px) !important;
+  }
+  .is-compact .reader-compact-toolbar {
+    left: auto;
+    width: calc(272px + var(--safe-right));
+    height: calc(48px + var(--safe-bottom));
+    padding-left: 0;
+    border-left: 1px solid var(--border);
+  }
+  .is-compact .reader-compact-toolbar button svg {
+    padding: 6px 12px;
+  }
+  .is-compact .progress-panel-container {
+    bottom: 0;
+    right: auto !important;
+    width: calc(100% - 272px - var(--safe-right)) !important;
+    /* Same height as the actions beside it */
+    height: calc(48px + var(--safe-bottom)) !important;
+    overflow: hidden;
+  }
+  .is-compact .progress-panel-container:not(.is-open) {
+    transform: translateY(calc(100% + 20px + var(--safe-bottom))) !important;
+  }
+  .is-compact .progress-panel {
+    height: calc(48px + var(--safe-bottom)) !important;
+    padding: 0 12px var(--safe-bottom) calc(16px + var(--safe-left)) !important;
+  }
 }
 
 /* Drawing tools sit above the toolbar, across the screen */

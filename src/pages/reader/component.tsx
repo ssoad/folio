@@ -23,6 +23,12 @@ import { isElectron } from "react-device-detect";
 import SettingDialog from "../../components/dialogs/settingDialog";
 import SpeechDialog from "../../components/dialogs/speechDialog";
 import AnnotationDialog from "../../components/dialogs/annotationDialog";
+import DisplaySheet from "../../components/readerPhone/displaySheet";
+import PhoneIcon from "../../components/readerPhone/phoneIcons";
+import {
+  setAnnotationEraser,
+  setAnnotationRecording,
+} from "../../utils/reader/annotationCanvas";
 import PopupOptionDialog from "../../components/dialogs/popupOptionDialog";
 import {
   updateDiscordPresence,
@@ -30,6 +36,7 @@ import {
 } from "../../utils/reader/discordRPC";
 import {
   READER_CHROME_TOGGLE_EVENT,
+  READER_ADD_BOOKMARK_EVENT,
   READER_EXIT_EVENT,
   READING_PANEL_TOGGLE_EVENT,
   searchInTheBook,
@@ -124,6 +131,8 @@ class Reader extends React.Component<ReaderProps, ReaderState> {
       isPreventTrigger:
         ConfigService.getReaderConfig("isPreventTrigger") === "yes",
       isShowScale: false,
+      isPhoneMoreOpen: false,
+      isDisplaySheetOpen: false,
       isNearEdge: false,
     };
   }
@@ -378,9 +387,24 @@ class Reader extends React.Component<ReaderProps, ReaderState> {
       this.closeSheets();
       return;
     }
+    if (this.state.isDisplaySheetOpen) {
+      this.setState({ isDisplaySheetOpen: false });
+      return;
+    }
     const show = !(this.state.isOpenTopPanel || this.state.isOpenBottomPanel);
     this.setState({ isOpenTopPanel: show, isOpenBottomPanel: show });
     if (!show) this.closeToolPopovers();
+  };
+  // The quick tools row (zoom, crop, convert) has something to show: zoom
+  // in scroll and single page modes, crop and convert for PDFs
+  hasQuickTools = () =>
+    this.props.readerMode === "scroll" ||
+    this.props.readerMode === "single" ||
+    this.props.currentBook.format === "PDF";
+  // Phone bars: an action hides them and whatever floats over the page
+  hidePhoneBars = () => {
+    this.setState({ isOpenTopPanel: false, isOpenBottomPanel: false });
+    this.closeToolPopovers();
   };
   handleOpenAssistant = async () => {
     if (!this.props.htmlBook?.rendition) return;
@@ -393,9 +417,7 @@ class Reader extends React.Component<ReaderProps, ReaderState> {
   // Drawing on the page: scanned PDFs only, since their text can't be
   // highlighted
   canDraw = () =>
-    !!this.props.currentBook &&
-    isReadingRawPDF(this.props.currentBook) &&
-    (this.props.currentBook.description || "").indexOf("scanned") > -1;
+    !!this.props.currentBook && isReadingRawPDF(this.props.currentBook);
   handleToggleDrawing = () => {
     if (!this.props.htmlBook?.rendition) return;
     const isDrawing = !this.props.isAnnotationOpen;
@@ -407,10 +429,13 @@ class Reader extends React.Component<ReaderProps, ReaderState> {
       this.props.currentBook.format,
       this.props.currentBook.key
     );
+    setAnnotationRecording(isDrawing);
+    if (!isDrawing) setAnnotationEraser(false);
     this.props.handleAnnotationDialog(isDrawing);
   };
   // Phones have no hover to close the PDF tool popovers (zoom, crop, convert)
   closeToolPopovers = () => {
+    if (this.state.isPhoneMoreOpen) this.setState({ isPhoneMoreOpen: false });
     if (this.props.isConvertOpen) this.props.handleConvertDialog(false);
     if (this.props.isPdfCropOpen) this.props.handlePdfCropDialog(false);
     if (this.state.isShowScale) this.setState({ isShowScale: false });
@@ -440,10 +465,15 @@ class Reader extends React.Component<ReaderProps, ReaderState> {
       this.props.handlePopupOptionDialog(false);
       return;
     }
+    if (this.state.isDisplaySheetOpen) {
+      this.setState({ isDisplaySheetOpen: false });
+      return;
+    }
     if (
       this.props.isConvertOpen ||
       this.props.isPdfCropOpen ||
-      this.state.isShowScale
+      this.state.isShowScale ||
+      this.state.isPhoneMoreOpen
     ) {
       this.closeToolPopovers();
     } else if (this.props.isAnnotationOpen) {
@@ -603,7 +633,10 @@ class Reader extends React.Component<ReaderProps, ReaderState> {
         <div
           className={
             "reader-quick-tools" +
-            (this.state.isOpenTopPanel ? " is-open" : "")
+            // Phones open it from the top bar's More button
+            (this.state.isOpenTopPanel && this.state.isPhoneMoreOpen
+              ? " is-open"
+              : "")
           }
           style={{
             position: "absolute",
@@ -1024,7 +1057,71 @@ class Reader extends React.Component<ReaderProps, ReaderState> {
           }
           onClick={this.closeSheets}
         ></div>
-        {/* Phones: the bottom bar's shortcuts to the side panels */}
+        {/* Phones: a slim top bar (back, title, bookmark, search, more) */}
+        <div
+          className={
+            "reader-phone-topbar" +
+            (this.state.isOpenTopPanel ? " is-open" : "")
+          }
+        >
+          <button
+            type="button"
+            className="reader-phone-icon-button"
+            aria-label={this.props.t("Back")}
+            onClick={() =>
+              window.dispatchEvent(new CustomEvent(READER_EXIT_EVENT))
+            }
+          >
+            <PhoneIcon name="back" size={24} />
+          </button>
+          <span className="reader-phone-title">
+            {this.props.currentBook.name}
+          </span>
+          <button
+            type="button"
+            className={
+              "reader-phone-icon-button" +
+              (this.props.isShowBookmark ? " is-active" : "")
+            }
+            aria-label={this.props.t("Bookmark")}
+            onClick={() =>
+              window.dispatchEvent(new CustomEvent(READER_ADD_BOOKMARK_EVENT))
+            }
+          >
+            <PhoneIcon name="bookmark" filled={this.props.isShowBookmark} />
+          </button>
+          <button
+            type="button"
+            className="reader-phone-icon-button"
+            aria-label={this.props.t("Search")}
+            onClick={() => {
+              this.hidePhoneBars();
+              searchInTheBook("", "", false);
+            }}
+          >
+            <PhoneIcon name="search" />
+          </button>
+          {this.hasQuickTools() && (
+            <button
+              type="button"
+              className={
+                "reader-phone-icon-button" +
+                (this.state.isPhoneMoreOpen ? " is-active" : "")
+              }
+              aria-label={this.props.t("More")}
+              onClick={() => {
+                if (this.state.isPhoneMoreOpen) {
+                  this.closeToolPopovers();
+                } else {
+                  this.setState({ isPhoneMoreOpen: true });
+                }
+              }}
+            >
+              <PhoneIcon name="more" />
+            </button>
+          )}
+        </div>
+        {/* Phones: icon toolbar under the progress line */}
         <div
           className={
             "reader-compact-toolbar" +
@@ -1033,74 +1130,73 @@ class Reader extends React.Component<ReaderProps, ReaderState> {
         >
           <button
             type="button"
+            aria-label={this.props.t("Contents")}
             onClick={() => {
               // Leaves search, which shares the sheet, and shows the contents
-              this.setState({ isOpenTopPanel: false, isOpenBottomPanel: false });
-              this.closeToolPopovers();
+              this.hidePhoneBars();
               toggleNavTab("contents");
             }}
           >
-            <span className="icon-grid"></span>
-            <Trans>Contents</Trans>
+            <PhoneIcon name="contents" />
           </button>
           <button
             type="button"
+            aria-label={this.props.t("Display")}
+            className={this.state.isDisplaySheetOpen ? "is-active" : ""}
             onClick={() => {
-              this.setState({ isOpenTopPanel: false, isOpenBottomPanel: false });
-              this.closeToolPopovers();
-              searchInTheBook("", "", false);
+              this.hidePhoneBars();
+              this.setState({ isDisplaySheetOpen: true });
             }}
           >
-            <span className="icon-search"></span>
-            <Trans>Search</Trans>
+            <PhoneIcon name="display" />
           </button>
+          {this.canDraw() && (
+            <button
+              type="button"
+              aria-label={this.props.t("Draw")}
+              className={this.props.isAnnotationOpen ? "is-active" : ""}
+              onClick={() => {
+                this.hidePhoneBars();
+                this.handleToggleDrawing();
+              }}
+            >
+              <PhoneIcon name="pen" />
+            </button>
+          )}
           <button
             type="button"
+            aria-label={this.props.t("Listen")}
             className={this.props.isSpeechOpen ? "is-active" : ""}
             onClick={() => {
-              this.setState({ isOpenTopPanel: false, isOpenBottomPanel: false });
+              this.hidePhoneBars();
               this.props.handleSpeechDialog(!this.props.isSpeechOpen);
             }}
           >
-            <span className="icon-earphone"></span>
-            <Trans>Listen</Trans>
+            <PhoneIcon name="listen" />
           </button>
           {ConfigService.getReaderConfig("isDisableAI") !== "yes" && (
             <button
               type="button"
+              aria-label={this.props.t("Assistant")}
               onClick={() => {
-                this.setState({
-                  isOpenTopPanel: false,
-                  isOpenBottomPanel: false,
-                });
+                this.hidePhoneBars();
                 this.handleOpenAssistant();
               }}
             >
-              <span className="reader-compact-toolbar-text-icon">AI</span>
-              <Trans>Assistant</Trans>
+              <PhoneIcon name="ai" />
             </button>
           )}
-          {this.canDraw() && (
-            <button
-              type="button"
-              className={this.props.isAnnotationOpen ? "is-active" : ""}
-              onClick={() => {
-                this.setState({
-                  isOpenTopPanel: false,
-                  isOpenBottomPanel: false,
-                });
-                this.handleToggleDrawing();
-              }}
-            >
-              <span className="icon-edit"></span>
-              <Trans>Draw</Trans>
-            </button>
-          )}
-          <button type="button" onClick={() => this.openSheet("right")}>
-            <span className="icon-setting"></span>
-            <Trans>Setting</Trans>
-          </button>
         </div>
+        <DisplaySheet
+          {...({
+            isOpen: this.state.isDisplaySheetOpen,
+            onClose: () => this.setState({ isDisplaySheetOpen: false }),
+            onMoreSettings: () => {
+              this.setState({ isDisplaySheetOpen: false });
+              this.openSheet("right");
+            },
+          } as any)}
+        />
 
         {this.props.currentBook.key && <Viewer {...(renditionProps as any)} />}
         {this.props.isConvertOpen && <ConvertDialog />}

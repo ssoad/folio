@@ -16,6 +16,13 @@ import {
 } from "../../../utils/common";
 import FontUtil from "../../../utils/file/fontUtil";
 import { setDrawingMode } from "../../../utils/reader/mouseEvent";
+import {
+  setAnnotationEraser,
+  setAnnotationRecording,
+  undoAnnotation,
+} from "../../../utils/reader/annotationCanvas";
+import { isCompact } from "../../../utils/platform";
+import PhoneIcon, { PhoneIconName } from "../../readerPhone/phoneIcons";
 
 class AnnotationDialog extends React.Component<
   AnnotationDialogProps,
@@ -60,6 +67,8 @@ class AnnotationDialog extends React.Component<
       annotationTextColor:
         ConfigService.getReaderConfig("annotationTextColor") || TEXT_COLORS[0],
       fontOptions: [],
+      isErasing: false,
+      isPhoneOptionsOpen: false,
     };
   }
   componentDidMount() {
@@ -217,7 +226,223 @@ class AnnotationDialog extends React.Component<
         return null;
     }
   };
+  // Phones: the eraser is a tool beside the pens. While it's on the engine
+  // stops drawing, and a tap on a drawing removes it (annotationCanvas).
+  handlePhoneTool = (tool: string) => {
+    if (tool === "eraser") {
+      this.setState({ isErasing: true, isPhoneOptionsOpen: false });
+      this.props.htmlBook.rendition.applyAnnotationConfig({ isDrawing: "no" });
+      setAnnotationEraser(true);
+      return;
+    }
+    if (this.state.isErasing) {
+      setAnnotationEraser(false);
+      this.props.htmlBook.rendition.applyAnnotationConfig({ isDrawing: "yes" });
+    }
+    // A second tap on the current tool opens its colours and sizes
+    const isSameTool = !this.state.isErasing && tool === this.state.annotationStyle;
+    this.setState({
+      isErasing: false,
+      isPhoneOptionsOpen: isSameTool ? !this.state.isPhoneOptionsOpen : false,
+    });
+    this.handleSelectTab(tool);
+  };
+  // The current tool's colour, colour list and setter
+  getPhoneToolColor = () => {
+    switch (this.state.annotationStyle) {
+      case "highlighter":
+        return {
+          color: this.state.annotationHighlighterColor,
+          colors: HIGHLIGHTER_COLORS,
+          select: this.handleSelectHighlighterColor,
+        };
+      case "shape":
+        return {
+          color: this.state.annotationShapeColor,
+          colors: BRUSH_COLORS,
+          select: this.handleSelectShapeColor,
+        };
+      case "text":
+        return {
+          color: this.state.annotationTextColor,
+          colors: TEXT_COLORS,
+          select: this.handleSelectTextColor,
+        };
+      default:
+        return {
+          color: this.state.annotationBrushColor,
+          colors: BRUSH_COLORS,
+          select: this.handleSelectColor,
+        };
+    }
+  };
+  renderPhoneSizes = () => {
+    const { annotationStyle } = this.state;
+    if (annotationStyle === "text") {
+      return (
+        <div className="annotation-phone-stepper">
+          <button
+            type="button"
+            onClick={() => {
+              this.handleSelectTextSize(
+                Math.max(TEXT_SIZE_MIN, this.state.annotationTextSize - TEXT_SIZE_STEP)
+              );
+              this.handleTextSizeRelease();
+            }}
+            aria-label={this.props.t("Smaller")}
+          >
+            <PhoneIcon name="minus" size={18} />
+          </button>
+          <span>{this.state.annotationTextSize}</span>
+          <button
+            type="button"
+            onClick={() => {
+              this.handleSelectTextSize(
+                Math.min(TEXT_SIZE_MAX, this.state.annotationTextSize + TEXT_SIZE_STEP)
+              );
+              this.handleTextSizeRelease();
+            }}
+            aria-label={this.props.t("Larger")}
+          >
+            <PhoneIcon name="plus" size={18} />
+          </button>
+        </div>
+      );
+    }
+    const isHighlighter = annotationStyle === "highlighter";
+    const widths = isHighlighter ? HIGHLIGHTER_WIDTHS : BRUSH_WIDTHS;
+    const current =
+      annotationStyle === "shape"
+        ? this.state.annotationShapeWidth
+        : isHighlighter
+          ? this.state.annotationHighlighterWidth
+          : this.state.annotationBrushWidth;
+    const select =
+      annotationStyle === "shape"
+        ? this.handleSelectShapeWidth
+        : isHighlighter
+          ? this.handleSelectHighlighterWidth
+          : this.handleSelectWidth;
+    const max = Math.max(...widths);
+    return (
+      <div className="annotation-phone-widths">
+        {widths.map((width) => (
+          <button
+            type="button"
+            key={width}
+            className={width === current ? "is-active" : ""}
+            onClick={() => select(width)}
+            aria-label={width + ""}
+          >
+            <span
+              style={{
+                height: Math.max(2, Math.round((width / max) * 12)),
+                background: this.getPhoneToolColor().color,
+              }}
+            ></span>
+          </button>
+        ))}
+      </div>
+    );
+  };
+  renderPhone = () => {
+    const { annotationStyle, isErasing, isPhoneOptionsOpen } = this.state;
+    const tools: { key: string; icon: PhoneIconName; label: string }[] = [
+      { key: "brush", icon: "pen", label: "Pen" },
+      { key: "highlighter", icon: "highlighter", label: "Highlighter" },
+      { key: "shape", icon: "shape", label: "Shape" },
+      { key: "text", icon: "text", label: "Text" },
+      { key: "eraser", icon: "eraser", label: "Eraser" },
+    ];
+    const toolColor = this.getPhoneToolColor();
+    return (
+      <div className="annotation-phone">
+        <div className="annotation-phone-bar" role="toolbar">
+          {tools.map((tool) => {
+            const isActive =
+              tool.key === "eraser" ? isErasing : !isErasing && annotationStyle === tool.key;
+            return (
+              <button
+                type="button"
+                key={tool.key}
+                className={"annotation-phone-tool" + (isActive ? " is-active" : "")}
+                aria-label={this.props.t(tool.label)}
+                aria-pressed={isActive}
+                onClick={() => this.handlePhoneTool(tool.key)}
+              >
+                <PhoneIcon name={tool.icon} />
+              </button>
+            );
+          })}
+          <span className="annotation-phone-divider" />
+          <button
+            type="button"
+            className="annotation-phone-color"
+            aria-label={this.props.t("Colour")}
+            disabled={isErasing}
+            onClick={() =>
+              this.setState({ isPhoneOptionsOpen: !isPhoneOptionsOpen })
+            }
+          >
+            <span style={{ background: toolColor.color }}></span>
+          </button>
+          <button
+            type="button"
+            className="annotation-phone-tool"
+            aria-label={this.props.t("Undo")}
+            onClick={() => undoAnnotation()}
+          >
+            <PhoneIcon name="undo" />
+          </button>
+          <button
+            type="button"
+            className="annotation-phone-tool annotation-phone-done"
+            aria-label={this.props.t("Done")}
+            onClick={this.handleClose}
+          >
+            <PhoneIcon name="check" />
+          </button>
+        </div>
+        {isPhoneOptionsOpen && !isErasing && (
+          <div className="annotation-phone-options">
+            {annotationStyle === "shape" && (
+              <div className="annotation-phone-shapes">
+                {SHAPE_TYPES.map((type) => (
+                  <button
+                    type="button"
+                    key={type}
+                    className={
+                      type === this.state.annotationShapeType ? "is-active" : ""
+                    }
+                    onClick={() => this.handleSelectShapeType(type)}
+                    aria-label={type}
+                  >
+                    {this.renderShapeIcon(type)}
+                  </button>
+                ))}
+              </div>
+            )}
+            <div className="annotation-phone-colors">
+              {toolColor.colors.map((color) => (
+                <button
+                  type="button"
+                  key={color}
+                  className={color === toolColor.color ? "is-active" : ""}
+                  style={{ background: color }}
+                  onClick={() => toolColor.select(color)}
+                  aria-label={color}
+                />
+              ))}
+            </div>
+            {this.renderPhoneSizes()}
+          </div>
+        )}
+      </div>
+    );
+  };
   handleClose = () => {
+    setAnnotationEraser(false);
+    setAnnotationRecording(false);
     this.props.handleAnnotationDialog(false);
     this.props.htmlBook.rendition.applyAnnotationConfig({
       isDrawing: "no",
@@ -229,6 +454,7 @@ class AnnotationDialog extends React.Component<
     );
   };
   render() {
+    if (isCompact()) return this.renderPhone();
     const {
       annotationStyle,
       annotationBrushColor,

@@ -17,8 +17,10 @@ import {
   getSelectionSentence,
   searchInTheBook,
 } from "../../../utils/reader/mouseEvent";
-import copy from "copy-text-to-clipboard";
-import { clearIframeSelection, getIframeDoc } from "../../../utils/reader/docUtil";
+import {
+  clearIframeSelection,
+  copyIframeSelection,
+} from "../../../utils/reader/docUtil";
 import { isReadingRawPDF, openExternalUrl } from "../../../utils/common";
 import { createHighlight } from "../../../utils/reader/noteUtil";
 import { Tooltip } from "react-tooltip";
@@ -37,31 +39,12 @@ class PopupOption extends React.Component<PopupOptionProps> {
   };
   handleCopy = () => {
     const format = this.props.currentBook.format;
-    let text = getSelection(format);
-    if (!text) return;
-    if (isReadingRawPDF(this.props.currentBook)) {
-      text = text.split("\n").join(" ").trim();
-    }
-    let copied = false;
-    const docs = getIframeDoc(format);
-    for (let i = 0; i < docs.length && !copied; i++) {
-      const doc = docs[i];
-      if (!doc) continue;
-      const sel = doc.getSelection();
-      if (!sel || sel.rangeCount === 0 || !sel.toString().trim()) continue;
-      try {
-        copied = doc.execCommand("copy");
-      } catch (e) {}
-    }
-    if (!copied) {
-      if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(text).catch(() => {
-          copy(text);
-        });
-      } else {
-        copy(text);
-      }
-    }
+    const isCopied = copyIframeSelection(
+      format,
+      getSelection(format),
+      isReadingRawPDF(this.props.currentBook)
+    );
+    if (!isCopied) return;
     this.props.handleOpenMenu(false);
     this.props.handleMenuMode("");
     clearIframeSelection(format);

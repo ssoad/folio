@@ -18,6 +18,7 @@ export interface ReaderProps {
   isSettingOpen: boolean;
   readerMode: string;
   scale: string;
+  isShowBookmark: boolean;
   handleFetchNotes: () => void;
   handleReaderMode: (readerMode: string) => void;
   handleConvertDialog: (isConvertOpen: boolean) => void;
@@ -49,6 +50,8 @@ export interface ReaderState {
   hoverPanel: string;
   scale: string;
   isShowScale: boolean;
+  isPhoneMoreOpen: boolean;
+  isDisplaySheetOpen: boolean;
   isNearEdge: boolean;
   totalDuration: number;
   currentDuration: number;
