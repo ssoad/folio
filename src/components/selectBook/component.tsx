@@ -136,6 +136,10 @@ class SelectBook extends React.Component<BookListProps, BookListState> {
             <div className="select-more-actions-container">
               <span
                 className="book-manage-title"
+                // Touch screens have no hover: a tap opens the menu
+                onClick={() => {
+                  this.setState({ isShowExport: true });
+                }}
                 onMouseEnter={() => {
                   this.setState({ isShowExport: true });
                 }}
@@ -183,6 +187,13 @@ class SelectBook extends React.Component<BookListProps, BookListState> {
                 <div style={{ position: "relative" }}>
                   <span
                     className="book-manage-title select-book-action"
+                    // Touch screens have no hover: a tap opens the submenu
+                    onClick={() => {
+                      this.setState({
+                        exportSubmenu: "notes",
+                        isShowExport: true,
+                      });
+                    }}
                     onMouseEnter={() => {
                       this.setState({
                         exportSubmenu: "notes",
@@ -268,6 +279,13 @@ class SelectBook extends React.Component<BookListProps, BookListState> {
                 <div style={{ position: "relative" }}>
                   <span
                     className="book-manage-title select-book-action"
+                    // Touch screens have no hover: a tap opens the submenu
+                    onClick={() => {
+                      this.setState({
+                        exportSubmenu: "highlights",
+                        isShowExport: true,
+                      });
+                    }}
                     onMouseEnter={() => {
                       this.setState({
                         exportSubmenu: "highlights",
@@ -349,6 +367,13 @@ class SelectBook extends React.Component<BookListProps, BookListState> {
                 <div style={{ position: "relative" }}>
                   <span
                     className="book-manage-title select-book-action"
+                    // Touch screens have no hover: a tap opens the submenu
+                    onClick={() => {
+                      this.setState({
+                        exportSubmenu: "words",
+                        isShowExport: true,
+                      });
+                    }}
                     onMouseEnter={() => {
                       this.setState({
                         exportSubmenu: "words",

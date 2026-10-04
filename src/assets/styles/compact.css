@@ -155,6 +155,77 @@
   width: 100% !important;
 }
 
+/* Multiple selection: the actions float at the bottom, in thumb reach,
+   instead of wrapping in the filter row under the header (where the first
+   row slid beneath it). The container is empty outside select mode. */
+.is-compact .booklist-manage-container:not(:empty) {
+  position: fixed;
+  left: calc(8px + var(--safe-left)) !important;
+  right: calc(8px + var(--safe-right));
+  bottom: calc(12px + var(--safe-bottom));
+  z-index: 31;
+  margin: 0;
+  padding: 6px;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 2px;
+  border-radius: var(--radius-lg);
+  background: var(--surface-raised);
+  box-shadow:
+    0 0 0 1px var(--border),
+    var(--shadow-lg);
+}
+.is-compact .booklist-manage-container .book-manage-title {
+  flex: none;
+  white-space: nowrap;
+  font-size: 14px;
+  padding: 10px 12px;
+  border-radius: var(--radius);
+}
+.is-compact .booklist-manage-container .book-manage-title:active {
+  background: var(--hover-bg, var(--subtle-bg));
+}
+/* "More actions" opens above the bar, at its right edge */
+.is-compact .select-more-actions-container {
+  position: static;
+}
+.is-compact .select-more-actions {
+  bottom: calc(100% + 8px);
+  right: 0;
+  left: auto;
+  width: auto;
+  min-width: 220px;
+  max-width: 100%;
+  box-sizing: border-box;
+  background: var(--surface-raised);
+  border-radius: var(--radius-lg);
+  box-shadow:
+    0 0 0 1px var(--border),
+    var(--shadow-lg);
+}
+/* Its format submenus open above their item, inside the screen (beside it
+   there's no room on a phone) */
+.is-compact .select-export-format-submenu {
+  left: auto !important;
+  right: 0;
+  top: auto !important;
+  bottom: calc(100% + 4px) !important;
+  min-width: 160px;
+  z-index: 12;
+  background: var(--surface-raised);
+  border-radius: var(--radius);
+  box-shadow:
+    0 0 0 1px var(--border),
+    var(--shadow-md);
+}
+/* The Import button would sit under the bar */
+.is-compact
+  body:has(.booklist-manage-container:not(:empty))
+  .import-from-local {
+  display: none !important;
+}
+
 /* ── Library lists ───────────────────────────────────────────────────────── */
 
 .is-compact .book-list-container-parent,
