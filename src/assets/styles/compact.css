@@ -480,6 +480,22 @@
 .is-compact .reader-float-actions {
   display: none !important;
 }
+/* The stacked "pages" behind the book (components/background) give a
+   paper look in a window; on a phone they span the screen, so their borders
+   showed as lines across the top and bottom and their shadow darkened the
+   sides. Phones get one flat page. */
+.is-compact .background-box1,
+.is-compact .background-box2,
+.is-compact .background-box3,
+.is-compact .book-spine {
+  border: none !important;
+  box-shadow: none !important;
+}
+.is-compact .spine-shadow-left,
+.is-compact .spine-shadow-right {
+  display: none !important;
+}
+
 /* Width and left come from getPageWidth (utils/common) */
 .is-compact .html-viewer-page {
   top: calc(40px + var(--safe-top)) !important;

@@ -98,6 +98,16 @@ class TextToSpeech extends React.Component<
       return new Promise((resolve) => {
         let synth = window.speechSynthesis;
         let id;
+        // No speech engine, or one without voices: carry on without system
+        // voices instead of waiting forever (the AI voices load after this)
+        if (!synth) {
+          resolve([]);
+          return;
+        }
+        setTimeout(() => {
+          clearInterval(id);
+          resolve([]);
+        }, 3000);
         if (synth) {
           id = setInterval(() => {
             if (synth.getVoices().length !== 0) {

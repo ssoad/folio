@@ -2548,6 +2548,11 @@
   optionalDependencies:
     node-fetch "^3.3.0"
 
+"@capacitor-community/text-to-speech@^8.0.2":
+  version "8.0.2"
+  resolved "https://registry.yarnpkg.com/@capacitor-community/text-to-speech/-/text-to-speech-8.0.2.tgz#89373b45d14132165e73bca3c6d4390122e99266"
+  integrity sha512-SbpBMzcmzdTiN8jQDme/yUYHEJISZA+IiaRn5zT14k3UKpjaA7eYBnSm9h76rJHRV/y6DVZVhT1J0SaK5JTKtA==
+
 "@capacitor/android@^8.5.2":
   version "8.5.2"
   resolved "https://registry.yarnpkg.com/@capacitor/android/-/android-8.5.2.tgz#e774465cd42c321f643bb365ffe50b89697ef2bb"
