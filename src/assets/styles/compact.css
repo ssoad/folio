@@ -229,6 +229,288 @@
 
 /* ── Library lists ───────────────────────────────────────────────────────── */
 
+/* Header: the toolbar icons sit flat beside the search, like the app bar
+   in Android apps, instead of in boxes */
+.is-compact .header .setting-icon-container {
+  background: transparent !important;
+  box-shadow: none !important;
+  border-radius: 50%;
+  color: var(--text) !important;
+}
+.is-compact .header .setting-icon-container:active {
+  background: var(--hover-bg, var(--subtle-bg)) !important;
+}
+
+/* Status filter as chips; the view switch stays at the end */
+.is-compact .book-list-header-right {
+  width: 100%;
+  justify-content: space-between;
+  gap: 8px;
+}
+.is-compact .book-list-header-right > .lang-setting-dropdown {
+  display: none;
+}
+.is-compact .book-list-chips {
+  display: flex;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.is-compact .book-list-chips::-webkit-scrollbar {
+  display: none;
+}
+.book-list-chip {
+  flex: none;
+  height: 32px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 16px;
+  background: transparent;
+  box-shadow: inset 0 0 0 1px var(--border-strong);
+  color: var(--muted);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.book-list-chip.is-active {
+  background: var(--accent-soft, var(--subtle-bg));
+  box-shadow: none;
+  color: var(--accent);
+}
+/* View switch: a small segmented pill beside the chips */
+.is-compact .book-list-view {
+  flex: none;
+  width: auto;
+  height: 32px;
+  gap: 0;
+  padding: 0 2px;
+  border-radius: 16px;
+  background: var(--subtle-bg);
+}
+.is-compact .book-list-view .card-list-mode {
+  width: 30px;
+  font-size: 15px;
+  line-height: 32px;
+  text-align: center;
+}
+.is-compact .book-list-chip {
+  padding: 0 12px;
+}
+
+/* Book grid (cover view): three even columns of 2:3 covers with soft
+   shadows, the title and author under each, progress as a thin bar on the
+   cover */
+.is-compact .book-list-item-box.view-card {
+  display: grid !important;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px 14px;
+  /* Rows hug their books instead of sharing out the list's height */
+  align-content: start;
+  align-items: start;
+  padding: 4px calc(14px + var(--safe-right)) calc(88px + var(--safe-bottom))
+    calc(14px + var(--safe-left));
+  box-sizing: border-box;
+}
+@media (min-width: 520px) {
+  .is-compact .book-list-item-box.view-card {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+@media (min-width: 680px) {
+  .is-compact .book-list-item-box.view-card {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+}
+.is-compact .book-list-item {
+  float: none;
+  width: auto !important;
+  height: auto !important;
+  overflow: visible;
+  display: grid;
+  align-content: start;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+}
+.is-compact .book-list-item .book-item-cover {
+  grid-column: 1 / -1;
+  position: relative;
+  width: 100% !important;
+  height: auto !important;
+  aspect-ratio: 2 / 3;
+  margin: 0 !important;
+  overflow: hidden !important;
+  border-radius: 6px;
+  background: var(--subtle-bg) !important;
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.12),
+    0 6px 14px -6px rgba(0, 0, 0, 0.35) !important;
+}
+.is-compact .book-list-item .book-item-cover > div,
+.is-compact .book-list-item .book-item-cover .empty-cover {
+  width: 100% !important;
+  height: 100% !important;
+  transform: none !important;
+  border-radius: 0;
+}
+.is-compact .book-list-item .book-item-image {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover;
+  border-radius: 0;
+}
+.is-compact .book-item-progress {
+  display: block;
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 3px;
+  background: rgba(0, 0, 0, 0.35);
+}
+.is-compact .book-item-progress span {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+}
+.is-compact .book-list-item .book-item-title {
+  grid-column: 1;
+  width: auto;
+  height: auto;
+  margin: 8px 0 0;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 17px;
+}
+.is-compact .book-list-item .book-item-author {
+  display: block;
+  grid-column: 1 / -1;
+  margin: 2px 0 0;
+  font-size: 12px;
+  line-height: 16px;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* Progress shows on the cover; the menu sits beside the title */
+.is-compact .book-list-item .reading-progress-icon {
+  display: none;
+}
+.is-compact .book-list-item .book-more-action {
+  grid-column: 2;
+  grid-row: 2;
+  float: none;
+  margin: 8px -4px 0 4px;
+  padding: 2px 4px;
+  color: var(--muted);
+  opacity: 1;
+}
+/* Details view: one row per book, the cover beside its title, author and
+   description, progress and the menu on the right */
+.is-compact .book-list-cover-item {
+  float: none;
+  width: 100% !important;
+  display: grid;
+  grid-template-columns: 72px minmax(0, 1fr) auto;
+  column-gap: 14px;
+  row-gap: 2px;
+  align-items: start;
+  padding: 12px calc(14px + var(--safe-right)) 12px
+    calc(14px + var(--safe-left));
+  box-sizing: border-box;
+  border-bottom: 1px solid var(--border);
+}
+.is-compact .book-list-cover-item .book-cover-item-cover {
+  grid-column: 1;
+  grid-row: 1 / span 4;
+  float: none;
+  width: 72px !important;
+  height: 108px !important;
+  margin: 0;
+  overflow: hidden;
+  border-radius: 5px;
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.12),
+    0 6px 14px -6px rgba(0, 0, 0, 0.35);
+}
+.is-compact .book-list-cover-item .book-item-image,
+.is-compact .book-list-cover-item .book-cover-item-cover .empty-cover {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover;
+  transform: none !important;
+}
+.is-compact .book-list-cover-item .book-cover-item-header {
+  grid-column: 3;
+  grid-row: 1;
+  width: auto;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.is-compact .book-list-cover-item .reading-progress-icon {
+  margin: 0;
+  font-size: 12px;
+}
+.is-compact .book-list-cover-item .book-more-action {
+  float: none;
+  margin: 0;
+  padding: 2px 4px;
+  color: var(--muted);
+}
+.is-compact .book-list-cover-item .book-cover-item-title {
+  grid-column: 2;
+  grid-row: 1;
+  float: none;
+  width: auto;
+  height: auto;
+  margin: 2px 0 0;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 20px;
+}
+.is-compact .book-list-cover-item .book-cover-item-author,
+.is-compact .book-list-cover-item .book-cover-item-desc {
+  grid-column: 2 / -1;
+  float: none;
+  width: auto;
+  height: auto;
+  margin: 0;
+  font-size: 13px;
+  line-height: 18px;
+  color: var(--muted);
+  opacity: 1;
+}
+/* Publisher is usually empty; the author and description are enough */
+.is-compact
+  .book-list-cover-item
+  .book-cover-item-author
+  + .book-cover-item-author {
+  display: none;
+}
+.is-compact .book-list-cover-item .book-cover-item-desc {
+  margin-top: 4px;
+}
+.is-compact .book-list-cover-item .book-cover-item-desc-detail {
+  -webkit-line-clamp: 2;
+}
+
+/* Favourite and pinned marks on the cover's corner */
+.is-compact .book-list-item .book-status-actions {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  padding: 2px 5px;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.45);
+  color: #fff;
+}
+
 .is-compact .book-list-container-parent,
 .is-compact .note-list-container-parent,
 .is-compact .card-list-container-parent,
@@ -276,16 +558,6 @@
 .is-compact .note-list-container-parent > :last-child,
 .is-compact .card-list-container {
   padding-bottom: calc(88px + var(--safe-bottom));
-}
-/* Covers: three to a row on phones, four on small tablets */
-.is-compact .book-list-item-box {
-  --card-scale: 0.8 !important;
-  justify-content: space-evenly;
-}
-@media (min-width: 520px) {
-  .is-compact .book-list-item-box {
-    --card-scale: 0.95 !important;
-  }
 }
 /* List view: title and progress on the first line, author below */
 .is-compact .book-list-item-container {

@@ -8,8 +8,9 @@ export const isCompact = () =>
 
 // The Android app (Capacitor)
 export const isNativeApp = () =>
-  !!(window as { Capacitor?: { isNativePlatform?: () => boolean } }).Capacitor
-    ?.isNativePlatform?.();
+  !!(
+    window as { Capacitor?: { isNativePlatform?: () => boolean } }
+  ).Capacitor?.isNativePlatform?.();
 
 export const isTouchDevice = () =>
   !!window.matchMedia?.("(pointer: coarse)").matches;
@@ -37,3 +38,9 @@ export const exitWebReader = (setFinished: () => void) => {
 // still applies on wider screens
 export const effectiveReaderMode = (mode: string) =>
   mode === "double" && window.innerWidth <= COMPACT_MAX_WIDTH ? "single" : mode;
+
+// The first screen is drawn with its content (the library with its books,
+// the empty library, a book): the Android app keeps its splash until then
+export const APP_READY_EVENT = "folio-app-ready";
+export const signalAppReady = () =>
+  window.dispatchEvent(new CustomEvent(APP_READY_EVENT));

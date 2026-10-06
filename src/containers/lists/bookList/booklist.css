@@ -136,3 +136,8 @@
   cursor: pointer;
   margin-top: 2px;
 }
+
+/* Phones only (compact.css): the reading status as chips */
+.book-list-chips {
+  display: none;
+}

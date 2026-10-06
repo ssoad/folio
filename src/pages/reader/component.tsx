@@ -1,11 +1,15 @@
 import React from "react";
 import { NATIVE_BACK_EVENT } from "../../utils/native";
-import { effectiveReaderMode, isCompact } from "../../utils/platform";
+import {
+  effectiveReaderMode,
+  isCompact,
+  signalAppReady,
+} from "../../utils/platform";
 import { Trans } from "react-i18next";
 import SettingPanel from "../../containers/panels/settingPanel";
 import NavigationPanel from "../../containers/panels/navigationPanel";
 import OperationPanel from "../../containers/panels/operationPanel";
-import { Toaster } from "react-hot-toast";
+import FolioToaster from "../../components/folioToaster";
 import ProgressPanel from "../../containers/panels/progressPanel";
 import { ReaderProps, ReaderState } from "./interface";
 import {
@@ -137,6 +141,8 @@ class Reader extends React.Component<ReaderProps, ReaderState> {
     };
   }
   componentDidMount() {
+    // Opened straight into a book (from another app): the splash can go
+    signalAppReady();
     // PDFs and comics fill the phone screen edge to edge (compact.css)
     document.documentElement.classList.toggle(
       "is-fixed-reading",
@@ -807,16 +813,7 @@ class Reader extends React.Component<ReaderProps, ReaderState> {
             <div className="drag-background"></div>
           </>
         )}
-        <Toaster
-          toastOptions={{
-            style: {
-              wordWrap: "break-word",
-              wordBreak: "break-word",
-              whiteSpace: "normal",
-              overflowWrap: "break-word",
-            },
-          }}
-        />
+        <FolioToaster />
 
         <div
           className="left-panel"
@@ -910,7 +907,8 @@ class Reader extends React.Component<ReaderProps, ReaderState> {
 
         <div
           className={
-            "setting-panel-container" + (this.state.isOpenRightPanel ? " is-open" : "")
+            "setting-panel-container" +
+            (this.state.isOpenRightPanel ? " is-open" : "")
           }
           onMouseEnter={() => {
             this.cancelLeaveReader("right");
@@ -930,7 +928,8 @@ class Reader extends React.Component<ReaderProps, ReaderState> {
         </div>
         <div
           className={
-            "navigation-panel-container" + (this.state.isOpenLeftPanel ? " is-open" : "")
+            "navigation-panel-container" +
+            (this.state.isOpenLeftPanel ? " is-open" : "")
           }
           onClickCapture={(event) => {
             // Phones: jumping to a chapter, bookmark or note closes the sheet
@@ -967,7 +966,8 @@ class Reader extends React.Component<ReaderProps, ReaderState> {
         </div>
         <div
           className={
-            "progress-panel-container" + (this.state.isOpenBottomPanel ? " is-open" : "")
+            "progress-panel-container" +
+            (this.state.isOpenBottomPanel ? " is-open" : "")
           }
           onMouseEnter={() => {
             this.cancelLeaveReader("bottom");
@@ -1004,7 +1004,8 @@ class Reader extends React.Component<ReaderProps, ReaderState> {
         </div>
         <div
           className={
-            "operation-panel-container" + (this.state.isOpenTopPanel ? " is-open" : "")
+            "operation-panel-container" +
+            (this.state.isOpenTopPanel ? " is-open" : "")
           }
           onMouseEnter={() => {
             this.cancelLeaveReader("top");

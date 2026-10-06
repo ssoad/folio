@@ -170,6 +170,13 @@ const BookCardItem: React.FC<BookCardProps> = (props) => {
               }}
             ></img>
           )}
+          {parseFloat(percentage) > 0 && parseFloat(percentage) < 1 && (
+            <span className="book-item-progress">
+              <span
+                style={{ width: parseFloat(percentage) * 100 + "%" }}
+              ></span>
+            </span>
+          )}
         </div>
         {props.isSelectBook || isHover ? (
           <span
@@ -198,6 +205,10 @@ const BookCardItem: React.FC<BookCardProps> = (props) => {
             ? getFileNameWithoutExtension(props.book.path, props.book.name)
             : props.book.name}
         </p>
+        {/* Phones show the author under the title (bookCardItem.css) */}
+        {props.book.author && (
+          <p className="book-item-author">{props.book.author}</p>
+        )}
         <div className="reading-progress-icon">
           <div style={{ position: "relative", left: "4px" }}>
             {percentage && !isNaN(parseFloat(percentage))

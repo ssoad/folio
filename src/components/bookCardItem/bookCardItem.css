@@ -181,3 +181,9 @@
   left: 200px;
   z-index: 10;
 }
+
+/* Phones only (compact.css): author line and cover progress bar */
+.book-item-author,
+.book-item-progress {
+  display: none;
+}

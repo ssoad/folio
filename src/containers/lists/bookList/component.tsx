@@ -9,6 +9,8 @@ import { ConfigService } from "../../../assets/lib/kookit-extra-browser.min";
 import { Redirect, withRouter } from "react-router-dom";
 import ViewMode from "../../../components/viewMode";
 import SelectBook from "../../../components/selectBook";
+import ContinueReading from "../../../components/continueReading";
+import { isCompact, signalAppReady } from "../../../utils/platform";
 import { Trans } from "react-i18next";
 import Book from "../../../models/Book";
 import { isElectron } from "react-device-detect";
@@ -167,7 +169,7 @@ class BookList extends React.Component<BookListProps, BookListState> {
       }
     }
 
-    this.setState({ fullBooksData });
+    this.setState({ fullBooksData }, signalAppReady);
   };
   handleFinishReading = async () => {
     if (!this.scrollContainer.current) return;
@@ -402,9 +404,10 @@ class BookList extends React.Component<BookListProps, BookListState> {
   };
 
   render() {
+    // Still loading: the empty-library page would flash before the books
+    if (this.props.books === null) return null;
     if (
       (this.state.favoriteBooks === 0 && this.props.mode === "favorite") ||
-      !this.props.books ||
       !this.props.books[0]
     ) {
       return <Redirect to="/manager/empty" />;
@@ -443,6 +446,31 @@ class BookList extends React.Component<BookListProps, BookListState> {
                 {"Total " + books.length + " books"}
               </Trans>
             </div>
+            {/* Phones: the reading status as chips (the select is hidden) */}
+            <div className="book-list-chips" role="radiogroup">
+              {[
+                ["", "All"],
+                ["reading", "CurrentlyReading"],
+                ["unread", "Unread"],
+                ["finished", "Finished"],
+              ].map(([value, label]) => (
+                <button
+                  type="button"
+                  key={value}
+                  role="radio"
+                  aria-checked={this.state.readingStatusFilter === value}
+                  className={
+                    "book-list-chip" +
+                    (this.state.readingStatusFilter === value
+                      ? " is-active"
+                      : "")
+                  }
+                  onClick={() => this.setState({ readingStatusFilter: value })}
+                >
+                  {this.props.t(label)}
+                </button>
+              ))}
+            </div>
             <select
               className="lang-setting-dropdown"
               value={this.state.readingStatusFilter}
@@ -476,8 +504,15 @@ class BookList extends React.Component<BookListProps, BookListState> {
           }
         >
           <div className="book-list-container">
+            {isCompact() &&
+              this.props.mode === "home" &&
+              !this.props.isSearch &&
+              !this.props.isSelectBook &&
+              this.state.readingStatusFilter === "" && (
+                <ContinueReading {...({ books } as any)} />
+              )}
             <ul
-              className="book-list-item-box"
+              className={"book-list-item-box view-" + this.props.viewMode}
               ref={this.scrollContainer}
               style={
                 { "--card-scale": this.state.cardScale } as React.CSSProperties

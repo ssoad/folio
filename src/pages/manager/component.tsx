@@ -17,7 +17,7 @@ import { Route, Switch } from "react-router-dom";
 import { routes } from "../../router/routes";
 import Arrow from "../../components/arrow";
 import LoadingDialog from "../../components/dialogs/loadingDialog";
-import { Toaster } from "react-hot-toast";
+import FolioToaster from "../../components/folioToaster";
 import DetailDialog from "../../components/dialogs/detailDialog";
 import { Tooltip } from "react-tooltip";
 import { ConfigService } from "../../assets/lib/kookit-extra-browser.min";
@@ -310,16 +310,7 @@ class Manager extends React.Component<ManagerProps, ManagerState> {
           )}
         </div>
         <Sidebar />
-        <Toaster
-          toastOptions={{
-            style: {
-              wordWrap: "break-word",
-              wordBreak: "break-word",
-              whiteSpace: "normal",
-              overflowWrap: "break-word",
-            },
-          }}
-        />
+        <FolioToaster />
         <Header {...({ handleDrag: this.handleDrag } as any)} />
         {this.props.isOpenDeleteDialog && <DeleteDialog />}
         {this.props.isOpenEditDialog && <EditDialog />}

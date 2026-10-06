@@ -8,7 +8,7 @@ import BookUtil from "./file/bookUtil";
 import DatabaseService from "./storage/databaseService";
 import { SplashScreen } from "@capacitor/splash-screen";
 import { StatusBar, Style } from "@capacitor/status-bar";
-import { LIBRARY_HASH } from "./platform";
+import { APP_READY_EVENT, LIBRARY_HASH } from "./platform";
 import { isDrawerOpen, setDrawerOpen } from "./responsive";
 
 // Android app (Capacitor) integration: the system back button, a status bar
@@ -54,9 +54,9 @@ const syncStatusBar = () => {
   const luminance = (0.2126 * rgb[0] + 0.7152 * rgb[1] + 0.0722 * rgb[2]) / 255;
   StatusBar.setBackgroundColor({ color }).catch(() => {});
   // Style.Dark means light icons, for dark backgrounds
-  StatusBar.setStyle({ style: luminance < 0.5 ? Style.Dark : Style.Light }).catch(
-    () => {}
-  );
+  StatusBar.setStyle({
+    style: luminance < 0.5 ? Style.Dark : Style.Light,
+  }).catch(() => {});
 };
 
 // Immersive reading: the status bar hides while the reader's bars are
@@ -142,8 +142,9 @@ const openSharedFile = async (uri: string) => {
 
 // folio://open-book?bookKey=... (the book's "Copy link")
 const openBookLink = async (url: string) => {
-  const bookKey = new URL(url.replace("folio://", "https://folio/"))
-    .searchParams.get("bookKey");
+  const bookKey = new URL(
+    url.replace("folio://", "https://folio/")
+  ).searchParams.get("bookKey");
   const book = bookKey && (await DatabaseService.getRecord(bookKey, "books"));
   if (book) {
     BookUtil.redirectBook(book);
@@ -177,14 +178,19 @@ export const initNative = () => {
   }
   window.addEventListener("hashchange", () => setTimeout(syncStatusBar, 300));
   syncStatusBar();
-  // Android shows the splash until the app has drawn its first frame
-  const hideSplash = () =>
+  // The splash stays until the first screen is drawn with its content, so
+  // there's no blank page or "empty library" flash on the way; the fallback
+  // covers screens that don't signal
+  let isSplashHidden = false;
+  const hideSplash = () => {
+    if (isSplashHidden) return;
+    isSplashHidden = true;
     requestAnimationFrame(() =>
-      requestAnimationFrame(() => SplashScreen.hide().catch(() => {}))
+      requestAnimationFrame(() =>
+        SplashScreen.hide({ fadeOutDuration: 220 }).catch(() => {})
+      )
     );
-  if (document.readyState === "complete") {
-    hideSplash();
-  } else {
-    window.addEventListener("load", hideSplash, { once: true });
-  }
+  };
+  window.addEventListener(APP_READY_EVENT, hideSplash, { once: true });
+  window.setTimeout(hideSplash, 3500);
 };

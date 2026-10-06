@@ -3,6 +3,7 @@ import "./emptyPage.css";
 import { emptyList } from "../../constants/emptyList";
 import { Trans } from "react-i18next";
 import { EmptyPageProps, EmptyPageState } from "./interface";
+import { signalAppReady } from "../../utils/platform";
 
 class EmptyPage extends React.Component<EmptyPageProps, EmptyPageState> {
   constructor(props: EmptyPageProps) {
@@ -10,6 +11,9 @@ class EmptyPage extends React.Component<EmptyPageProps, EmptyPageState> {
     this.state = {
       isOpenDelete: false,
     };
+  }
+  componentDidMount() {
+    signalAppReady();
   }
   render() {
     const item = emptyList.find((entry) => entry.mode === this.props.mode);
