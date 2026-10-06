@@ -8,11 +8,12 @@
   },
   "plugins": {
     "SplashScreen": {
-      "launchShowDuration": 0,
+      "launchShowDuration": 4000,
       "launchAutoHide": false,
       "backgroundColor": "#141413",
       "androidScaleType": "CENTER_INSIDE",
-      "showSpinner": false
+      "showSpinner": false,
+      "launchFadeOutDuration": 220
     },
     "Keyboard": {
       "resize": "body",

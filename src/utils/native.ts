@@ -178,18 +178,35 @@ export const initNative = () => {
   }
   window.addEventListener("hashchange", () => setTimeout(syncStatusBar, 300));
   syncStatusBar();
-  // The splash stays until the first screen is drawn with its content, so
-  // there's no blank page or "empty library" flash on the way; the fallback
-  // covers screens that don't signal
+  // The splash stays until the first screen is drawn with its content
+  // (capacitor.config.json holds it: launchAutoHide false), so there's no
+  // blank page or "empty library" flash on the way. The theme stylesheet is
+  // added at startup (launchUtil initTheme) and must be in too, or the first
+  // frame is unstyled. The fallback covers screens that don't signal.
   let isSplashHidden = false;
+  const isThemeLoaded = () =>
+    !!(
+      document.querySelector(
+        'link[href*="theme.css"]'
+      ) as HTMLLinkElement | null
+    )?.sheet;
   const hideSplash = () => {
     if (isSplashHidden) return;
     isSplashHidden = true;
-    requestAnimationFrame(() =>
+    const startedAt = performance.now();
+    const hideWhenStyled = () => {
+      if (!isThemeLoaded() && performance.now() - startedAt < 1500) {
+        requestAnimationFrame(hideWhenStyled);
+        return;
+      }
+      // Two frames: the styled screen is painted before the splash fades
       requestAnimationFrame(() =>
-        SplashScreen.hide({ fadeOutDuration: 220 }).catch(() => {})
-      )
-    );
+        requestAnimationFrame(() =>
+          SplashScreen.hide({ fadeOutDuration: 220 }).catch(() => {})
+        )
+      );
+    };
+    hideWhenStyled();
   };
   window.addEventListener(APP_READY_EVENT, hideSplash, { once: true });
   window.setTimeout(hideSplash, 3500);

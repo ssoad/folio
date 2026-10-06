@@ -169,7 +169,10 @@ class BookList extends React.Component<BookListProps, BookListState> {
       }
     }
 
-    this.setState({ fullBooksData }, signalAppReady);
+    this.setState({ fullBooksData }, () => {
+      // Only once the library's books have loaded, not on an early pass
+      if (this.props.books !== null) signalAppReady();
+    });
   };
   handleFinishReading = async () => {
     if (!this.scrollContainer.current) return;
