@@ -2,6 +2,7 @@ import { ConfigService } from "../../assets/lib/kookit-extra-browser.min";
 import { isNativeApp } from "../platform";
 import i18n from "../../i18n";
 import { decryptSecret, encryptSecret } from "../ai";
+import { FOLIO_SERVER } from "../../constants/server";
 
 // Talks to the Folio server (httpserver/pro.go), which provides every service
 // beyond reading: AI, voices, OCR, metadata, credential encryption,
@@ -46,9 +47,10 @@ export interface SelfHostedResponse<T = any> {
 }
 
 const CONFIG_KEY = "selfHostedServer";
-// Server a build points at (REACT_APP_FOLIO_SERVER), filled in until the
-// user connects to one
-export const DEFAULT_SERVER_URL = process.env.REACT_APP_FOLIO_SERVER || "";
+// The app's server (constants/server.ts): the only one when locked, else
+// filled in until the user connects to one
+export const DEFAULT_SERVER_URL = FOLIO_SERVER.url.replace(/\/+$/, "");
+export const isServerLocked = () => FOLIO_SERVER.locked;
 // Entry in aiModelConfig so the assistant, translation, dictionary and book
 // assistant can use the server's model like any model added in the AI settings
 export const SELF_HOSTED_MODEL_KEY = "selfhosted-server";
@@ -62,7 +64,11 @@ export const getSelfHostedConfig = (): SelfHostedConfig | null => {
   try {
     const raw = ConfigService.getItem(CONFIG_KEY);
     const config = raw ? JSON.parse(raw) : null;
-    return config && config.url ? config : null;
+    if (!config || !config.url) return null;
+    // A connection to another server doesn't count once the app is locked
+    // to its own
+    if (isServerLocked() && config.url !== DEFAULT_SERVER_URL) return null;
+    return config;
   } catch (error) {
     return null;
   }

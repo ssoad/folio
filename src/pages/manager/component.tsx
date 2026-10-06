@@ -30,13 +30,18 @@ import {
   isExternalFileDragEvent,
 } from "../../utils/reader/bookDrag";
 import ProtectionOverlay from "../../components/protection";
+import Onboarding, {
+  shouldShowOnboarding,
+} from "../../components/onboarding";
 class Manager extends React.Component<ManagerProps, ManagerState> {
   timer!: NodeJS.Timeout;
   private isDraggingFromApp = false;
   constructor(props: ManagerProps) {
     super(props);
+    const totalBooks =
+      parseInt(ConfigService.getReaderConfig("totalBooks")) || 0;
     this.state = {
-      totalBooks: parseInt(ConfigService.getReaderConfig("totalBooks")) || 0,
+      totalBooks,
       favoriteBooks: Object.keys(
         ConfigService.getAllListConfig("favoriteBooks")
       ).length,
@@ -46,6 +51,7 @@ class Manager extends React.Component<ManagerProps, ManagerState> {
       isUpdated: false,
       isDrag: false,
       token: "",
+      isOnboarding: shouldShowOnboarding(totalBooks),
     };
   }
 
@@ -202,6 +208,13 @@ class Manager extends React.Component<ManagerProps, ManagerState> {
         }}
       >
         <ProtectionOverlay />
+        {this.state.isOnboarding && (
+          <Onboarding
+            {...({
+              onDone: () => this.setState({ isOnboarding: false }),
+            } as any)}
+          />
+        )}
         <Tooltip id="my-tooltip" style={{ zIndex: 25 }} />
         {this.props.isShowPopupNote && (
           <div

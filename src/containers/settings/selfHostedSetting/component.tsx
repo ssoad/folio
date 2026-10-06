@@ -12,6 +12,7 @@ import {
   fetchAccount,
   fetchPlans,
   DEFAULT_SERVER_URL,
+  isServerLocked,
   fetchServerInfo,
   getSelfHostedConfig,
   googleSignInUrl,
@@ -62,7 +63,9 @@ class SelfHostedSetting extends React.Component<
     const config = getSelfHostedConfig();
     this.state = {
       step: "server",
-      url: config?.url || DEFAULT_SERVER_URL,
+      url: isServerLocked()
+        ? DEFAULT_SERVER_URL
+        : config?.url || DEFAULT_SERVER_URL,
       info: null,
       authMode: "signin",
       name: "",
@@ -90,6 +93,9 @@ class SelfHostedSetting extends React.Component<
     window.addEventListener("message", this.handleLoginMessage);
     if (this.state.config?.account) {
       this.loadAccount();
+    } else if (!this.state.config && isServerLocked()) {
+      // The one server: straight to signing in
+      this.handleContinue();
     }
   }
 
@@ -154,7 +160,7 @@ class SelfHostedSetting extends React.Component<
     if (account.code === 401) {
       // Signed out elsewhere (password reset, admin)
       disconnectSelfHostedServer();
-      this.setState({ config: null, account: null, step: "server" });
+      this.setState({ config: null, account: null, step: this.signedOutStep() });
       this.props.handleFetchAuthed();
       toast(this.props.t("You were signed out; sign in again"));
       return;
@@ -169,6 +175,10 @@ class SelfHostedSetting extends React.Component<
     this.setState({ config: getSelfHostedConfig() });
     this.props.handleFetchPlugins();
   };
+
+  // With the server locked, signing out leads back to signing in
+  signedOutStep = () =>
+    isServerLocked() && this.state.info ? "account" : "server";
 
   handleContinue = () =>
     this.busy(async () => {
@@ -264,7 +274,7 @@ class SelfHostedSetting extends React.Component<
       } else {
         disconnectSelfHostedServer();
       }
-      this.setState({ config: null, account: null, step: "server" });
+      this.setState({ config: null, account: null, step: this.signedOutStep() });
       this.props.handleFetchPlugins();
       this.props.handleFetchAuthed();
       toast.success(this.props.t("Disconnected"));
@@ -381,7 +391,28 @@ class SelfHostedSetting extends React.Component<
 
   // ── Not connected ────────────────────────────────────────────────────────
 
-  renderServerStep = () => (
+  renderServerStep = () =>
+    isServerLocked() ? this.renderConnecting() : this.renderAddressStep();
+
+  // Locked to one server: no address to enter, only reaching it
+  renderConnecting = () => (
+    <div className="self-hosted-card self-hosted-form">
+      <div className="self-hosted-muted">
+        {this.props.t(
+          this.state.isBusy
+            ? "Connecting to the server..."
+            : "Can't reach the server. Check your connection and try again."
+        )}
+      </div>
+      {!this.state.isBusy && (
+        <div className="self-hosted-row">
+          {this.button("Try again", this.handleContinue, true)}
+        </div>
+      )}
+    </div>
+  );
+
+  renderAddressStep = () => (
     <div className="self-hosted-card self-hosted-form">
       <label className="ai-setting-label">
         <Trans>Server address</Trans>
@@ -407,15 +438,17 @@ class SelfHostedSetting extends React.Component<
     const canSignUp = !!info?.registration_open;
     return (
       <div className="self-hosted-card self-hosted-form">
-        <div className="self-hosted-row between">
-          <span className="self-hosted-url">{this.state.url}</span>
-          <span
-            className="self-hosted-link"
-            onClick={() => this.setState({ step: "server", notice: "" })}
-          >
-            <Trans>Change</Trans>
-          </span>
-        </div>
+        {!isServerLocked() && (
+          <div className="self-hosted-row between">
+            <span className="self-hosted-url">{this.state.url}</span>
+            <span
+              className="self-hosted-link"
+              onClick={() => this.setState({ step: "server", notice: "" })}
+            >
+              <Trans>Change</Trans>
+            </span>
+          </div>
+        )}
         {canSignUp && (
           <div className="self-hosted-tabs">
             {(["signin", "signup"] as const).map((mode) => (
@@ -627,8 +660,12 @@ class SelfHostedSetting extends React.Component<
                 {account.user.name || account.user.email}
               </div>
               <div className="self-hosted-muted">
-                {account.user.name ? account.user.email + " · " : ""}
-                {config!.url}
+                {isServerLocked()
+                  ? account.user.name
+                    ? account.user.email
+                    : ""
+                  : (account.user.name ? account.user.email + " · " : "") +
+                    config!.url}
               </div>
             </div>
             <span className="self-hosted-link" onClick={this.handleSignOut}>
@@ -853,9 +890,15 @@ class SelfHostedSetting extends React.Component<
     return (
       <div className="self-hosted-setting">
         <p className="self-hosted-setting-desc">
-          <Trans>
-            Folio's AI, voices, OCR, sync and downloads come from a Folio server. Sign in to your account on it, or create one.
-          </Trans>
+          {isServerLocked() ? (
+            <Trans>
+              Sign in to your Folio account, or create one, for AI, voices, OCR, sync and downloads.
+            </Trans>
+          ) : (
+            <Trans>
+              Folio's AI, voices, OCR, sync and downloads come from a Folio server. Sign in to your account on it, or create one.
+            </Trans>
+          )}
         </p>
         {config
           ? config.account

@@ -1480,5 +1480,22 @@
   "Smaller": "Smaller",
   "Larger": "Larger",
   "Folio Cloud": "Folio Cloud",
-  "Folio Cloud sync": "Folio Cloud sync"
+  "Folio Cloud sync": "Folio Cloud sync",
+  "Welcome to Folio": "Welcome to Folio",
+  "Get started": "Get started",
+  "Next": "Next",
+  "Add your first book": "Add your first book",
+  "Explore first": "Explore first",
+  "Your library, beautifully kept": "Your library, beautifully kept",
+  "EPUB, PDF, comics and more, with covers, progress and shelves, all in one calm place.": "EPUB, PDF, comics and more, with covers, progress and shelves, all in one calm place.",
+  "Read the way you like": "Read the way you like",
+  "Pick your font, size and theme. Highlight, take notes and write in the margins.": "Pick your font, size and theme. Highlight, take notes and write in the margins.",
+  "Listen, ask, translate": "Listen, ask, translate",
+  "Have any book read aloud, ask the AI about a passage, or translate it in a tap.": "Have any book read aloud, ask the AI about a passage, or translate it in a tap.",
+  "Everywhere, and private": "Everywhere, and private",
+  "Your books, notes and progress follow you across devices, encrypted on your own Folio server.": "Your books, notes and progress follow you across devices, encrypted on your own Folio server.",
+  "Connecting to the server...": "Connecting to the server...",
+  "Can't reach the server. Check your connection and try again.": "Can't reach the server. Check your connection and try again.",
+  "Try again": "Try again",
+  "Sign in to your Folio account, or create one, for AI, voices, OCR, sync and downloads.": "Sign in to your Folio account, or create one, for AI, voices, OCR, sync and downloads."
 }

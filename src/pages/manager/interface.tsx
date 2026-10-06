@@ -59,4 +59,6 @@ export interface ManagerState {
   isUpdated: boolean;
   isDrag: boolean;
   token: string;
+  // First launch: the welcome pages over the library
+  isOnboarding: boolean;
 }
