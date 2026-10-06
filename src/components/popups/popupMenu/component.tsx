@@ -61,6 +61,44 @@ class PopupMenu extends React.Component<PopupMenuProps, PopupMenuStates> {
       this.setState({ isExpanded: false });
     }
   }
+  // On touch screens a tap outside the book's frame clears its selection,
+  // which closes this menu (the viewer's selectionchange handler) and leaves
+  // the menu's actions nothing to act on. A touch on the menu remembers the
+  // selection and puts it back after the tap.
+  savedSelection: { doc: Document; range: Range } | null = null;
+  saveSelection = () => {
+    this.savedSelection = null;
+    for (const doc of getIframeDoc(this.props.currentBook.format)) {
+      const selection = doc?.getSelection();
+      if (selection && selection.rangeCount > 0 && !selection.isCollapsed) {
+        this.savedSelection = {
+          doc,
+          range: selection.getRangeAt(0).cloneRange(),
+        };
+        break;
+      }
+    }
+    // The tap may end outside the menu (it can change under the finger),
+    // so the selection comes back on a timer rather than on pointerup only
+    this.restoreSelection();
+  };
+  restoreSelection = () => {
+    const saved = this.savedSelection;
+    if (!saved) return;
+    const restore = () => {
+      if (!this.props.isOpenMenu || !saved.doc.defaultView) return;
+      const selection = saved.doc.getSelection();
+      if (selection && selection.isCollapsed) {
+        selection.removeAllRanges();
+        selection.addRange(saved.range);
+      }
+    };
+    // The selection is cleared after the tap ends, at a time that varies;
+    // the viewer closes the menu 350ms after it empties
+    window.setTimeout(restore, 30);
+    window.setTimeout(restore, 150);
+    window.setTimeout(restore, 300);
+  };
   // Phone pill: a colour highlights straight away and becomes the default
   handlePillColor = async (color: string) => {
     const value = { styleType: this.props.highlight.styleType, color };
@@ -161,7 +199,13 @@ class PopupMenu extends React.Component<PopupMenuProps, PopupMenuStates> {
           type="button"
           className="popup-pill-action"
           aria-label={this.props.t("More")}
-          onPointerDown={press(() => this.setState({ isExpanded: true }))}
+          // Expands when the finger lifts: swapping the pill for the full
+          // menu on press left the rest of the tap to land on the page
+          onPointerDown={stop}
+          onPointerUp={(event) => {
+            stop(event);
+            this.setState({ isExpanded: true });
+          }}
         >
           <PhoneIcon name="moreHorizontal" />
         </button>
@@ -408,7 +452,12 @@ class PopupMenu extends React.Component<PopupMenuProps, PopupMenuStates> {
       : { display: "none" };
     return (
       <div>
-        <div className="popup-menu-container" style={containerStyle}>
+        <div
+          className="popup-menu-container"
+          style={containerStyle}
+          onPointerDownCapture={this.saveSelection}
+          onPointerUpCapture={this.restoreSelection}
+        >
           {isCompact() && !this.state.isExpanded ? (
             this.renderPill()
           ) : (
