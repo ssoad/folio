@@ -33,6 +33,8 @@ import {
 import {
   canUseDrive,
   canUseProFeature,
+  FOLIO_CLOUD_DRIVE,
+  getFolioCloudConfig,
   getSelfHostedAuthorizeUrl,
   isOAuthDrive,
   isSelfHostedConnected,
@@ -120,6 +122,10 @@ class SyncSetting extends React.Component<SettingInfoProps, SettingInfoState> {
       this.showDriveUpgradeHint(targetDrive);
       return;
     }
+    if (targetDrive === FOLIO_CLOUD_DRIVE) {
+      await this.handleAddFolioCloud();
+      return;
+    }
     this.props.handleSettingDrive(targetDrive);
     let settingDrive = targetDrive;
     if (settingDrive === "folder") {
@@ -177,6 +183,27 @@ class SyncSetting extends React.Component<SettingInfoProps, SettingInfoState> {
     ) {
       this.handleJump(getSelfHostedAuthorizeUrl(settingDrive));
     }
+  };
+  // Signed in with the server account: checks the server takes a file, then
+  // adds it, as the default when there's none
+  handleAddFolioCloud = async () => {
+    const config = await getFolioCloudConfig();
+    if (!config || !(await testConnection(FOLIO_CLOUD_DRIVE, config))) {
+      toast.error(this.props.t("Binding failed"), { id: "adding-sync-id" });
+      return;
+    }
+    // Marks the data source as signed in for backup and restore; the login
+    // itself comes from the server connection
+    await TokenService.setToken(FOLIO_CLOUD_DRIVE + "_token", "account");
+    SyncService.removeSyncUtil(FOLIO_CLOUD_DRIVE);
+    removeCloudConfig(FOLIO_CLOUD_DRIVE);
+    ConfigService.setListConfig(FOLIO_CLOUD_DRIVE, "dataSourceList");
+    if (!ConfigService.getItem("defaultSyncOption")) {
+      ConfigService.setItem("defaultSyncOption", FOLIO_CLOUD_DRIVE);
+      this.props.handleFetchDefaultSyncOption();
+    }
+    this.props.handleFetchDataSourceList();
+    toast.success(this.props.t("Binding successful"), { id: "adding-sync-id" });
   };
   handleDeleteDataSource = async (event: any) => {
     let targetDrive = event.target.value;

@@ -1,5 +1,14 @@
 export const driveList = [
   {
+    // The library synced to your Folio server (plans with sync)
+    label: "Folio Cloud",
+    value: "folio",
+    icon: "icon-cloud",
+    isPro: true,
+    support: ["desktop", "browser", "phone"],
+    scoped: true,
+  },
+  {
     label: "WebDAV",
     value: "webdav",
     icon: "icon-webdav",
@@ -183,6 +192,8 @@ export const driveInputConfig: DriveInputConfig = {
       required: true,
     },
   ],
+  // Signed in with the server account, nothing to fill in
+  folio: [],
   docker: [
     {
       label: "Server address",

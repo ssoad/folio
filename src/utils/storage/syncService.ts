@@ -4,6 +4,7 @@ import {
 } from "../../assets/lib/kookit-extra-browser.min";
 import { isTokenExpired } from "../common";
 import { getCloudConfig } from "../file/common";
+import { syncEngineDrive } from "../request/selfHosted";
 
 class SyncService {
   private static syncUtilCache: { [key: string]: SyncUtil } = {};
@@ -16,7 +17,10 @@ class SyncService {
     if (!this.syncUtilCache[service] || (await isTokenExpired(service))) {
       let config = await getCloudConfig(service);
 
-      this.syncUtilCache[service] = new SyncUtil(service, config);
+      this.syncUtilCache[service] = new SyncUtil(
+        syncEngineDrive(service),
+        config
+      );
     }
     return this.syncUtilCache[service];
   }
@@ -31,7 +35,10 @@ class SyncService {
       let config = await getCloudConfig(service);
       config.baseFolder = "";
 
-      this.pickerUtilCache[service] = new SyncUtil(service, config);
+      this.pickerUtilCache[service] = new SyncUtil(
+        syncEngineDrive(service),
+        config
+      );
     }
     return this.pickerUtilCache[service];
   }

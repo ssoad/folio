@@ -91,6 +91,7 @@ const FEATURE_NAMES = {
   vault: "Sync to own storage",
   assets: "Font & dictionary downloads",
   drives: "Cloud drives",
+  sync: "Folio Cloud sync",
 };
 const LIMIT_NAMES = {
   ai_requests: "AI requests / month",

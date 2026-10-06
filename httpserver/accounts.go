@@ -76,6 +76,7 @@ func serverFeatures() map[string]bool {
 		"vault":    true,
 		"assets":   true,
 		"drives":   len(proOAuthDrives()) > 0,
+		"sync":     true,
 	}
 }
 
@@ -139,6 +140,8 @@ func routeRequirements(method, path string) (feature, metric string) {
 		return "drives", ""
 	case strings.HasPrefix(path, "/pro/v1/assets/"):
 		return "assets", ""
+	case isProSyncPath(path):
+		return "sync", ""
 	}
 	return "", ""
 }

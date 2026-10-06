@@ -43,6 +43,8 @@ func initProVault() {
 	}
 	sum := sha256.Sum256([]byte("folio-token-vault:" + secret))
 	proVaultKey = sum[:]
+	// Folio Cloud's encryption (pro_sync.go), kept apart from the vault's
+	proSyncRootKey = hmacSum([]byte(secret), "folio-sync-v1")
 }
 
 func proVaultCipher() (cipher.AEAD, error) {

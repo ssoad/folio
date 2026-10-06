@@ -37,6 +37,7 @@ const FEATURE_LABELS: { feature: SelfHostedFeature | "drives"; label: string }[]
     { feature: "vault", label: "Sync to your own storage" },
     { feature: "assets", label: "Font and dictionary downloads" },
     { feature: "drives", label: "Cloud drives" },
+    { feature: "sync", label: "Folio Cloud sync" },
   ];
 
 const LIMIT_LABELS: Record<string, string> = {

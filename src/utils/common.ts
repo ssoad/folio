@@ -22,6 +22,7 @@ import {
   removeCloudConfig,
 } from "./file/common";
 import SyncService from "./storage/syncService";
+import { syncEngineDrive } from "./request/selfHosted";
 import localforage from "localforage";
 import { driveList } from "../constants/driveList";
 import { languageCNMap, languageENMap } from "../constants/ttsList";
@@ -957,7 +958,7 @@ export const testConnection = async (driveName: string, driveConfig: any) => {
 
     return result;
   } else {
-    let syncUtil = new SyncUtil(driveName, driveConfig);
+    let syncUtil = new SyncUtil(syncEngineDrive(driveName), driveConfig);
     // 上传到云端
     let result = await syncUtil.uploadFile(
       "test.txt",

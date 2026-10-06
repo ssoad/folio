@@ -367,6 +367,7 @@ func adminUsers(w http.ResponseWriter, r *http.Request, admin *User, parts []str
 		}
 		accountsDB.Exec(`DELETE FROM promo_redemptions WHERE user_id = ?`, id)
 		accountsDB.Exec(`DELETE FROM users WHERE id = ?`, id)
+		removeSyncStore(id)
 		adminOK(w, map[string]any{})
 	case len(parts) == 3 && parts[2] == "subscriptions" && r.Method == http.MethodPost:
 		var in struct {

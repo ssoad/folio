@@ -61,6 +61,7 @@ func initPro() {
 	if !proEnabled {
 		return
 	}
+	initProSync()
 	// Token: Docker secret > env
 	proAccessToken = getDockerSecret(getEnv("PRO_ACCESS_TOKEN_FILE", "pro_access_token"))
 	if proAccessToken == "" {
@@ -114,7 +115,12 @@ func proHandler(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 	}
-	r.Body = http.MaxBytesReader(w, r.Body, proMaxBodyBytes)
+	maxBody := int64(proMaxBodyBytes)
+	if isProSyncPath(path) {
+		proSyncBearer(r)
+		maxBody = proSyncMaxBodyBytes
+	}
+	r.Body = http.MaxBytesReader(w, r.Body, maxBody)
 	// Sign-up, sign-in and the plan list need no token
 	if handlePublicAccounts(w, r, path) {
 		return
@@ -136,6 +142,10 @@ func proRoute(w http.ResponseWriter, r *http.Request) {
 	path := strings.TrimSuffix(r.URL.Path, "/")
 	if rest, ok := strings.CutPrefix(path, "/pro/v1/assets/"); ok && r.Method == http.MethodGet && rest != "catalog" {
 		proHandleAssetFile(w, r, rest)
+		return
+	}
+	if isProSyncPath(path) {
+		proHandleSync(w, r)
 		return
 	}
 	switch {

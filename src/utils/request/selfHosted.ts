@@ -9,14 +9,15 @@ import { decryptSecret, encryptSecret } from "../ai";
 // {code, msg, data} envelope.
 
 // vault: encrypts data-source credentials; assets: fonts, dictionaries and
-// backgrounds to download. Older servers lack some of them.
+// backgrounds to download; sync: Folio Cloud. Older servers lack some of them.
 export type SelfHostedFeature =
   | "ai"
   | "tts"
   | "ocr"
   | "metadata"
   | "vault"
-  | "assets";
+  | "assets"
+  | "sync";
 
 export interface SelfHostedConfig {
   url: string;
@@ -98,9 +99,34 @@ export const canSyncCloudFiles = async () => isSelfHostedConnected();
 // Own storage needs the credential encryption; cloud drives need the server
 // to have an OAuth app for them
 export const canUseDrive = (drive: string) =>
-  isOAuthDrive(drive)
-    ? !!getSelfHostedConfig()?.drives?.includes(drive)
-    : hasSelfHostedFeature("vault");
+  drive === FOLIO_CLOUD_DRIVE
+    ? hasSelfHostedFeature("sync")
+    : isOAuthDrive(drive)
+      ? !!getSelfHostedConfig()?.drives?.includes(drive)
+      : hasSelfHostedFeature("vault");
+
+// Folio Cloud: the library synced to the connected server, in the account's
+// own folder (httpserver/pro_sync.go). The server speaks the Docker data
+// source's file API, so the sync engine uses its Docker client, signed in
+// with the account's token.
+export const FOLIO_CLOUD_DRIVE = "folio";
+
+// The sync engine's name for a data source
+export const syncEngineDrive = (drive: string) =>
+  drive === FOLIO_CLOUD_DRIVE ? "docker" : drive;
+
+// Built from the server connection each time, so it follows sign-ins
+export const getFolioCloudConfig = async () => {
+  const config = getSelfHostedConfig();
+  if (!config || !config.features?.sync) {
+    return null;
+  }
+  return {
+    url: config.url + "/pro/v1/sync",
+    username: "folio",
+    password: await decryptSecret(config.token),
+  };
+};
 
 export const normalizeServerUrl = (url: string) => {
   const trimmed = url.trim().replace(/\/+$/, "");
@@ -236,6 +262,11 @@ export const connectSelfHostedServer = async (
 export const disconnectSelfHostedServer = () => {
   ConfigService.removeItem(CONFIG_KEY);
   syncAIModel(null);
+  // Folio Cloud lives on the server
+  ConfigService.deleteListConfig(FOLIO_CLOUD_DRIVE, "dataSourceList");
+  if (ConfigService.getItem("defaultSyncOption") === FOLIO_CLOUD_DRIVE) {
+    ConfigService.removeItem("defaultSyncOption");
+  }
 };
 
 // Re-reads the features on startup, the server's configuration may have changed.

@@ -321,10 +321,17 @@ const getDBConnection = (dbName, storagePath, sqlStatement) => {
   }
   return dbConnection[dbName];
 };
+// Folio Cloud (src/utils/request/selfHosted.ts) speaks the Docker data
+// source's file API on the Folio server
+const syncEngineDrive = (service) =>
+  service === "folio" ? "docker" : service;
 const getSyncUtil = async (config, isUseCache = true) => {
   if (!isUseCache || !syncUtilCache[config.service]) {
     const { SyncUtil } = await import("./src/assets/lib/kookit-extra.min.mjs");
-    syncUtilCache[config.service] = new SyncUtil(config.service, config);
+    syncUtilCache[config.service] = new SyncUtil(
+      syncEngineDrive(config.service),
+      config
+    );
   }
   return syncUtilCache[config.service];
 };
@@ -337,7 +344,10 @@ const removeSyncUtil = (config) => {
 const getPickerUtil = async (config, isUseCache = true) => {
   if (!isUseCache || !pickerUtilCache[config.service]) {
     const { SyncUtil } = await import("./src/assets/lib/kookit-extra.min.mjs");
-    pickerUtilCache[config.service] = new SyncUtil(config.service, config);
+    pickerUtilCache[config.service] = new SyncUtil(
+      syncEngineDrive(config.service),
+      config
+    );
   }
   return pickerUtilCache[config.service];
 };

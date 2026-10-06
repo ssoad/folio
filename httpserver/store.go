@@ -27,7 +27,7 @@ import (
 var accountsDB *sql.DB
 
 // Features a package can include; the server must also provide them
-var allFeatures = []string{"ai", "tts", "ocr", "metadata", "vault", "assets", "drives"}
+var allFeatures = []string{"ai", "tts", "ocr", "metadata", "vault", "assets", "drives", "sync"}
 
 // Monthly usage limits a package can set; missing means unlimited
 var allLimits = []string{"ai_requests", "tts_chars", "ocr_pages"}

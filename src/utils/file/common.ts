@@ -11,6 +11,10 @@ import Note from "../../models/Note";
 import Bookmark from "../../models/Bookmark";
 import DictHistory from "../../models/DictHistory";
 import { decryptToken } from "../request/thirdparty";
+import {
+  FOLIO_CLOUD_DRIVE,
+  getFolioCloudConfig,
+} from "../request/selfHosted";
 import toast from "react-hot-toast";
 import { Buffer } from "buffer";
 import i18n from "../../i18n";
@@ -304,6 +308,9 @@ export const getCloudConfig = (service: string): Promise<any> => {
   return next;
 };
 export const getCloudToken = async (service: string) => {
+  if (service === FOLIO_CLOUD_DRIVE) {
+    return await getFolioCloudConfig();
+  }
   if (configCache[service]) {
     return configCache[service];
   } else {
