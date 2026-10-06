@@ -11,6 +11,7 @@ import {
   fetchAccessRequests,
   fetchAccount,
   fetchPlans,
+  DEFAULT_SERVER_URL,
   fetchServerInfo,
   getSelfHostedConfig,
   googleSignInUrl,
@@ -60,7 +61,7 @@ class SelfHostedSetting extends React.Component<
     const config = getSelfHostedConfig();
     this.state = {
       step: "server",
-      url: config?.url || "",
+      url: config?.url || DEFAULT_SERVER_URL,
       info: null,
       authMode: "signin",
       name: "",

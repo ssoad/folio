@@ -45,6 +45,9 @@ export interface SelfHostedResponse<T = any> {
 }
 
 const CONFIG_KEY = "selfHostedServer";
+// Server a build points at (REACT_APP_FOLIO_SERVER), filled in until the
+// user connects to one
+export const DEFAULT_SERVER_URL = process.env.REACT_APP_FOLIO_SERVER || "";
 // Entry in aiModelConfig so the assistant, translation, dictionary and book
 // assistant can use the server's model like any model added in the AI settings
 export const SELF_HOSTED_MODEL_KEY = "selfhosted-server";
