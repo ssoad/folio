@@ -45,7 +45,7 @@ const slides = [
   {
     Scene: SyncScene,
     title: "Everywhere, and private",
-    body: "Your books, notes and progress follow you across devices, encrypted on your own Folio server.",
+    body: "Your books, notes and progress follow you across devices, encrypted in Folio Cloud.",
   },
 ];
 

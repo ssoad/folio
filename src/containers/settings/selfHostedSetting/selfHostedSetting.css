@@ -245,3 +245,116 @@
   background: color-mix(in srgb, var(--danger) 15%, transparent);
   color: var(--danger);
 }
+
+/* ── Modern look ─────────────────────────────────────────────────────── */
+.self-hosted-setting {
+  margin: 4px 0 24px;
+  gap: 16px;
+}
+.self-hosted-hero {
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 6px 4px 0;
+  animation: modern-rise 0.5s var(--ease-out, ease) both;
+}
+.self-hosted-hero::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  left: -50px;
+  top: -24px;
+  width: 200px;
+  height: 140px;
+  border-radius: 50%;
+  background: radial-gradient(
+    closest-side,
+    color-mix(in srgb, var(--accent) 26%, transparent),
+    color-mix(in srgb, var(--accent) 7%, transparent) 60%,
+    transparent
+  );
+}
+.self-hosted-hero .folio-mark {
+  flex: none;
+  filter: drop-shadow(0 8px 14px color-mix(in srgb, var(--accent) 45%, transparent));
+}
+.self-hosted-setting-desc {
+  font-size: 14px;
+}
+.self-hosted-card {
+  border: 0;
+  border-radius: var(--radius-lg, 18px);
+  padding: 18px;
+  background: var(--surface-raised);
+  box-shadow: 0 0 0 1px var(--border);
+  animation: modern-rise 0.5s 0.06s var(--ease-out, ease) both;
+}
+.self-hosted-form {
+  gap: 12px;
+}
+.self-hosted-form .token-dialog-username-box {
+  height: 48px;
+  padding: 0 14px;
+  font-size: 15px;
+}
+.self-hosted-tabs {
+  align-self: stretch;
+  padding: 4px;
+  border-radius: 14px;
+  background: var(--subtle-bg);
+}
+.self-hosted-tabs span {
+  flex: 1;
+  text-align: center;
+  padding: 8px 12px;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease;
+}
+.self-hosted-tabs span.active {
+  background: var(--surface-raised);
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.1),
+    0 4px 10px -4px rgba(0, 0, 0, 0.18);
+}
+.self-hosted-button {
+  height: 44px;
+  padding: 0 20px;
+  border-radius: 12px;
+  font-size: 14px;
+  border: 0;
+  background: var(--subtle-bg);
+  transition:
+    transform 0.16s ease,
+    filter 0.2s ease;
+}
+.self-hosted-button.primary {
+  box-shadow: var(--shadow-accent);
+}
+/* The main action of a form spans it */
+.self-hosted-form > .self-hosted-row:last-child > .self-hosted-button.primary:only-child,
+.self-hosted-form > .self-hosted-button.primary {
+  flex: 1;
+  width: 100%;
+  height: 50px;
+  font-size: 16px;
+  border-radius: 14px;
+}
+.self-hosted-notice {
+  border-radius: 12px;
+}
+/* Deleting the account: quiet until opened, then clearly destructive */
+.self-hosted-link.danger {
+  color: var(--danger);
+}
+.self-hosted-button.danger {
+  background: var(--danger);
+  color: #fff;
+  box-shadow: 0 10px 24px -10px
+    color-mix(in srgb, var(--danger) 70%, transparent);
+}

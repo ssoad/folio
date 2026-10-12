@@ -1,0 +1,152 @@
+<!doctype html>
+<!-- Google Play feature graphic, 1024 x 500: the wordmark and promise on
+     the left, a fan of book covers on the right, over the brand aurora. -->
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <style>
+      @font-face {
+        font-family: "Newsreader";
+        src: url("../../../node_modules/@fontsource-variable/newsreader/files/newsreader-latin-opsz-normal.woff2") format("woff2");
+        font-weight: 200 800;
+      }
+      @font-face {
+        font-family: "Newsreader";
+        font-style: italic;
+        src: url("../../../node_modules/@fontsource-variable/newsreader/files/newsreader-latin-opsz-italic.woff2") format("woff2");
+        font-weight: 200 800;
+      }
+      @font-face {
+        font-family: "Geist";
+        src: url("../../../node_modules/@fontsource-variable/geist/files/geist-latin-wght-normal.woff2") format("woff2");
+        font-weight: 100 900;
+      }
+      html,
+      body {
+        margin: 0;
+        width: 1024px;
+        height: 500px;
+        overflow: hidden;
+      }
+      .fg {
+        position: relative;
+        width: 1024px;
+        height: 500px;
+        overflow: hidden;
+        background: linear-gradient(140deg, #1b1f45 0%, #141632 55%, #0e0f22 100%);
+        color: #f4f3ef;
+        font-family: "Geist", sans-serif;
+      }
+      .glow {
+        position: absolute;
+        border-radius: 50%;
+        filter: blur(60px);
+      }
+      .g1 {
+        width: 520px;
+        height: 420px;
+        left: -120px;
+        top: -160px;
+        background: radial-gradient(circle, rgba(109, 124, 246, 0.7), transparent 65%);
+      }
+      .g2 {
+        width: 520px;
+        height: 420px;
+        right: -60px;
+        top: 60px;
+        background: radial-gradient(circle, rgba(242, 166, 90, 0.45), transparent 65%);
+      }
+      .g3 {
+        width: 420px;
+        height: 320px;
+        left: 380px;
+        bottom: -180px;
+        background: radial-gradient(circle, rgba(232, 102, 143, 0.4), transparent 65%);
+      }
+      .copy {
+        position: absolute;
+        left: 72px;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 440px;
+      }
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+      }
+      .brand svg {
+        width: 64px;
+        height: 64px;
+        filter: drop-shadow(0 10px 18px rgba(109, 124, 246, 0.45));
+      }
+      .wordmark {
+        font: 600 66px/1 "Newsreader", serif;
+        font-variation-settings: "opsz" 72;
+        letter-spacing: -0.045em;
+      }
+      .wordmark b {
+        color: #8c9bff;
+      }
+      h1 {
+        margin: 28px 0 0;
+        font: 500 44px/1.08 "Newsreader", serif;
+        font-variation-settings: "opsz" 72;
+        letter-spacing: -0.03em;
+      }
+      h1 em {
+        font-style: italic;
+        color: #c7ceff;
+      }
+      p {
+        margin: 16px 0 0;
+        font-size: 19px;
+        line-height: 1.45;
+        color: rgba(244, 243, 239, 0.72);
+      }
+      .books {
+        position: absolute;
+        right: 40px;
+        top: 50%;
+        width: 480px;
+        height: 360px;
+        transform: translateY(-50%);
+      }
+      .books img {
+        position: absolute;
+        width: 170px;
+        height: 255px;
+        border-radius: 10px;
+        box-shadow:
+          0 2px 4px rgba(0, 0, 0, 0.3),
+          0 28px 50px -18px rgba(0, 0, 0, 0.75);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="fg">
+      <span class="glow g1"></span><span class="glow g2"></span><span class="glow g3"></span>
+      <div class="copy">
+        <div class="brand">
+          <svg viewBox="0 0 64 64" aria-hidden="true">
+            <path d="M14 6h26l14 14v34a4 4 0 0 1-4 4H14a4 4 0 0 1-4-4V10a4 4 0 0 1 4-4z" fill="#6d7cf6" />
+            <path d="M40 6v10a4 4 0 0 0 4 4h10z" fill="#c7ceff" />
+            <rect x="19" y="26" width="24" height="5" rx="2.5" fill="#fff" />
+            <rect x="19" y="36" width="16" height="5" rx="2.5" fill="#fff" />
+            <rect x="19" y="26" width="5" height="22" rx="2.5" fill="#fff" />
+          </svg>
+          <span class="wordmark">Folio<b>.</b></span>
+        </div>
+        <h1>Read <em>beautifully</em>,<br />everywhere.</h1>
+        <p>Your books, notes and highlights, with AI and voices when you want them.</p>
+      </div>
+      <div class="books">
+        <img src="../../build/covers/1.png" style="left: 10px; top: 70px; transform: rotate(-12deg)" />
+        <img src="../../build/covers/5.png" style="left: 300px; top: 70px; transform: rotate(12deg)" />
+        <img src="../../build/covers/8.png" style="left: 60px; top: 40px; transform: rotate(-5deg)" />
+        <img src="../../build/covers/4.png" style="left: 250px; top: 40px; transform: rotate(6deg)" />
+        <img src="../../build/covers/0.png" style="left: 155px; top: 22px; transform: rotate(0deg); width: 180px; height: 270px" />
+      </div>
+    </div>
+  </body>
+</html>

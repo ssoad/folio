@@ -289,6 +289,20 @@ func setUserPassword(id int64, password string) error {
 	return err
 }
 
+// Deletes an account and everything kept for it: its devices, plans,
+// requests and usage go with the user row; promo redemptions and the
+// Folio Cloud store are removed here
+func deleteUserAccount(id int64) error {
+	if _, err := accountsDB.Exec(`DELETE FROM promo_redemptions WHERE user_id = ?`, id); err != nil {
+		return err
+	}
+	if _, err := accountsDB.Exec(`DELETE FROM users WHERE id = ?`, id); err != nil {
+		return err
+	}
+	removeSyncStore(id)
+	return nil
+}
+
 func countAdmins() int {
 	var n int
 	accountsDB.QueryRow(`SELECT COUNT(*) FROM users WHERE role = 'admin' AND status = 'active'`).Scan(&n)

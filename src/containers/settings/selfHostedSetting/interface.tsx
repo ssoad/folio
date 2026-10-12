@@ -41,4 +41,7 @@ export interface SelfHostedSettingState {
   requestMessage: string;
   isSpecialOpen: boolean;
   specialMessage: string;
+  // Deleting the account: open, and the password or email that confirms it
+  isDeleteOpen: boolean;
+  deleteConfirm: string;
 }

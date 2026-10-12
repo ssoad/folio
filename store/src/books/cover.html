@@ -1,0 +1,205 @@
+<!doctype html>
+<!-- Covers for the sample library in the store screenshots: one per book,
+     picked by the URL hash (#0..#8), rendered at 600x900 by build.sh. -->
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <style>
+      @font-face {
+        font-family: "Newsreader";
+        src: url("../../../node_modules/@fontsource-variable/newsreader/files/newsreader-latin-opsz-normal.woff2") format("woff2");
+        font-weight: 200 800;
+      }
+      @font-face {
+        font-family: "Newsreader";
+        font-style: italic;
+        src: url("../../../node_modules/@fontsource-variable/newsreader/files/newsreader-latin-opsz-italic.woff2") format("woff2");
+        font-weight: 200 800;
+      }
+      @font-face {
+        font-family: "Geist";
+        src: url("../../../node_modules/@fontsource-variable/geist/files/geist-latin-wght-normal.woff2") format("woff2");
+        font-weight: 100 900;
+      }
+      html,
+      body {
+        margin: 0;
+        width: 600px;
+        height: 900px;
+        overflow: hidden;
+      }
+      .cover {
+        position: relative;
+        width: 600px;
+        height: 900px;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        padding: 64px 56px 56px;
+        box-sizing: border-box;
+        background: var(--bg);
+        color: var(--ink);
+      }
+      .grain {
+        position: absolute;
+        inset: 0;
+        background:
+          radial-gradient(circle at 20% 10%, rgba(255, 255, 255, 0.18), transparent 50%),
+          radial-gradient(circle at 90% 100%, rgba(0, 0, 0, 0.25), transparent 55%);
+      }
+      .art {
+        position: absolute;
+        inset: 0;
+      }
+      .top,
+      .bottom {
+        position: relative;
+      }
+      .series {
+        font: 600 15px/1 "Geist", sans-serif;
+        letter-spacing: 0.32em;
+        text-transform: uppercase;
+        opacity: 0.8;
+      }
+      .rule {
+        width: 56px;
+        height: 3px;
+        margin: 22px 0 0;
+        background: var(--accent);
+        border-radius: 2px;
+      }
+      h1 {
+        margin: 0;
+        font: 500 76px/0.98 "Newsreader", Georgia, serif;
+        font-variation-settings: "opsz" 72;
+        letter-spacing: -0.035em;
+      }
+      h1 em {
+        font-style: italic;
+        font-weight: 400;
+      }
+      .author {
+        margin-top: 22px;
+        font: 600 19px/1 "Geist", sans-serif;
+        letter-spacing: 0.2em;
+        text-transform: uppercase;
+        opacity: 0.85;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="cover" id="cover">
+      <div class="grain"></div>
+      <svg class="art" id="art" viewBox="0 0 600 900"></svg>
+      <div class="top">
+        <div class="series">Folio Classics</div>
+        <div class="rule"></div>
+      </div>
+      <div class="bottom">
+        <h1 id="title"></h1>
+        <div class="author" id="author"></div>
+      </div>
+    </div>
+    <script>
+      // title (HTML), author, colours, and an SVG motif drawn behind the text
+      const books = [
+        {
+          title: "Pride <em>and</em> Prejudice",
+          author: "Jane Austen",
+          bg: "linear-gradient(160deg, #f7d9d2, #e8a6a0)",
+          ink: "#3a1f24",
+          accent: "#b8475a",
+          art: `<g fill="none" stroke="#b8475a" stroke-opacity=".35" stroke-width="3">
+                  ${[0, 1, 2, 3, 4, 5, 6, 7].map((i) => `<ellipse cx="430" cy="300" rx="120" ry="40" transform="rotate(${i * 22.5} 430 300)"/>`).join("")}
+                </g><circle cx="430" cy="300" r="22" fill="#b8475a" fill-opacity=".55"/>`,
+        },
+        {
+          title: "Moby&#8209;Dick",
+          author: "Herman Melville",
+          bg: "linear-gradient(170deg, #1d3a5f, #0b1a2e)",
+          ink: "#e9f1f8",
+          accent: "#6fb3d9",
+          art: `${[0, 1, 2, 3, 4].map((i) => `<path d="M-20 ${560 + i * 34} q 80 -30 160 0 t 160 0 t 160 0 t 160 0" fill="none" stroke="#6fb3d9" stroke-opacity="${0.5 - i * 0.08}" stroke-width="4"/>`).join("")}
+                <path d="M380 470 c -10 -70 50 -120 110 -110 c -40 20 -60 50 -55 90 c 40 -40 95 -45 125 -20 c -60 0 -110 25 -150 70 z" fill="#6fb3d9" fill-opacity=".8"/>`,
+        },
+        {
+          title: "Alice<em>'s</em> Adventures in Wonderland",
+          author: "Lewis Carroll",
+          bg: "linear-gradient(160deg, #bfe7df, #6cc1b2)",
+          ink: "#12302c",
+          accent: "#e0565b",
+          art: `<g transform="rotate(-12 400 300)"><rect x="330" y="150" width="150" height="210" rx="16" fill="#fff" fill-opacity=".85"/>
+                <path d="M405 215 c -20 -30 -60 -10 -40 20 l 40 40 l 40 -40 c 20 -30 -20 -50 -40 -20 z" fill="#e0565b"/></g>
+                <g transform="rotate(10 470 330)"><rect x="420" y="220" width="130" height="185" rx="14" fill="#fff" fill-opacity=".6"/></g>`,
+        },
+        {
+          title: "Frankenstein",
+          author: "Mary Shelley",
+          bg: "linear-gradient(165deg, #2c3d33, #111a15)",
+          ink: "#e6efe8",
+          accent: "#b6e36b",
+          art: `<path d="M430 120 l -70 170 h 60 l -50 160 l 130 -210 h -65 l 55 -120 z" fill="#b6e36b" fill-opacity=".85"/>
+                <circle cx="420" cy="300" r="190" fill="none" stroke="#b6e36b" stroke-opacity=".15" stroke-width="40"/>`,
+        },
+        {
+          title: "The Adventures <em>of</em> Sherlock Holmes",
+          author: "Arthur Conan Doyle",
+          bg: "linear-gradient(165deg, #7d2232, #3d0d17)",
+          ink: "#f6e9dc",
+          accent: "#e8b86b",
+          art: `<circle cx="400" cy="270" r="95" fill="none" stroke="#e8b86b" stroke-width="22"/>
+                <path d="M468 340 l 90 90" stroke="#e8b86b" stroke-width="30" stroke-linecap="round"/>
+                <circle cx="400" cy="270" r="72" fill="#e8b86b" fill-opacity=".15"/>`,
+        },
+        {
+          title: "The Time Machine",
+          author: "H. G. Wells",
+          bg: "linear-gradient(160deg, #ffd58a, #f0963c)",
+          ink: "#3a1d07",
+          accent: "#7a3410",
+          art: `<circle cx="420" cy="290" r="150" fill="none" stroke="#7a3410" stroke-opacity=".5" stroke-width="6"/>
+                ${Array.from({ length: 12 }, (_, i) => `<line x1="420" y1="160" x2="420" y2="182" stroke="#7a3410" stroke-opacity=".6" stroke-width="6" stroke-linecap="round" transform="rotate(${i * 30} 420 290)"/>`).join("")}
+                <line x1="420" y1="290" x2="420" y2="200" stroke="#7a3410" stroke-width="8" stroke-linecap="round"/>
+                <line x1="420" y1="290" x2="485" y2="320" stroke="#7a3410" stroke-width="8" stroke-linecap="round"/>
+                <circle cx="420" cy="290" r="10" fill="#7a3410"/>`,
+        },
+        {
+          title: "Little Women",
+          author: "Louisa May Alcott",
+          bg: "linear-gradient(160deg, #e2dcf7, #a99bdc)",
+          ink: "#241b45",
+          accent: "#5a49a6",
+          art: `${[[360, 200], [470, 200], [360, 320], [470, 320]].map(([x, y], i) => `<path d="M${x} ${y - 46} C ${x + 6} ${y - 6} ${x + 6} ${y - 6} ${x + 46} ${y} C ${x + 6} ${y + 6} ${x + 6} ${y + 6} ${x} ${y + 46} C ${x - 6} ${y + 6} ${x - 6} ${y + 6} ${x - 46} ${y} C ${x - 6} ${y - 6} ${x - 6} ${y - 6} ${x} ${y - 46} Z" fill="#5a49a6" fill-opacity="${0.75 - i * 0.12}"/>`).join("")}`,
+        },
+        {
+          title: "Dracula",
+          author: "Bram Stoker",
+          bg: "linear-gradient(170deg, #1b1416, #050304)",
+          ink: "#f3e6e6",
+          accent: "#d33a3f",
+          art: `<circle cx="430" cy="250" r="130" fill="#d33a3f" fill-opacity=".85"/>
+                <path d="M300 300 q 40 -60 70 -20 q 20 -40 60 -10 q 40 -30 60 10 q 30 -40 70 20 q -60 -10 -90 30 q -40 -20 -80 0 q -30 -40 -90 -30 z" fill="#050304"/>`,
+        },
+        {
+          title: "The Great Gatsby",
+          author: "F. Scott Fitzgerald",
+          bg: "linear-gradient(165deg, #0f2a44, #050d17)",
+          ink: "#f4e7c3",
+          accent: "#e9c46a",
+          art: `${Array.from({ length: 9 }, (_, i) => `<line x1="430" y1="300" x2="${430 + Math.cos((i / 8) * Math.PI - Math.PI) * 220}" y2="${300 + Math.sin((i / 8) * Math.PI - Math.PI) * 220}" stroke="#e9c46a" stroke-opacity=".5" stroke-width="3"/>`).join("")}
+                <circle cx="430" cy="300" r="70" fill="#e9c46a" fill-opacity=".9"/>
+                <circle cx="430" cy="300" r="100" fill="none" stroke="#e9c46a" stroke-opacity=".5" stroke-width="3"/>`,
+        },
+      ];
+      const book = books[Number(location.hash.slice(1)) || 0];
+      const cover = document.getElementById("cover");
+      cover.style.setProperty("--bg", book.bg);
+      cover.style.setProperty("--ink", book.ink);
+      cover.style.setProperty("--accent", book.accent);
+      document.getElementById("title").innerHTML = book.title;
+      document.getElementById("author").textContent = book.author;
+      document.getElementById("art").innerHTML = book.art;
+    </script>
+  </body>
+</html>

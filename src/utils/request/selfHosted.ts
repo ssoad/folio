@@ -641,6 +641,23 @@ export const signOutDevice = (id: number) =>
   });
 
 // Ends this device's session on the server, then forgets the server here
+// Deletes the account and all it keeps on the server (Folio Cloud included);
+// the password confirms, or the email for accounts that only use Google.
+// Books on this device stay.
+export const deleteAccount = async (confirm: {
+  password?: string;
+  email?: string;
+}) => {
+  const response = await call("/pro/v1/account/delete", {
+    method: "POST",
+    body: confirm,
+  });
+  if (response.code !== 200) {
+    throw new Error(response.msg || i18n.t("Connection failed"));
+  }
+  disconnectSelfHostedServer();
+};
+
 export const signOutAccount = async () => {
   await call("/pro/v1/account/logout", { method: "POST" });
   disconnectSelfHostedServer();

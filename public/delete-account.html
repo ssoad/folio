@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Delete your account · Folio</title>
+    <meta name="description" content="Delete your Folio account and the data kept for it." />
+    <link rel="stylesheet" href="/legal.css" />
+    <link rel="icon" href="/favicon.png" />
+  </head>
+  <body>
+    <main>
+      <a class="brand" href="/">
+        <svg viewBox="0 0 64 64" aria-hidden="true">
+          <path d="M14 6h26l14 14v34a4 4 0 0 1-4 4H14a4 4 0 0 1-4-4V10a4 4 0 0 1 4-4z" fill="#4458c7" />
+          <path d="M40 6v10a4 4 0 0 0 4 4h10z" fill="#a6aee6" />
+          <rect x="19" y="26" width="24" height="5" rx="2.5" fill="#fff" />
+          <rect x="19" y="36" width="16" height="5" rx="2.5" fill="#fff" />
+          <rect x="19" y="26" width="5" height="22" rx="2.5" fill="#fff" />
+        </svg>
+        <span>Folio<b>.</b></span>
+      </a>
+
+      <h1>Delete your account</h1>
+      <p class="updated">Folio by Sohanuzzaman Soad</p>
+
+      <p>
+        Deleting your Folio account removes, immediately and permanently:
+      </p>
+      <ul>
+        <li>your account (email, name and password);</li>
+        <li>your plan and its history, promo codes and requests;</li>
+        <li>your signed-in devices and monthly usage counts;</li>
+        <li>everything synced to Folio Cloud: books, covers, progress, highlights, notes and settings.</li>
+      </ul>
+      <p class="muted">
+        Books and notes stored on your device stay there; uninstall the app to
+        remove them. Nothing is kept after deletion.
+      </p>
+
+      <div class="card">
+        <h2>In the app</h2>
+        <p>
+          Open <strong>Settings → Server</strong>, scroll to
+          <strong>Delete account</strong>, tap <strong>Delete</strong> and
+          confirm with your password.
+        </p>
+      </div>
+
+      <form class="card" id="delete-form" autocomplete="on">
+        <h2>Here, on the web</h2>
+        <p class="muted">Sign in to confirm it's your account.</p>
+        <label for="email">Email</label>
+        <input id="email" name="email" type="email" autocomplete="username" required />
+        <label for="password">Password</label>
+        <input id="password" name="password" type="password" autocomplete="current-password" required />
+        <button type="submit" id="submit">Delete my account</button>
+        <div class="message" id="message" role="status"></div>
+      </form>
+
+      <p class="muted">
+        Signed up with Google only, or can't sign in? Email
+        <a href="mailto:mdsoad@gmail.com?subject=Delete%20my%20Folio%20account">mdsoad@gmail.com</a>
+        from your account's address and we'll delete it within 7 days.
+      </p>
+
+      <footer>
+        <a href="/privacy">Privacy policy</a> · <a href="/">Open Folio</a>
+      </footer>
+    </main>
+    <script>
+      // Signs in (the same endpoint the app uses), then deletes the account
+      // with that session; the password confirms both steps.
+      const form = document.getElementById("delete-form");
+      const message = document.getElementById("message");
+      const submit = document.getElementById("submit");
+      const say = (text, kind) => {
+        message.textContent = text;
+        message.className = "message " + (kind || "");
+      };
+      const post = async (path, body, token) => {
+        const res = await fetch(path, {
+          method: "POST",
+          headers: Object.assign(
+            { "Content-Type": "application/json" },
+            token ? { Authorization: "Bearer " + token } : {}
+          ),
+          body: JSON.stringify(body),
+        });
+        return res.json().catch(() => ({ code: res.status, msg: "Request failed" }));
+      };
+      form.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        const email = form.email.value.trim();
+        const password = form.password.value;
+        if (!email || !password) return;
+        if (!confirm("Delete your Folio account and everything synced to Folio Cloud? This can't be undone.")) return;
+        submit.disabled = true;
+        say("Deleting…");
+        try {
+          const login = await post("/pro/v1/auth/login", { email, password, device: "Account deletion page" });
+          if (login.code !== 200 || !login.data || !login.data.token) {
+            throw new Error(login.msg || "Your email or password is wrong");
+          }
+          const done = await post("/pro/v1/account/delete", { password }, login.data.token);
+          if (done.code !== 200) throw new Error(done.msg || "Couldn't delete the account");
+          form.reset();
+          say("Your account and its data have been deleted.", "done");
+        } catch (error) {
+          say(error.message, "error");
+          submit.disabled = false;
+        }
+      });
+    </script>
+  </body>
+</html>

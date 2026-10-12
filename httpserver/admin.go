@@ -365,9 +365,10 @@ func adminUsers(w http.ResponseWriter, r *http.Request, admin *User, parts []str
 			adminFail(w, http.StatusBadRequest, "You can't delete your own account")
 			return
 		}
-		accountsDB.Exec(`DELETE FROM promo_redemptions WHERE user_id = ?`, id)
-		accountsDB.Exec(`DELETE FROM users WHERE id = ?`, id)
-		removeSyncStore(id)
+		if err := deleteUserAccount(id); err != nil {
+			adminFail(w, http.StatusInternalServerError, err.Error())
+			return
+		}
 		adminOK(w, map[string]any{})
 	case len(parts) == 3 && parts[2] == "subscriptions" && r.Method == http.MethodPost:
 		var in struct {

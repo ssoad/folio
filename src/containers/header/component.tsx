@@ -80,6 +80,11 @@ class Header extends React.Component<HeaderProps, HeaderState> {
     this.props.handleFetchAuthed();
     this.props.handleFetchDefaultSyncOption();
     this.props.handleFetchDataSourceList();
+    // The dismissed "Connect a server" banner stays dismissed, on every
+    // platform (it was only read back on desktop)
+    if (ConfigService.getReaderConfig("isHidePro") === "yes") {
+      this.setState({ isHidePro: true });
+    }
     if (isElectron) {
       const fs = window.electronAPI.fs;
       const path = window.electronAPI.path;
@@ -98,9 +103,7 @@ class Header extends React.Component<HeaderProps, HeaderState> {
           ConfigService.getReaderConfig("storageLocation")
         );
       }
-      if (ConfigService.getReaderConfig("isHidePro") === "yes") {
-        this.setState({ isHidePro: true });
-      }
+
 
       //Check for data update
       //upgrade data from old version

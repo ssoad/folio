@@ -1,0 +1,8 @@
+Welcome to Folio, the first release.
+
+• A calm library for EPUB, PDF, MOBI, AZW3, comics, TXT, FB2, DOCX and more
+• Light, sepia and dark themes, scroll or page-turn reading
+• Highlights in colour, notes, bookmarks and look-ups
+• Read aloud with your phone's voices, or natural AI voices
+• AI helper to explain, summarise and translate passages
+• Folio Cloud: your library synced across devices, encrypted

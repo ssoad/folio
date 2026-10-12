@@ -793,6 +793,8 @@ func handleAccount(w http.ResponseWriter, r *http.Request, p *principal, path st
 		decodeJSON(r, &in)
 		accountsDB.Exec(`UPDATE tokens SET revoked = 1 WHERE id = ? AND user_id = ?`, in.ID, p.User.ID)
 		proOK(w, listDevices(p.User.ID))
+	case r.Method == http.MethodPost && path == "/pro/v1/account/delete":
+		handleDeleteAccount(w, r, p)
 	case r.Method == http.MethodPost && path == "/pro/v1/account/password":
 		var in struct{ Current, New string }
 		decodeJSON(r, &in)
@@ -810,6 +812,45 @@ func handleAccount(w http.ResponseWriter, r *http.Request, p *principal, path st
 		proFail(w, http.StatusNotFound, 404, "Not Found")
 	}
 	return true
+}
+
+// The account deletes itself (Google Play asks for this in the app and on
+// the web). The password confirms it; accounts that only sign in with Google
+// type their email instead.
+func handleDeleteAccount(w http.ResponseWriter, r *http.Request, p *principal) {
+	var in struct {
+		Password string `json:"password"`
+		Email    string `json:"email"`
+	}
+	decodeJSON(r, &in)
+	key := "delete:" + strconv.FormatInt(p.User.ID, 10)
+	if loginLimiter.blocked(key) {
+		proFail(w, http.StatusTooManyRequests, 429, "Too many attempts, try again in a few minutes")
+		return
+	}
+	confirmed := p.User.HasPassword && checkPassword(p.User.passwordHash, in.Password)
+	if !p.User.HasPassword {
+		confirmed = normalizeEmail(in.Email) == p.User.Email
+	}
+	if !confirmed {
+		loginLimiter.fail(key)
+		if p.User.HasPassword {
+			proFail(w, http.StatusBadRequest, 400, "Your password is wrong")
+		} else {
+			proFail(w, http.StatusBadRequest, 400, "Type your account's email to confirm")
+		}
+		return
+	}
+	if p.User.Role == "admin" && countAdmins() <= 1 {
+		proFail(w, http.StatusBadRequest, 400, "You're the only admin. Make someone else an admin first")
+		return
+	}
+	if err := deleteUserAccount(p.User.ID); err != nil {
+		log.Printf("[accounts] Deleting account %d: %v", p.User.ID, err)
+		proFail(w, http.StatusInternalServerError, 500, "Couldn't delete the account, try again")
+		return
+	}
+	proOK(w, map[string]any{})
 }
 
 func accountSummary(p *principal) map[string]any {

@@ -988,7 +988,8 @@ class Reader extends React.Component<ReaderProps, ReaderState> {
                         : 0,
                 }
               : {
-                  transform: "translateY(110px)",
+                  // Its panel is taller than the 60px box: clear all of it
+                  transform: "translateY(200px)",
                   marginLeft:
                     this.props.isNavLocked && !this.props.isSettingLocked
                       ? 150

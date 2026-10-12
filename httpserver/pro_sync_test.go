@@ -226,3 +226,36 @@ func TestDeletingAnAccountDeletesItsSyncData(t *testing.T) {
 		t.Fatal("the account's store is still there")
 	}
 }
+
+func TestAccountDeletesItself(t *testing.T) {
+	srv := setupSync(t)
+	alice, id := syncAccount(t, srv, "alice@example.com")
+	uploadSync(t, srv, alice, "config", "books.db", "library")
+	if _, env, _ := call(t, srv, http.MethodPost, "/pro/v1/account/delete", `{"password":"wrong password"}`, alice); env.Code != 400 {
+		t.Fatalf("deleted with a wrong password: %d", env.Code)
+	}
+	if _, env, raw := call(t, srv, http.MethodPost, "/pro/v1/account/delete", `{"password":"correct horse"}`, alice); env.Code != 200 {
+		t.Fatalf("delete: %s", raw)
+	}
+	if _, err := getUserByEmail("alice@example.com"); err == nil {
+		t.Fatal("the account is still there")
+	}
+	if status, _, _ := call(t, srv, http.MethodGet, "/pro/v1/account", "", alice); status != http.StatusUnauthorized {
+		t.Fatalf("the deleted account's token still works: HTTP %d", status)
+	}
+	if _, err := os.Stat(syncStorePath(strconv.FormatInt(id, 10))); !os.IsNotExist(err) {
+		t.Fatal("the account's Folio Cloud data is still there")
+	}
+	// The email is free again
+	register(t, srv, "alice@example.com")
+}
+
+func TestOnlyAdminCantDeleteItself(t *testing.T) {
+	srv := setupSync(t)
+	admin := register(t, srv, "admin@example.com")
+	u, _ := getUserByEmail("admin@example.com")
+	accountsDB.Exec(`UPDATE users SET role = 'admin' WHERE id = ?`, u.ID)
+	if _, env, _ := call(t, srv, http.MethodPost, "/pro/v1/account/delete", `{"password":"correct horse"}`, admin); env.Code != 400 {
+		t.Fatalf("the only admin deleted itself: %d", env.Code)
+	}
+}

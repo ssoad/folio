@@ -7,6 +7,7 @@ import {
   AccessRequest,
   connectSelfHostedServer,
   createAccessRequest,
+  deleteAccount,
   disconnectSelfHostedServer,
   fetchAccessRequests,
   fetchAccount,
@@ -28,6 +29,8 @@ import {
   signUp,
 } from "../../../utils/request/selfHosted";
 import { SelfHostedSettingProps, SelfHostedSettingState } from "./interface";
+import { FolioMark } from "../../../components/folioLogo";
+import { isNativeApp } from "../../../utils/platform";
 
 const FEATURE_LABELS: { feature: SelfHostedFeature | "drives"; label: string }[] =
   [
@@ -85,6 +88,8 @@ class SelfHostedSetting extends React.Component<
       paymentReference: "",
       requestMessage: "",
       isSpecialOpen: false,
+      isDeleteOpen: false,
+      deleteConfirm: "",
       specialMessage: "",
     };
   }
@@ -265,6 +270,29 @@ class SelfHostedSetting extends React.Component<
         this.props.handleFetchPlugins();
       }
       toast.success(this.props.t("Refresh successful"));
+    });
+
+  handleDeleteAccount = () =>
+    this.busy(async () => {
+      const user = this.state.account?.user;
+      if (!user || !this.state.deleteConfirm.trim()) {
+        throw new Error(this.props.t("Please fill in all required fields"));
+      }
+      await deleteAccount(
+        user.has_password
+          ? { password: this.state.deleteConfirm }
+          : { email: this.state.deleteConfirm.trim() }
+      );
+      this.setState({
+        config: null,
+        account: null,
+        isDeleteOpen: false,
+        deleteConfirm: "",
+        step: this.signedOutStep(),
+      });
+      this.props.handleFetchPlugins();
+      this.props.handleFetchAuthed();
+      toast.success(this.props.t("Your account was deleted"));
     });
 
   handleSignOut = () =>
@@ -731,7 +759,11 @@ class SelfHostedSetting extends React.Component<
           </div>
         </div>
 
-        {plans && plans.packages.length > 0 && (
+        {/* Buying a plan (prices, payment instructions, requests) stays off
+            the Android app: Google Play only allows its own billing for
+            features bought in an app. Plans are given on the web or by the
+            admin, and the app shows the current one above. */}
+        {!isNativeApp() && plans && plans.packages.length > 0 && (
           <div className="self-hosted-card">
             <div className="self-hosted-card-head">
               <span className="self-hosted-card-title">
@@ -801,6 +833,7 @@ class SelfHostedSetting extends React.Component<
           </div>
         )}
 
+        {!isNativeApp() && (
         <div className="self-hosted-card self-hosted-form">
           <div className="self-hosted-card-head" style={{ marginBottom: 0 }}>
             <span className="self-hosted-card-title">
@@ -833,8 +866,9 @@ class SelfHostedSetting extends React.Component<
             </>
           )}
         </div>
+        )}
 
-        {requests.length > 0 && (
+        {!isNativeApp() && requests.length > 0 && (
           <div className="self-hosted-card">
             <div className="self-hosted-card-head">
               <span className="self-hosted-card-title">
@@ -881,6 +915,59 @@ class SelfHostedSetting extends React.Component<
             ))}
           </div>
         )}
+
+        <div className="self-hosted-card self-hosted-form self-hosted-danger">
+          <div className="self-hosted-card-head" style={{ marginBottom: 0 }}>
+            <span className="self-hosted-card-title">
+              <Trans>Delete account</Trans>
+            </span>
+            {!this.state.isDeleteOpen && (
+              <span
+                className="self-hosted-link danger"
+                onClick={() => this.setState({ isDeleteOpen: true })}
+              >
+                <Trans>Delete</Trans>
+              </span>
+            )}
+          </div>
+          <div className="self-hosted-muted">
+            <Trans>
+              Removes your account, plan and everything synced to Folio Cloud. Books on this device stay. This can't be undone.
+            </Trans>
+          </div>
+          {this.state.isDeleteOpen && (
+            <>
+              {this.input(
+                "self-hosted-delete-box",
+                this.state.deleteConfirm,
+                (deleteConfirm) => this.setState({ deleteConfirm }),
+                account.user.has_password
+                  ? {
+                      type: "password",
+                      placeholder: this.props.t("Your password"),
+                      autoComplete: "current-password",
+                      onEnter: this.handleDeleteAccount,
+                    }
+                  : {
+                      placeholder: this.props.t("Type your email to confirm"),
+                      onEnter: this.handleDeleteAccount,
+                    }
+              )}
+              <div className="self-hosted-row">
+                <span
+                  className="self-hosted-button danger"
+                  role="button"
+                  onClick={this.handleDeleteAccount}
+                >
+                  <Trans>Delete my account</Trans>
+                </span>
+                {this.button("Cancel", () =>
+                  this.setState({ isDeleteOpen: false, deleteConfirm: "" })
+                )}
+              </div>
+            </>
+          )}
+        </div>
       </>
     );
   };
@@ -889,17 +976,25 @@ class SelfHostedSetting extends React.Component<
     const { config, step } = this.state;
     return (
       <div className="self-hosted-setting">
-        <p className="self-hosted-setting-desc">
-          {isServerLocked() ? (
-            <Trans>
-              Sign in to your Folio account, or create one, for AI, voices, OCR, sync and downloads.
-            </Trans>
-          ) : (
-            <Trans>
-              Folio's AI, voices, OCR, sync and downloads come from a Folio server. Sign in to your account on it, or create one.
-            </Trans>
-          )}
-        </p>
+        {!config && (
+          <div className="self-hosted-hero" aria-hidden="true">
+            <FolioMark size={48} />
+          </div>
+        )}
+        {/* Signed in, the account card says it all */}
+        {!config && (
+          <p className="self-hosted-setting-desc">
+            {isServerLocked() ? (
+              <Trans>
+                Sign in to your Folio account, or create one, for AI, voices, OCR, sync and downloads.
+              </Trans>
+            ) : (
+              <Trans>
+                Folio's AI, voices, OCR, sync and downloads come from a Folio server. Sign in to your account on it, or create one.
+              </Trans>
+            )}
+          </p>
+        )}
         {config
           ? config.account
             ? this.renderAccount()
