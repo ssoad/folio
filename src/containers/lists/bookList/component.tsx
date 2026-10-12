@@ -10,6 +10,7 @@ import { Redirect, withRouter } from "react-router-dom";
 import ViewMode from "../../../components/viewMode";
 import SelectBook from "../../../components/selectBook";
 import ContinueReading from "../../../components/continueReading";
+import EmptyArt from "../../../components/emptyArt";
 import { isCompact, signalAppReady } from "../../../utils/platform";
 import { Trans } from "react-i18next";
 import Book from "../../../models/Book";
@@ -34,6 +35,9 @@ function getBookCountPerPage() {
 
 class BookList extends React.Component<BookListProps, BookListState> {
   private scrollContainer: React.RefObject<HTMLUListElement>;
+  // Phones scroll the whole page (title, filters, books) rather than the
+  // list alone, so the filters can stick under the app bar
+  private scrollParent = React.createRef<HTMLDivElement>();
   private visibilityChangeHandler: ((event: Event) => void) | null = null;
   private resizeHandler: (() => void) | null = null;
   private readingFinishedHandler: ((config: any) => void) | null = null;
@@ -141,8 +145,9 @@ class BookList extends React.Component<BookListProps, BookListState> {
       });
       this.props.handleLoadMore(false);
       // 滚动到顶部
-      if (this.scrollContainer.current) {
-        this.scrollContainer.current.scrollTop = 0;
+      const scroller = this.getScroller();
+      if (scroller) {
+        scroller.scrollTop = 0;
       }
       // 重新加载完整的书籍数据
       this.loadFullBooksData();
@@ -175,33 +180,34 @@ class BookList extends React.Component<BookListProps, BookListState> {
     });
   };
   handleFinishReading = async () => {
-    if (!this.scrollContainer.current) return;
-    if (
-      this.scrollContainer.current &&
-      this.scrollContainer.current.scrollTop > 100
-    ) {
+    const scroller = this.getScroller();
+    if (!scroller) return;
+    if (scroller.scrollTop > 100) {
       //ignore if the scroll is not at top
     } else {
       this.props.handleFetchBooks();
     }
   };
 
+  getScroller = (): HTMLElement | null =>
+    isCompact() ? this.scrollParent.current : this.scrollContainer.current;
+
   setupScrollListener = () => {
-    const scrollContainer = this.scrollContainer.current;
+    const scrollContainer = this.getScroller();
     if (scrollContainer) {
       scrollContainer.addEventListener("scroll", this.handleScroll);
     }
   };
 
   cleanupScrollListener = () => {
-    const scrollContainer = this.scrollContainer.current;
+    const scrollContainer = this.getScroller();
     if (scrollContainer) {
       scrollContainer.removeEventListener("scroll", this.handleScroll);
     }
   };
 
   handleScroll = () => {
-    const scrollContainer = this.scrollContainer.current;
+    const scrollContainer = this.getScroller();
     if (!scrollContainer || this.state.isLoadingMore) return;
 
     const { scrollTop, scrollHeight, clientHeight } = scrollContainer;
@@ -314,7 +320,13 @@ class BookList extends React.Component<BookListProps, BookListState> {
   };
 
   renderBookList = (books: Book[], bookMode: string) => {
-    if (books.length === 0 && !this.props.isSearch) {
+    // Nothing in this view at all; a filter that matches nothing shows its
+    // own message instead
+    if (
+      books.length === 0 &&
+      !this.props.isSearch &&
+      this.state.readingStatusFilter === ""
+    ) {
       return <Redirect to="/manager/empty" />;
     }
     if (bookMode !== currentBookMode) {
@@ -406,6 +418,61 @@ class BookList extends React.Component<BookListProps, BookListState> {
     };
   };
 
+  // The reading status as chips (phones; wide windows use the select)
+  renderChips = () => (
+    <div className="book-list-chips" role="radiogroup">
+      {[
+        ["", "All"],
+        ["reading", "CurrentlyReading"],
+        ["unread", "Unread"],
+        ["finished", "Finished"],
+      ].map(([value, label]) => (
+        <button
+          type="button"
+          key={value}
+          role="radio"
+          aria-checked={this.state.readingStatusFilter === value}
+          className={
+            "book-list-chip" +
+            (this.state.readingStatusFilter === value ? " is-active" : "")
+          }
+          onClick={() => this.setState({ readingStatusFilter: value })}
+        >
+          {this.props.t(label)}
+        </button>
+      ))}
+    </div>
+  );
+
+  // Phones: a large title over the books, greeting by the time of day
+  renderHero = (count: number) => {
+    const hour = new Date().getHours();
+    const greeting =
+      hour < 5 || hour >= 18
+        ? "Good evening"
+        : hour < 12
+          ? "Good morning"
+          : "Good afternoon";
+    const title =
+      this.props.mode === "favorite"
+        ? this.props.t("Favorites")
+        : this.props.mode === "shelf" && this.props.shelfTitle
+          ? this.props.shelfTitle
+          : this.props.t("Library");
+    return (
+      <header className="library-hero">
+        <span className="library-hero-glow" aria-hidden="true" />
+        <p className="library-hero-greeting">{this.props.t(greeting)}</p>
+        <h1 className="library-hero-title">{title}</h1>
+        <p className="library-hero-meta">
+          {count === 1
+            ? this.props.t("1 book")
+            : this.props.t("{{count}} books", { count })}
+        </p>
+      </header>
+    );
+  };
+
   render() {
     // Still loading: the empty-library page would flash before the books
     if (this.props.books === null) return null;
@@ -444,35 +511,11 @@ class BookList extends React.Component<BookListProps, BookListState> {
                 title="Adjust cover size"
               />
             )}
+            {!isCompact() && this.renderChips()}
             <div className="book-list-total-page">
               <Trans i18nKey="Total books" count={books.length}>
                 {"Total " + books.length + " books"}
               </Trans>
-            </div>
-            {/* Phones: the reading status as chips (the select is hidden) */}
-            <div className="book-list-chips" role="radiogroup">
-              {[
-                ["", "All"],
-                ["reading", "CurrentlyReading"],
-                ["unread", "Unread"],
-                ["finished", "Finished"],
-              ].map(([value, label]) => (
-                <button
-                  type="button"
-                  key={value}
-                  role="radio"
-                  aria-checked={this.state.readingStatusFilter === value}
-                  className={
-                    "book-list-chip" +
-                    (this.state.readingStatusFilter === value
-                      ? " is-active"
-                      : "")
-                  }
-                  onClick={() => this.setState({ readingStatusFilter: value })}
-                >
-                  {this.props.t(label)}
-                </button>
-              ))}
             </div>
             <select
               className="lang-setting-dropdown"
@@ -500,6 +543,7 @@ class BookList extends React.Component<BookListProps, BookListState> {
         </div>
         <div
           className="book-list-container-parent"
+          ref={this.scrollParent}
           style={
             this.props.isCollapsed
               ? { width: "calc(100vw - 70px)", left: "70px" }
@@ -508,12 +552,25 @@ class BookList extends React.Component<BookListProps, BookListState> {
         >
           <div className="book-list-container">
             {isCompact() &&
+              !this.props.isSearch &&
+              !this.props.isSelectBook &&
+              // The whole view, not what the filter leaves
+              this.renderHero(
+                this.props.mode === "home" ? this.props.books.length : books.length
+              )}
+            {isCompact() &&
               this.props.mode === "home" &&
               !this.props.isSearch &&
               !this.props.isSelectBook &&
               this.state.readingStatusFilter === "" && (
                 <ContinueReading {...({ books } as any)} />
               )}
+            {isCompact() && !this.props.isSelectBook && (
+              <div className="library-filter-bar">
+                {this.renderChips()}
+                <ViewMode />
+              </div>
+            )}
             <ul
               className={"book-list-item-box view-" + this.props.viewMode}
               ref={this.scrollContainer}
@@ -523,6 +580,17 @@ class BookList extends React.Component<BookListProps, BookListState> {
             >
               {this.renderBookList(books, bookMode)}
             </ul>
+            {books.length === 0 && (
+              <div className="book-list-empty">
+                <EmptyArt mode="search" />
+                <p className="book-list-empty-title">
+                  {this.props.t("No books found")}
+                </p>
+                <p className="book-list-empty-sub">
+                  {this.props.t("Try another search or filter")}
+                </p>
+              </div>
+            )}
           </div>
         </div>
       </>

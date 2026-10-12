@@ -1,0 +1,126 @@
+.empty-art {
+  width: min(260px, 66vw);
+  height: auto;
+  overflow: visible;
+  animation: ea-in 0.6s var(--ease-out, ease) both;
+}
+@keyframes ea-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.96);
+  }
+}
+.ea-float {
+  animation: ea-float 6s ease-in-out infinite;
+}
+.ea-d1 {
+  animation-delay: -1.5s;
+}
+.ea-d2 {
+  animation-delay: -3s;
+}
+.ea-d3 {
+  animation-delay: -4.5s;
+}
+@keyframes ea-float {
+  50% {
+    transform: translateY(-6px);
+  }
+}
+.ea-twinkle {
+  animation: ea-twinkle 3s ease-in-out infinite;
+}
+@keyframes ea-twinkle {
+  0%,
+  100% {
+    opacity: 0.25;
+    transform: scale(0.6);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+.ea-pop {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation:
+    ea-pop 0.6s 0.4s var(--ease-spring, ease) both,
+    ea-float 6s 1s ease-in-out infinite;
+}
+@keyframes ea-pop {
+  from {
+    transform: scale(0);
+  }
+}
+.ea-heart {
+  transform-box: fill-box;
+  transform-origin: center bottom;
+  animation: ea-beat 2.4s 0.4s ease-in-out infinite;
+}
+@keyframes ea-beat {
+  0%,
+  100% {
+    transform: translateY(0) scale(1);
+  }
+  15% {
+    transform: translateY(-3px) scale(1.12);
+  }
+  30% {
+    transform: translateY(0) scale(0.98);
+  }
+  45% {
+    transform: translateY(-2px) scale(1.06);
+  }
+}
+.ea-drop {
+  animation: ea-drop 0.8s 0.3s var(--ease-spring, ease) both;
+}
+@keyframes ea-drop {
+  from {
+    transform: translateY(-30px);
+    opacity: 0;
+  }
+}
+.ea-mark {
+  transform-box: fill-box;
+  transform-origin: left center;
+  animation: ea-mark 0.7s var(--ease-out, ease) both;
+}
+@keyframes ea-mark {
+  from {
+    transform: scaleX(0);
+  }
+}
+.ea-draw {
+  stroke-dasharray: 80;
+  animation: ea-draw 3.6s 0.4s ease-in-out infinite;
+}
+@keyframes ea-draw {
+  0% {
+    stroke-dashoffset: 80;
+  }
+  50%,
+  85% {
+    stroke-dashoffset: 0;
+  }
+  100% {
+    stroke-dashoffset: 0;
+    opacity: 0;
+  }
+}
+.ea-search {
+  animation: ea-search 4s ease-in-out infinite;
+}
+@keyframes ea-search {
+  0%,
+  100% {
+    transform: translate(0, 0);
+  }
+  33% {
+    transform: translate(-16px, 10px);
+  }
+  66% {
+    transform: translate(-6px, -8px);
+  }
+}

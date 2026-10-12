@@ -37,12 +37,27 @@
     sans-serif;
   --font-display: "Newsreader Variable", Georgia, "Times New Roman", serif;
 
-  /* Shape */
-  --radius-sm: 6px;
-  --radius: 8px;
-  --radius-md: 10px;
-  --radius-lg: 14px;
-  --radius-xl: 20px;
+  /* Shape: soft, generous corners */
+  --radius-sm: 8px;
+  --radius: 10px;
+  --radius-md: 12px;
+  --radius-lg: 18px;
+  --radius-xl: 24px;
+
+  /* Motion: a gentle spring for things that arrive, a quick ease for the
+     rest. Reduced motion turns them off (end of this file). */
+  --ease-spring: cubic-bezier(0.22, 1.25, 0.36, 1);
+  --ease-out: cubic-bezier(0.22, 0.9, 0.24, 1);
+  --dur-fast: 0.16s;
+  --dur: 0.28s;
+  --dur-slow: 0.5s;
+
+  /* Accent glow under filled buttons and the floating Import */
+  --shadow-accent: 0 10px 24px -10px
+    color-mix(in srgb, var(--accent) 75%, transparent);
+  /* Frosted bars and sheets */
+  --glass: color-mix(in srgb, var(--ground) 78%, transparent);
+  --glass-raised: color-mix(in srgb, var(--surface-raised) 82%, transparent);
   --shadow-sm: 0 1px 2px rgba(28, 27, 25, 0.06);
   --shadow-md: 0 1px 2px rgba(28, 27, 25, 0.06),
     0 8px 24px -8px rgba(28, 27, 25, 0.16);
@@ -613,5 +628,410 @@ a {
   [data-theme="dark"] .single-control-switch {
     border: 1px solid var(--border-strong);
     background-color: var(--surface-raised);
+  }
+}
+
+/* ══ Modern layer ══════════════════════════════════════════════════════════
+   The onboarding's look across the app: rounder shapes, filled controls,
+   an accent glow on primary actions, and motion that springs. Later in the
+   cascade than the component styles, so it takes over at equal weight. */
+
+/* ── Buttons ──────────────────────────────────────────────────────────── */
+
+.add-dialog-confirm,
+.edit-dialog-confirm,
+.token-dialog-confirm,
+.voice-add-confirm,
+.new-version-open,
+.update-dialog-container-button,
+.download-desk-button,
+.biometric-auth-button,
+.delete-dialog-confirm,
+.delete-digest-button,
+.self-hosted-button.primary,
+.ai-setting-button.primary {
+  border-radius: var(--radius-md) !important;
+  font-weight: 600;
+  letter-spacing: -0.005em;
+  box-shadow: var(--shadow-accent);
+  transition:
+    transform var(--dur-fast) ease,
+    filter var(--dur-fast) ease,
+    box-shadow var(--dur) ease;
+}
+.delete-dialog-confirm,
+.delete-digest-button {
+  box-shadow: 0 10px 24px -10px
+    color-mix(in srgb, var(--danger) 70%, transparent);
+}
+.add-dialog-confirm:hover,
+.edit-dialog-confirm:hover,
+.token-dialog-confirm:hover,
+.voice-add-confirm:hover,
+.delete-dialog-confirm:hover {
+  filter: brightness(1.06);
+}
+
+.add-dialog-cancel,
+.delete-dialog-cancel,
+.edit-dialog-cancel,
+.token-dialog-cancel,
+.voice-add-cancel,
+.change-location-button,
+.book-bookmark-link {
+  border: 0 !important;
+  border-radius: var(--radius-md) !important;
+  background: var(--subtle-bg) !important;
+  box-shadow: none !important;
+  color: var(--text-color) !important;
+  font-weight: 600;
+  transition:
+    transform var(--dur-fast) ease,
+    background var(--dur-fast) ease;
+}
+.add-dialog-cancel:hover,
+.delete-dialog-cancel:hover,
+.edit-dialog-cancel:hover,
+.token-dialog-cancel:hover,
+.voice-add-cancel:hover {
+  background: var(--active-bg) !important;
+}
+
+/* Buttons give a little under the finger (named ones only: some others
+   are positioned with transform) */
+.add-dialog-confirm:active,
+.edit-dialog-confirm:active,
+.token-dialog-confirm:active,
+.voice-add-confirm:active,
+.delete-dialog-confirm:active,
+.add-dialog-cancel:active,
+.delete-dialog-cancel:active,
+.edit-dialog-cancel:active,
+.token-dialog-cancel:active,
+.voice-add-cancel:active,
+.import-from-local:active,
+.account-login-option:active,
+.add-source-card:active {
+  transform: scale(0.97);
+}
+
+/* ── Fields ───────────────────────────────────────────────────────────── */
+
+.add-dialog-shelf-list-box,
+.add-dialog-new-shelf-box,
+.edit-dialog-book-name-box,
+.edit-dialog-book-author-box,
+.edit-dialog-input,
+.edit-dialog-textarea,
+.token-dialog-token-box,
+.feedback-dialog-content-box,
+.voice-add-content-box,
+.token-dialog-url-box,
+.token-dialog-username-box,
+.token-dialog-password-box,
+.input-value,
+.trans-add-content-box {
+  border: 1px solid transparent !important;
+  border-radius: var(--radius-md) !important;
+  background-color: var(--input-bg) !important;
+}
+.add-dialog-shelf-list-box:focus,
+.add-dialog-new-shelf-box:focus,
+.edit-dialog-book-name-box:focus,
+.edit-dialog-book-author-box:focus,
+.edit-dialog-input:focus,
+.edit-dialog-textarea:focus,
+.token-dialog-token-box:focus,
+.feedback-dialog-content-box:focus,
+.voice-add-content-box:focus,
+.token-dialog-url-box:focus,
+.token-dialog-username-box:focus,
+.token-dialog-password-box:focus,
+.input-value:focus,
+.trans-add-content-box:focus {
+  border-color: var(--accent) !important;
+  background-color: var(--surface) !important;
+}
+
+/* Dropdowns: a quiet filled pill with its own chevron */
+.lang-setting-dropdown,
+.general-setting-dropdown,
+.booklist-shelf-list,
+.backup-source-dropdown {
+  appearance: none;
+  -webkit-appearance: none;
+  border: 1px solid transparent !important;
+  border-radius: var(--radius) !important;
+  background-color: var(--input-bg) !important;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%238a8984' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") !important;
+  background-repeat: no-repeat !important;
+  background-position: right 10px center !important;
+  padding: 0 28px 0 12px !important;
+  text-align: left !important;
+  transition: background-color var(--dur-fast) ease;
+}
+.lang-setting-dropdown:hover,
+.general-setting-dropdown:hover {
+  background-color: var(--active-bg) !important;
+}
+
+/* ── Switches: a pill track with a sliding knob ───────────────────────── */
+
+.single-control-switch {
+  width: 44px !important;
+  height: 26px !important;
+  flex: none;
+  border-radius: 13px !important;
+  background-color: var(--accent) !important;
+  opacity: 1 !important;
+  align-items: center;
+  box-sizing: border-box;
+  transition: background-color var(--dur) ease;
+}
+/* Off: the components dim the track instead of saying so */
+.single-control-switch[style*="opacity: 0.6"] {
+  background-color: var(--border-strong) !important;
+}
+.single-control-button {
+  width: 20px !important;
+  height: 20px !important;
+  margin: 3px !important;
+  background: #ffffff !important;
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.18),
+    0 2px 6px -1px rgba(0, 0, 0, 0.2);
+  transition: transform 0.38s var(--ease-spring) !important;
+}
+.single-control-switch-container {
+  align-items: center;
+}
+
+/* ── Surfaces: rounder, and they arrive ───────────────────────────────── */
+
+.action-dialog-container,
+.add-dialog-container,
+.delete-dialog-container,
+.edit-dialog-container,
+.loading-dialog,
+.feedback-dialog-container,
+.token-dialog-container,
+.new-version,
+.sort-dialog-container,
+.backup-page-container,
+.download-desk-container,
+.biometric-auth-container {
+  border-radius: var(--radius-xl) !important;
+  animation: modern-pop var(--dur-slow) var(--ease-spring) both;
+}
+.setting-dialog-container {
+  border-radius: var(--radius-xl) !important;
+  animation: modern-rise var(--dur-slow) var(--ease-out) both;
+  overflow: hidden;
+}
+.more-options-dropdown,
+.select-more-actions,
+.popup-menu-box,
+.popup-color-box,
+.popup-box-container {
+  border-radius: var(--radius-lg) !important;
+}
+.more-options-dropdown,
+.select-more-actions {
+  animation: modern-pop 0.32s var(--ease-spring) both;
+  transform-origin: top right;
+}
+@keyframes modern-pop {
+  from {
+    opacity: 0;
+    scale: 0.94;
+  }
+}
+@keyframes modern-rise {
+  from {
+    opacity: 0;
+    translate: 0 16px;
+  }
+}
+@keyframes modern-fade {
+  from {
+    opacity: 0;
+  }
+}
+.drag-background {
+  animation: modern-fade var(--dur) ease both;
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+}
+
+/* Rows and options respond softly */
+.more-option-item,
+.sort-by-category-list,
+.sort-by-order-list,
+.action-dialog-add,
+.action-dialog-delete,
+.action-dialog-edit,
+.side-menu-selector,
+.setting-dialog-sidebar-item,
+.book-manage-title {
+  transition:
+    background-color var(--dur-fast) ease,
+    color var(--dur-fast) ease;
+  border-radius: var(--radius);
+}
+
+/* Covers: a deeper, softer shadow, lifting on hover */
+.book-item-cover,
+.book-cover-item-cover {
+  border-radius: 10px !important;
+  transition:
+    transform var(--dur) var(--ease-out),
+    box-shadow var(--dur) var(--ease-out);
+}
+@media (hover: hover) {
+  .book-list-item:hover .book-item-cover,
+  .book-list-cover-item:hover .book-cover-item-cover {
+    transform: translateY(-4px);
+    box-shadow:
+      0 2px 4px rgba(0, 0, 0, 0.08),
+      0 18px 34px -14px rgba(0, 0, 0, 0.45) !important;
+  }
+}
+
+/* Books arrive in a short cascade */
+.book-list-item,
+.book-list-cover-item,
+.book-list-item-box > li {
+  animation: modern-rise 0.5s var(--ease-out) both;
+}
+.book-list-item-box > :nth-child(2) { animation-delay: 0.03s; }
+.book-list-item-box > :nth-child(3) { animation-delay: 0.06s; }
+.book-list-item-box > :nth-child(4) { animation-delay: 0.09s; }
+.book-list-item-box > :nth-child(5) { animation-delay: 0.12s; }
+.book-list-item-box > :nth-child(6) { animation-delay: 0.15s; }
+.book-list-item-box > :nth-child(7) { animation-delay: 0.18s; }
+.book-list-item-box > :nth-child(8) { animation-delay: 0.21s; }
+.book-list-item-box > :nth-child(9) { animation-delay: 0.24s; }
+.book-list-item-box > :nth-child(n + 10) { animation-delay: 0.27s; }
+
+/* ── Settings: rows grouped into rounded cards ────────────────────────── */
+
+.setting-dialog-main {
+  background: var(--ground);
+}
+.setting-dialog-main-header {
+  font-family: var(--font-display);
+  font-weight: 600 !important;
+  font-optical-sizing: auto;
+  font-variation-settings: "opsz" 72;
+  font-size: 28px !important;
+  letter-spacing: -0.025em;
+  animation: modern-rise 0.45s var(--ease-out) both;
+}
+.setting-dialog-info {
+  padding: 4px 16px 28px;
+  box-sizing: border-box;
+}
+/* A row: its title line (label and control) and an optional explanation */
+.setting-dialog-info
+  > :is(div:has(> .setting-dialog-new-title), .setting-dialog-new-title) {
+  position: relative;
+  box-sizing: border-box;
+  width: auto !important;
+  margin: 0 !important;
+  padding: 12px 16px;
+  background: var(--surface-raised);
+  animation: modern-rise 0.45s var(--ease-out) both;
+}
+/* Hairline between rows of a group */
+.setting-dialog-info
+  > :is(div:has(> .setting-dialog-new-title), .setting-dialog-new-title)
+  + :is(div:has(> .setting-dialog-new-title), .setting-dialog-new-title)::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 16px;
+  right: 0;
+  height: 1px;
+  background: var(--border);
+}
+/* The first and last rows of a run round the group's corners */
+.setting-dialog-info
+  > :is(
+    div:has(> .setting-dialog-new-title),
+    .setting-dialog-new-title
+  ):not(
+    :is(div:has(> .setting-dialog-new-title), .setting-dialog-new-title)
+      + *
+  ) {
+  margin-top: 12px !important;
+  border-top-left-radius: var(--radius-lg);
+  border-top-right-radius: var(--radius-lg);
+}
+.setting-dialog-info
+  > :is(
+    div:has(> .setting-dialog-new-title),
+    .setting-dialog-new-title
+  ):not(
+    /* :has() can't nest, so the next row is spelled out */
+    :has(+ div > .setting-dialog-new-title, + .setting-dialog-new-title)
+  ) {
+  margin-bottom: 4px !important;
+  border-bottom-left-radius: var(--radius-lg);
+  border-bottom-right-radius: var(--radius-lg);
+}
+.setting-dialog-info > div > .setting-dialog-new-title {
+  margin: 0 !important;
+  width: 100% !important;
+  min-height: 30px;
+  align-items: center;
+  gap: 12px;
+  line-height: 1.35;
+}
+.setting-dialog-info .setting-option-subtitle {
+  margin: 6px 56px 0 0 !important;
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: var(--muted);
+  opacity: 1;
+}
+/* Adding a data source: a dashed card that invites a tap */
+.add-source-card {
+  border: 1.5px dashed var(--border-strong) !important;
+  border-radius: var(--radius-lg) !important;
+  background: color-mix(in srgb, var(--accent) 6%, transparent);
+  color: var(--accent) !important;
+  transition:
+    background-color var(--dur-fast) ease,
+    border-color var(--dur-fast) ease,
+    transform var(--dur-fast) ease !important;
+}
+.add-source-card:hover {
+  opacity: 1 !important;
+  border-color: var(--accent) !important;
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+}
+
+/* Sidebar: soft pills */
+.setting-dialog-sidebar-item {
+  border-radius: var(--radius-md) !important;
+}
+.setting-dialog-sidebar-item.active {
+  background: var(--accent-soft) !important;
+  color: var(--accent) !important;
+  font-weight: 600;
+}
+
+/* Toasts on wide windows: rounder, frosted */
+.message-box-container {
+  border-radius: var(--radius-lg) !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-delay: 0s !important;
+    transition-duration: 0.01ms !important;
   }
 }

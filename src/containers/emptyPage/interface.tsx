@@ -7,6 +7,7 @@ export interface EmptyPageProps extends RouteComponentProps<any> {
   shelfTitle: string;
   handleShelf: (shelfTitle: string) => void;
   handleMode: (mode: string) => void;
+  t: (title: string) => string;
 }
 export interface EmptyPageState {
   isOpenDelete: boolean;

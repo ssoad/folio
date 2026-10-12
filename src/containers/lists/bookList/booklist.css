@@ -141,3 +141,29 @@
 .book-list-chips {
   display: none;
 }
+/* A search or filter that matches nothing */
+.book-list-empty {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 24px 32px 120px;
+  box-sizing: border-box;
+  text-align: center;
+}
+.book-list-empty .empty-art {
+  width: min(200px, 56vw);
+}
+.book-list-empty-title {
+  margin: 8px 0 4px;
+  font-family: var(--font-display);
+  font-size: 24px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--text);
+}
+.book-list-empty-sub {
+  margin: 0;
+  font-size: 14px;
+  color: var(--muted);
+}

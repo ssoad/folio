@@ -33,13 +33,23 @@ class SettingDialog extends React.Component<
     this.props.handleFetchPlugins();
     this.props.handleFetchDataSourceList();
     this.props.handleFetchDefaultSyncOption();
+    this.revealActiveTab("auto");
   }
 
   componentDidUpdate(prevProps: SettingInfoProps): void {
     if (prevProps.settingMode !== this.props.settingMode) {
       this.contentRef.current?.scrollTo(0, 0);
+      this.revealActiveTab("smooth");
     }
   }
+
+  // Phones show the sections as a scrolling strip: keep the open one in view
+  revealActiveTab = (behavior: ScrollBehavior) => {
+    const active = document.querySelector(
+      ".setting-dialog-sidebar-item.active"
+    );
+    active?.scrollIntoView({ behavior, block: "nearest", inline: "center" });
+  };
 
   renderSidebarItem = (
     mode: string,

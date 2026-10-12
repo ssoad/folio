@@ -5,6 +5,7 @@ import { ActionDialogProps, ActionDialogState } from "./interface";
 import toast from "react-hot-toast";
 import MoreAction from "../moreAction";
 import MarkAction from "../markAction";
+import { isCompact } from "../../../utils/platform";
 import { ConfigService } from "../../../assets/lib/kookit-extra-browser.min";
 import {
   CONTEXT_MENU_WIDTH,
@@ -91,6 +92,17 @@ class ActionDialog extends React.Component<
   handleMarkAction = (isShow: boolean) => {
     this.setState({ isShowMark: isShow });
   };
+  // Phones show the menu as a sheet: a tap on the dimmed page closes it
+  renderBackdrop = () =>
+    isCompact() ? (
+      <div
+        className="action-sheet-backdrop"
+        onClick={() => {
+          this.setState({ isShowMark: false, isShowExport: false });
+          this.props.handleActionDialog(false);
+        }}
+      />
+    ) : null;
   render() {
     const moreActionProps = {
       left: this.props.left,
@@ -108,37 +120,41 @@ class ActionDialog extends React.Component<
     };
     if (this.props.mode === "trash") {
       return (
-        <div
-          className="action-dialog-container"
-          onMouseLeave={() => {
-            this.props.handleActionDialog(false);
-          }}
-          onMouseEnter={() => {
-            this.props.handleActionDialog(true);
-          }}
-          style={{
-            left: this.props.left,
-            top: this.props.top,
-          }}
-        >
-          <div className="action-dialog-actions-container">
-            <div
-              className="action-dialog-add"
-              onClick={() => {
-                this.handleRestoreBook();
-              }}
-            >
-              <span className="icon-clockwise view-icon"></span>
-              <span className="action-name">
-                <Trans>Restore</Trans>
-              </span>
+        <>
+          {this.renderBackdrop()}
+          <div
+            className="action-dialog-container"
+            onMouseLeave={() => {
+              this.props.handleActionDialog(false);
+            }}
+            onMouseEnter={() => {
+              this.props.handleActionDialog(true);
+            }}
+            style={{
+              left: this.props.left,
+              top: this.props.top,
+            }}
+          >
+            <div className="action-dialog-actions-container">
+              <div
+                className="action-dialog-add"
+                onClick={() => {
+                  this.handleRestoreBook();
+                }}
+              >
+                <span className="icon-clockwise view-icon"></span>
+                <span className="action-name">
+                  <Trans>Restore</Trans>
+                </span>
+              </div>
             </div>
           </div>
-        </div>
+        </>
       );
     }
     return (
       <>
+        {this.renderBackdrop()}
         <div
           className="action-dialog-container"
           onMouseLeave={() => {
