@@ -29,6 +29,7 @@ export interface SettingSwitchState {
   isUnderline: boolean;
   isItalic: boolean;
   isInvert: boolean;
+  isTapTurn: boolean;
   isStartFromEven: boolean;
   isShowTotalPage: boolean;
   isAllowScript: boolean;

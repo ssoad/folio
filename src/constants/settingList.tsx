@@ -507,6 +507,11 @@ export const skinList = [
 
 export const readerSettingList = [
   {
+    title: "Tap the edges to turn pages",
+    propName: "isTapTurn",
+    isPDF: true,
+  },
+  {
     title: "Enable paragraph mode",
     propName: "isParagraphMode",
     isPDF: true,

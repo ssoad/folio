@@ -61,6 +61,7 @@ class SettingSwitch extends React.Component<
       isShadow: ConfigService.getReaderConfig("isShadow") === "yes",
       isItalic: ConfigService.getReaderConfig("isItalic") === "yes",
       isInvert: ConfigService.getReaderConfig("isInvert") === "yes",
+      isTapTurn: ConfigService.getReaderConfig("isTapTurn") === "yes",
       isBionic: ConfigService.getReaderConfig("isBionic") === "yes",
       isParagraphMode:
         ConfigService.getReaderConfig("isParagraphMode") === "yes",

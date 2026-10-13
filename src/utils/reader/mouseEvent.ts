@@ -175,8 +175,10 @@ const READING_PANEL_SHORTCUTS: Array<{
   { shortcut: "openBottomPanel", position: "bottom" },
 ];
 
-// Taps on the page (phones, tablets): the outer thirds turn the page, the
-// middle shows or hides the reader bars
+// Taps on the page (phones, tablets) show or hide the reader bars; swipes
+// turn pages. With "Tap the edges to turn pages" on, the outer thirds turn
+// them too. Off by default: most of a page turned on every tap, which left
+// nowhere to tap while highlighting or annotating.
 export const READER_CHROME_TOGGLE_EVENT = "folio-reader-chrome-toggle";
 // Asks the reader's top bar to leave the book (Android back button)
 export const READER_EXIT_EVENT = "folio-reader-exit";
@@ -241,13 +243,16 @@ const handleReaderTap = async (
   const frame = doc.defaultView?.frameElement;
   const x = (frame ? frame.getBoundingClientRect().left : 0) + event.clientX;
   const ratio = x / window.innerWidth;
-  if (readerMode !== "scroll" && ratio < TAP_TURN_ZONE) {
+  const turns =
+    readerMode !== "scroll" &&
+    ConfigService.getReaderConfig("isTapTurn") === "yes";
+  if (turns && ratio < TAP_TURN_ZONE) {
     if (lock) return;
     lock = true;
     await rendition.prev();
     handleLocation(key, rendition);
     setTimeout(() => (lock = false), throttleTime);
-  } else if (readerMode !== "scroll" && ratio > 1 - TAP_TURN_ZONE) {
+  } else if (turns && ratio > 1 - TAP_TURN_ZONE) {
     if (lock) return;
     lock = true;
     await rendition.next();
