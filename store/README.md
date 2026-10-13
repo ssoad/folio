@@ -52,19 +52,19 @@ project).
 
 | Field | Value |
 | --- | --- |
-| App name | Folio: Ebook & PDF Reader |
+| App name | Folio AI: PDF & Ebook Reader |
 | Default language | English (United States) |
 | App or game | App |
 | Free or paid | Free |
-| Package name | `io.github.ssoad.folio` (comes from the bundle) |
+| Package name | `com.ssoad.folio` (comes from the bundle) |
 
 ## 3. Store listing (Grow → Store presence → Main store listing)
 
 | Field | Where |
 | --- | --- |
-| App name | `listing/en-US/title.txt` (25/30) |
-| Short description | `listing/en-US/short-description.txt` (77/80) |
-| Full description | `listing/en-US/full-description.txt` (2,084/4,000) |
+| App name | `listing/en-US/title.txt` (28/30) |
+| Short description | `listing/en-US/short-description.txt` (75/80) |
+| Full description | `listing/en-US/full-description.txt` (3,212/4,000) |
 | App icon | `icon-512.png` |
 | Feature graphic | `feature-graphic-1024x500.png` |
 | Phone screenshots | `phone/01…08.png`, in order |
@@ -72,8 +72,23 @@ project).
 | 10-inch tablet screenshots | `tablet-10/01…03.png` |
 | Video | none |
 
-**Store settings:** category **Books & Reference**; tags such as *E-book
-reader*, *PDF reader*, *Reading*. Contact email **mdsoad@gmail.com**, website
+**Store settings:** category **Books & Reference**. Tags (up to five):
+*E-book reader*, *PDF reader*, *Reading*, *Comics*, *Text to speech*, or the
+closest ones Play offers.
+
+**Search (ASO).** Play ranks on the title, short description and full
+description (screenshot text isn't searched). The title carries the category's two
+biggest searches, *PDF reader* and *ebook reader* (Play matches title words
+independently, so one *Reader* serves both), with *AI* as part of the name
+for Folio's difference; the short description repeats
+*AI ebook reader* and adds *EPUB*, *comics*, *read aloud*, *summarize*,
+*translate* and *sync* (the title's 30-character cap leaves no room for them);
+the first lines of the full description (all that shows before "More")
+repeat them in plain sentences, and each section names one feature people
+search for (*comic reader*, *night mode*, *text to speech*, *audiobook*,
+*OCR*, *translate*, *annotate PDF*, *WebDAV*, *KOReader*). Every feature
+named is in the app; keep it that way when editing, since Play removes
+listings with misleading claims or keyword lists. Contact email **mdsoad@gmail.com**, website
 **https://folio.armorclub.org**.
 
 ## 4. App content (Policy → App content)

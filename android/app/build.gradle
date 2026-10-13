@@ -11,10 +11,10 @@ if (keystorePropertiesFile.exists()) {
 }
 
 android {
-    namespace = "io.github.ssoad.folio"
+    namespace = "com.ssoad.folio"
     compileSdk = rootProject.ext.compileSdkVersion
     defaultConfig {
-        applicationId "io.github.ssoad.folio"
+        applicationId "com.ssoad.folio"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         // Raise versionCode by one for every upload to Google Play

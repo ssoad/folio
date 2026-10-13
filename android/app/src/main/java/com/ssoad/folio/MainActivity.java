@@ -1,4 +1,4 @@
-package io.github.ssoad.folio;
+package com.ssoad.folio;
 
 import com.getcapacitor.BridgeActivity;
 

@@ -1,40 +1,61 @@
-Folio is a calm, modern reader for the books you already own. Add your EPUBs, PDFs and comics, and read them on clean pages that you can shape to your eyes, with your highlights and notes kept alongside.
+Folio is a modern ebook reader and PDF reader for Android. Read EPUB, PDF, MOBI, AZW3 and comics on beautiful, distraction-free pages, highlight and take notes, listen with text to speech, and ask a built-in AI about any passage. Your library stays in sync across devices, encrypted.
 
-YOUR LIBRARY, BEAUTIFULLY KEPT
-• Covers, reading progress and "continue reading" at a glance
-• Shelves and favourites to organise your books
+★ ONE READER FOR EVERY BOOK FORMAT
+• EPUB reader and PDF reader, plus MOBI, AZW3, AZW, FB2, TXT, Markdown, DOCX and HTML
+• Comic reader for CBZ, CBR, CBT and CB7
+• Open books straight from Files, Downloads or email with "Open with Folio"
+• Browse and download from OPDS catalogs
+• Reads offline; no account needed to read
+
+★ A BEAUTIFUL LIBRARY
+• Cover grid, list and detailed views, with reading progress on every book
+• "Continue reading" picks up exactly where you stopped
+• Shelves, favorites and pin to top to organize a large collection
 • Filter by unread, reading and finished; search your whole library
-• Grid, list or detailed views
+• Reading statistics to see your reading time
 
-READ THE WAY YOU LIKE
-• Light, sepia, dark and black themes
-• Adjustable text size, scrolling or page turns, and brightness
-• A distraction-free page: tap to show or hide the controls
-• Search inside a book, and jump through its contents
+★ READING, YOUR WAY
+• Light, sepia, dark, black and auto themes: a night mode that's easy on the eyes
+• Text size, fonts, line spacing and brightness in one quick sheet
+• Scroll or turn pages; two-page spreads on tablets
+• Tap to hide every control for a clean, full-screen page
+• Full-text search inside books, contents, and bookmarks
 
-HIGHLIGHTS AND NOTES
-• Highlight passages in colour with a tap
-• Add notes, bookmarks, and copy or look up any word or passage
-• See every highlight and note in one place
-• Draw and annotate on PDF pages
+★ HIGHLIGHTS, NOTES AND ANNOTATIONS
+• Highlight in color with one tap, add notes and bookmarks
+• Annotate and draw on PDF pages with a pen
+• Look up words in the dictionary, Wikipedia or the web
+• All highlights and notes in one place, with tags
+• Export notes and highlights to Markdown, CSV, HTML, PDF, TXT or JSON
 
-LISTEN, ASK, TRANSLATE
-• Read aloud with your phone's own voices, offline
-• Natural AI voices with a Folio account
-• An AI helper to explain, summarise or translate a passage
-• Text recognition for scanned PDFs
+★ AI READING ASSISTANT
+• Ask the AI to explain, summarize or discuss any passage
+• Translate selected text instantly
+• Summarize chapters to recall what you've read
+• Text recognition (OCR) makes scanned PDFs readable and searchable
+• Automatically recognize a book's title and author on import
 
-EVERY FORMAT YOU READ
-EPUB, PDF, MOBI, AZW3, AZW, FB2, TXT, Markdown, DOCX, HTML, and comics in CBZ, CBR, CBT and CB7. Open books straight from your Files app, Downloads or email with "Open with Folio", or browse OPDS catalogs.
+★ LISTEN: TEXT TO SPEECH
+• Read aloud with your phone's built-in voices, even offline
+• Natural-sounding AI voices for long listening sessions
+• Turns any ebook into an audiobook, read sentence by sentence
 
-ON EVERY DEVICE, AND PRIVATE
-• Folio Cloud keeps your books, notes, highlights and reading position in sync across devices, encrypted on our servers, with each account's data stored and encrypted separately
-• Or sync to storage you run yourself, such as WebDAV or S3
+★ SYNC AND BACKUP, PRIVATELY
+• Folio Cloud syncs books, reading position, highlights and notes across your phone, tablet and computer
+• Every account's data is stored in its own file and encrypted (AES-256)
+• Or sync to your own WebDAV or S3-compatible storage
+• Sync reading progress with KOReader
+• Back up and restore your whole library
+
+★ PRIVACY BY DESIGN
 • No ads, no trackers, no analytics
+• Your books and notes stay on your device unless you turn on sync
+• Delete your account and all of its data at any time, in the app or on the web
 
-ACCOUNTS AND PLANS
-Reading, organising and annotating your books needs no account. A free Folio account adds a monthly allowance of AI requests, AI voices and text recognition, plus book information look-ups. Folio Cloud sync is part of the Pro plan.
+ACCOUNTS
+Reading, organising, annotating and offline read-aloud need no account. A free Folio account adds a monthly allowance of AI features, AI voices, text recognition and book information look-ups. Folio Cloud sync is included with Pro accounts.
 
-You can delete your account and all of its data at any time, in the app or at folio.armorclub.org/delete-account.
+Folio is also available for Windows, macOS, Linux and the web, so your library follows you to every screen.
 
-Privacy policy: folio.armorclub.org/privacy
+Privacy policy: https://folio.armorclub.org/privacy
+Delete your account: https://folio.armorclub.org/delete-account
