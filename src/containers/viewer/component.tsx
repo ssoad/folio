@@ -58,7 +58,15 @@ let lock = false; //prevent from clicking too fasts
 // need to know, since their pages can't take the theme's text colour.
 const isReaderDark = () => {
   const backgroundColor = ConfigService.getReaderConfig("backgroundColor");
-  if (backgroundColor) return backgroundColor === "rgba(44,47,49,1)";
+  if (backgroundColor) {
+    // Dark, Black, or any dark custom colour (rgba() or #rrggbb)
+    const hex = backgroundColor.match(/^#([\da-f]{2})([\da-f]{2})([\da-f]{2})/i);
+    const [r, g, b] = hex
+      ? hex.slice(1, 4).map((x) => parseInt(x, 16))
+      : (backgroundColor.match(/[\d.]+/g) || []).map(Number);
+    if (r === undefined || g === undefined || b === undefined) return false;
+    return 0.299 * r + 0.587 * g + 0.114 * b < 110;
+  }
   const skin = ConfigService.getReaderConfig("appSkin");
   return (
     skin === "night" ||
@@ -66,9 +74,28 @@ const isReaderDark = () => {
   );
 };
 
+// PDFs are inverted for dark reading. The engine doesn't keep that in step
+// with the theme (a PDF opened in Dark stayed light, and one switched to a
+// light theme could stay inverted on a white page, its text washed out), so
+// each page layer is set to match here. Pages render as they scroll in.
+const PDF_DARK_FILTER = "invert(1) hue-rotate(180deg) contrast(0.95)";
+const syncPdfInversion = () => {
+  const filter = isReaderDark() ? PDF_DARK_FILTER : "none";
+  const outer = document.querySelector<HTMLIFrameElement>("#page-area iframe");
+  const frames = outer?.contentDocument?.querySelectorAll("iframe") || [];
+  frames.forEach((frame) => {
+    (frame as HTMLIFrameElement).contentDocument
+      ?.querySelectorAll<HTMLElement>(".koodoPDFLayer")
+      .forEach((layer) => {
+        if (layer.style.filter !== filter) layer.style.filter = filter;
+      });
+  });
+};
+
 class Viewer extends React.Component<ViewerProps, ViewerState> {
   private resizeHandler: (() => void) | null = null;
   private _pendingRerender = false;
+  private pdfInversionTimer = 0;
   lock: boolean;
   constructor(props: ViewerProps) {
     super(props);
@@ -107,6 +134,8 @@ class Viewer extends React.Component<ViewerProps, ViewerState> {
     this.props.handleFetchPlugins();
   }
   componentDidMount() {
+    // Only PDF pages have these layers; other books cost a lookup
+    this.pdfInversionTimer = window.setInterval(syncPdfInversion, 600);
     this.handleRenderBook();
     //make sure page width is always 12 times, section = Math.floor(element.clientWidth / 12), or text will be blocked
     this.setState(
@@ -149,6 +178,7 @@ class Viewer extends React.Component<ViewerProps, ViewerState> {
     window.addEventListener("resize", this.resizeHandler);
   }
   componentWillUnmount() {
+    window.clearInterval(this.pdfInversionTimer);
     if (this.resizeHandler) {
       window.removeEventListener("resize", this.resizeHandler);
       this.resizeHandler = null;
