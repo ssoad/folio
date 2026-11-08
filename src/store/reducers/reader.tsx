@@ -1,5 +1,14 @@
 import { ConfigService, HighlightUtil } from "../../assets/lib/kookit-extra-browser.min";
 const highlightUtil = new HighlightUtil(ConfigService);
+// This state is made before startup saves whether the system is dark
+// (isOSNight, utils/reader/launchUtil), so on a fresh install that wasn't
+// known yet: the page started white while PDFs, which check later, were
+// inverted for dark, leaving light text on a white page. Ask the system.
+const isSystemDark = () =>
+  typeof window !== "undefined" && window.matchMedia
+    ? window.matchMedia("(prefers-color-scheme: dark)").matches
+    : ConfigService.getReaderConfig("isOSNight") === "yes";
+
 const initState = {
   bookmarks: [],
   notes: [],
@@ -14,8 +23,10 @@ const initState = {
       : ConfigService.getReaderConfig("backgroundColor")
         ? ConfigService.getReaderConfig("backgroundColor")
         : ConfigService.getReaderConfig("appSkin") === "night" ||
-            (ConfigService.getReaderConfig("appSkin") === "system" &&
-              ConfigService.getReaderConfig("isOSNight") === "yes")
+            // Unset on a fresh install too, where it means "system"
+            ((ConfigService.getReaderConfig("appSkin") || "system") ===
+              "system" &&
+              isSystemDark())
           ? "rgba(44,47,49,1)"
           : "rgba(255,255,255,1)",
   noteKey: "",

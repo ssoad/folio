@@ -1518,5 +1518,14 @@
   "Type your email to confirm": "Type your email to confirm",
   "Delete my account": "Delete my account",
   "Your account was deleted": "Your account was deleted",
-  "Tap the edges to turn pages": "Tap the edges to turn pages"
+  "Tap the edges to turn pages": "Tap the edges to turn pages",
+  "Annotate": "Annotate",
+  "Marker": "Marker",
+  "Redo": "Redo",
+  "Thickness": "Thickness",
+  "Thick": "Thick",
+  "Couldn't undo that": "Couldn't undo that",
+  "Drag over text to mark it": "Drag over text to mark it",
+  "Draw on the page": "Draw on the page",
+  "Rub over ink or highlights to erase them": "Rub over ink or highlights to erase them"
 }

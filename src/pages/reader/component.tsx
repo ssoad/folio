@@ -27,6 +27,7 @@ import { isElectron } from "react-device-detect";
 import SettingDialog from "../../components/dialogs/settingDialog";
 import SpeechDialog from "../../components/dialogs/speechDialog";
 import AnnotationDialog from "../../components/dialogs/annotationDialog";
+import AnnotateBar from "../../components/readerPhone/annotateBar";
 import DisplaySheet from "../../components/readerPhone/displaySheet";
 import PhoneIcon from "../../components/readerPhone/phoneIcons";
 import {
@@ -138,6 +139,7 @@ class Reader extends React.Component<ReaderProps, ReaderState> {
       isPhoneMoreOpen: false,
       isDisplaySheetOpen: false,
       isNearEdge: false,
+      isMarking: false,
     };
   }
   componentDidMount() {
@@ -420,10 +422,18 @@ class Reader extends React.Component<ReaderProps, ReaderState> {
     );
     this.props.handleOpenMenu(true);
   };
-  // Drawing on the page: scanned PDFs only, since their text can't be
-  // highlighted
+  // Drawing on the page: scanned PDFs only. The engine sets up its drawing
+  // layer for those alone (text PDFs are marked up with highlights and
+  // notes), so on a text PDF the pen did nothing.
   canDraw = () =>
-    !!this.props.currentBook && isReadingRawPDF(this.props.currentBook);
+    !!this.props.currentBook &&
+    isReadingRawPDF(this.props.currentBook) &&
+    (this.props.currentBook.description || "").includes("scanned");
+  // Mark mode (phones): a drag over text highlights it
+  // (the bar turns the tools on and off as it opens and closes)
+  handleToggleMarking = (isMarking = !this.state.isMarking) => {
+    this.setState({ isMarking });
+  };
   handleToggleDrawing = () => {
     if (!this.props.htmlBook?.rendition) return;
     const isDrawing = !this.props.isAnnotationOpen;
@@ -469,6 +479,10 @@ class Reader extends React.Component<ReaderProps, ReaderState> {
     }
     if (this.props.isOpenPopupOptionDialog) {
       this.props.handlePopupOptionDialog(false);
+      return;
+    }
+    if (this.state.isMarking) {
+      this.handleToggleMarking(false);
       return;
     }
     if (this.state.isDisplaySheetOpen) {
@@ -1165,6 +1179,19 @@ class Reader extends React.Component<ReaderProps, ReaderState> {
               <PhoneIcon name="pen" />
             </button>
           )}
+          {!this.canDraw() && (
+            <button
+              type="button"
+              aria-label={this.props.t("Annotate")}
+              className={this.state.isMarking ? "is-active" : ""}
+              onClick={() => {
+                this.hidePhoneBars();
+                this.handleToggleMarking();
+              }}
+            >
+              <PhoneIcon name="annotate" />
+            </button>
+          )}
           <button
             type="button"
             aria-label={this.props.t("Listen")}
@@ -1218,6 +1245,11 @@ class Reader extends React.Component<ReaderProps, ReaderState> {
           </div>
         }
         {this.props.isAnnotationOpen && <AnnotationDialog />}
+        {this.state.isMarking && (
+          <AnnotateBar
+            {...({ onDone: () => this.handleToggleMarking(false) } as any)}
+          />
+        )}
       </div>
     );
   }

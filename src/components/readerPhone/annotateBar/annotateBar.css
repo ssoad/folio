@@ -1,0 +1,60 @@
+/* Notes-app toolbar: fits a 360px phone with every tool */
+.annotate-bar .annotation-phone-bar {
+  gap: 0;
+  padding: 3px 4px;
+}
+.annotate-bar .annotation-phone-tool,
+.annotate-bar .annotation-phone-color {
+  position: relative;
+  width: 36px;
+  height: 40px;
+  border-radius: 14px;
+}
+.annotate-bar .annotation-phone-tool:disabled {
+  opacity: 0.3;
+}
+.annotate-bar .annotation-phone-divider {
+  margin: 0 3px;
+}
+/* The highlighter's current colour, under its icon */
+.annotate-bar-swatch {
+  position: absolute;
+  left: 11px;
+  right: 11px;
+  bottom: 5px;
+  height: 3px;
+  border-radius: 2px;
+}
+.annotate-bar .annotation-phone-options {
+  min-width: 220px;
+}
+.annotate-bar-wrap {
+  flex-wrap: wrap;
+  max-width: 260px;
+}
+.annotate-bar-width {
+  display: block;
+  width: 22px;
+  border-radius: 4px;
+}
+.annotation-phone-hint {
+  padding: 5px 12px;
+  border-radius: 999px;
+  background: var(--surface-raised);
+  color: var(--text-muted, var(--text));
+  font-size: 12.5px;
+  box-shadow:
+    0 0 0 1px var(--border),
+    var(--shadow-lg);
+  pointer-events: none;
+  animation: folio-mark-hint 3.2s ease forwards;
+}
+@keyframes folio-mark-hint {
+  0%,
+  75% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}

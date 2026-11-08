@@ -18,7 +18,9 @@ export interface DigestParams {
   onSuccess?: () => void;
 }
 
-export async function createHighlight(params: DigestParams): Promise<void> {
+export async function createHighlight(
+  params: DigestParams
+): Promise<Note | undefined> {
   const {
     currentBook,
     htmlBook,
@@ -29,7 +31,7 @@ export async function createHighlight(params: DigestParams): Promise<void> {
     onSuccess,
   } = params;
 
-  if (!htmlBook) return;
+  if (!htmlBook) return undefined;
 
   let bookKey = currentBook.key;
   let bookLocation = ConfigService.getObjectConfig(
@@ -64,7 +66,7 @@ export async function createHighlight(params: DigestParams): Promise<void> {
       break;
     }
   }
-  if (!text) return;
+  if (!text) return undefined;
 
   text = text.replace(/\s\s/g, "");
   text = text.replace(/\r/g, "");
@@ -107,4 +109,5 @@ export async function createHighlight(params: DigestParams): Promise<void> {
     console.error("createOneNote failed:", err);
   }
   onSuccess?.();
+  return highlight;
 }

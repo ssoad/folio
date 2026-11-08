@@ -2,6 +2,7 @@ import { ConfigService } from "../../assets/lib/kookit-extra-browser.min";
 import { exitWebReader, isCompact, isTouchDevice } from "../platform";
 import { isElectron } from "react-device-detect";
 import { getIframeDoc, getIframeWin } from "./docUtil";
+import { bindMarkMode, isMarkMode } from "./markMode";
 import {
   handleExitFullScreen,
   handleFullScreen,
@@ -231,8 +232,10 @@ const handleReaderTap = async (
   // tell taps it handles
   const target = event.target as Element | null;
   if (
-    // In pen mode a tap is a dot on the page, not a request for the bars
+    // In pen mode a tap is a dot on the page, not a request for the bars;
+    // in mark mode the bars stay as they are while marking
     isDrawingMode ||
+    isMarkMode() ||
     doc.getSelection()?.toString() ||
     target?.closest?.("a, button, input, textarea, select, audio, video")
   ) {
@@ -427,6 +430,19 @@ const handleShortcut = (
   }
 };
 
+// Text is selected in the book (any page frame), or the menu for it is open
+const isSelecting = (doc: Document) => {
+  if (doc.getSelection()?.toString()) return true;
+  const outer = document.querySelector<HTMLIFrameElement>("#page-area iframe");
+  const docs = [outer?.contentDocument];
+  outer?.contentDocument?.querySelectorAll("iframe").forEach((frame) => {
+    docs.push((frame as HTMLIFrameElement).contentDocument);
+  });
+  if (docs.some((d) => d?.getSelection()?.toString())) return true;
+  const menu = document.querySelector(".popup-menu-container");
+  return !!menu && getComputedStyle(menu).display !== "none";
+};
+
 const gesture = async (rendition: any, type: string) => {
   if (type === "panleft" || type === "panup") {
     await rendition.next();
@@ -552,6 +568,9 @@ export const bindHtmlEvent = (
         return;
       }
       if (lock || event.pointerType === "mouse") return;
+      // A drag that draws, or that moves a selection's handles to highlight,
+      // isn't a page turn
+      if (isDrawingMode || isMarkMode() || isSelecting(doc)) return;
       lock = true;
       await gesture(rendition, event.type);
       handleLocation(key, rendition);
@@ -576,7 +595,10 @@ export const bindHtmlEvent = (
     });
   }
 
-  if (isCompact() || isTouchDevice()) applyDrawingMode(doc);
+  if (isCompact() || isTouchDevice()) {
+    applyDrawingMode(doc);
+    bindMarkMode(doc);
+  }
   if ((isCompact() || isTouchDevice()) && !tapBoundDocs.has(doc)) {
     // The engine renders again on resize and page changes; one listener per
     // document, or a tap would toggle the bars twice

@@ -22,6 +22,11 @@ import { copyIframeSelection } from "../../../utils/reader/docUtil";
 import { isCompact } from "../../../utils/platform";
 import PhoneIcon from "../../readerPhone/phoneIcons";
 import toast from "react-hot-toast";
+import {
+  MARK_EVENT,
+  MarkEventDetail,
+  pushHistory,
+} from "../../../utils/reader/markMode";
 
 declare var window: any;
 
@@ -51,6 +56,21 @@ class PopupMenu extends React.Component<PopupMenuProps, PopupMenuStates> {
       isExpanded: false,
     };
   }
+  componentDidMount() {
+    window.addEventListener(MARK_EVENT, this.handleMark);
+  }
+  componentWillUnmount() {
+    window.removeEventListener(MARK_EVENT, this.handleMark);
+  }
+  // Mark mode: text dragged over is highlighted in the current colour
+  handleMark = async (event: Event) => {
+    const detail = (event as CustomEvent<MarkEventDetail>).detail || {};
+    const note = await this.handlePillColor(
+      this.props.highlight.color,
+      detail.chapterDocIndex
+    );
+    if (note) pushHistory({ kind: "note", note, added: true });
+  };
   componentDidUpdate(prevProps: PopupMenuProps) {
     // The next selection starts from the short pill again
     if (
@@ -100,14 +120,14 @@ class PopupMenu extends React.Component<PopupMenuProps, PopupMenuStates> {
     window.setTimeout(restore, 300);
   };
   // Phone pill: a colour highlights straight away and becomes the default
-  handlePillColor = async (color: string) => {
+  handlePillColor = async (color: string, chapterDocIndex?: number) => {
     const value = { styleType: this.props.highlight.styleType, color };
     this.props.handleHighlight(value);
     this.highlightUtil.saveNoteHighlightValue(value);
-    await createHighlight({
+    return createHighlight({
       currentBook: this.props.currentBook,
       htmlBook: this.props.htmlBook,
-      chapterDocIndex: this.props.chapterDocIndex,
+      chapterDocIndex: chapterDocIndex ?? this.props.chapterDocIndex,
       chapter: this.props.chapter,
       color: this.highlightUtil.formatHighlightValue(value),
       t: this.props.t,

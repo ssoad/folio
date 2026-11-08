@@ -53,6 +53,7 @@ export interface ReaderState {
   isPhoneMoreOpen: boolean;
   isDisplaySheetOpen: boolean;
   isNearEdge: boolean;
+  isMarking: boolean;
   totalDuration: number;
   currentDuration: number;
 }

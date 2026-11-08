@@ -4,6 +4,12 @@ import { ViewerProps, ViewerState } from "./interface";
 import { withRouter } from "react-router-dom";
 import BookUtil from "../../utils/file/bookUtil";
 import PopupMenu from "../../components/popups/popupMenu";
+import { syncHighlightColors } from "../../utils/reader/highlightStyle";
+import {
+  bindMarkMode,
+  isMarkMode,
+  syncInk,
+} from "../../utils/reader/markMode";
 import Background from "../../components/background";
 import StyleUtil from "../../utils/reader/styleUtil";
 import "./index.css";
@@ -76,18 +82,34 @@ const isReaderDark = () => {
 
 // PDFs are inverted for dark reading. The engine doesn't keep that in step
 // with the theme (a PDF opened in Dark stayed light, and one switched to a
-// light theme could stay inverted on a white page, its text washed out), so
-// each page layer is set to match here. Pages render as they scroll in.
+// light theme could stay inverted on a white page, its text washed out), and
+// it inverts the drawing layer along with the page, so each page is set here.
+// Pages render as they scroll in.
 const PDF_DARK_FILTER = "invert(1) hue-rotate(180deg) contrast(0.95)";
-const syncPdfInversion = () => {
-  const filter = isReaderDark() ? PDF_DARK_FILTER : "none";
+const syncPdfInversion = (bookKey: string) => {
+  const isDark = isReaderDark();
+  const filter = isDark ? PDF_DARK_FILTER : "none";
   const outer = document.querySelector<HTMLIFrameElement>("#page-area iframe");
+  // Highlights in the book's page and in each PDF page follow the theme too
+  if (outer?.contentDocument) syncHighlightColors(outer.contentDocument, isDark);
   const frames = outer?.contentDocument?.querySelectorAll("iframe") || [];
   frames.forEach((frame) => {
+    const pageDoc = (frame as HTMLIFrameElement).contentDocument;
+    if (pageDoc) {
+      syncHighlightColors(pageDoc, isDark);
+      // PDF pages are added as the book scrolls
+      if (isCompact() || isTouchDevice()) bindMarkMode(pageDoc);
+      // Freehand ink drawn on PDF pages
+      syncInk(pageDoc, bookKey, isDark);
+    }
     (frame as HTMLIFrameElement).contentDocument
       ?.querySelectorAll<HTMLElement>(".koodoPDFLayer")
       .forEach((layer) => {
-        if (layer.style.filter !== filter) layer.style.filter = filter;
+        // Only the rendered page is inverted: drawings on top (pen,
+        // highlighter) keep their colours instead of turning dark brown
+        if (layer.style.filter !== "none") layer.style.filter = "none";
+        const page = layer.querySelector<HTMLElement>(":scope > #canvas");
+        if (page && page.style.filter !== filter) page.style.filter = filter;
       });
   });
 };
@@ -135,7 +157,10 @@ class Viewer extends React.Component<ViewerProps, ViewerState> {
   }
   componentDidMount() {
     // Only PDF pages have these layers; other books cost a lookup
-    this.pdfInversionTimer = window.setInterval(syncPdfInversion, 600);
+    this.pdfInversionTimer = window.setInterval(
+      () => syncPdfInversion(this.props.currentBook?.key || ""),
+      600
+    );
     this.handleRenderBook();
     //make sure page width is always 12 times, section = Math.floor(element.clientWidth / 12), or text will be blocked
     this.setState(
@@ -679,7 +704,8 @@ class Viewer extends React.Component<ViewerProps, ViewerState> {
             this.setState({ rect });
           }
         }
-        if (this.state.isDisablePopup) return;
+        // Mark mode highlights on lift (utils/reader/markMode), no menu
+        if (this.state.isDisablePopup || isMarkMode()) return;
         let selection = doc!.getSelection();
         if (
           !selection ||
@@ -707,7 +733,7 @@ class Viewer extends React.Component<ViewerProps, ViewerState> {
         doc.addEventListener("selectionchange", () => {
           window.clearTimeout(selectionTimer);
           selectionTimer = window.setTimeout(() => {
-            if (this.state.isDisablePopup) return;
+            if (this.state.isDisablePopup || isMarkMode()) return;
             // If already in a sub-mode (note, dict, trans, assistant), do not overwrite rect or reopen menu
             if (
               this.props.isOpenMenu &&
@@ -764,6 +790,7 @@ class Viewer extends React.Component<ViewerProps, ViewerState> {
           event.preventDefault();
         }
 
+        if (isMarkMode()) return;
         if (!this.state.isDisablePopup && !this.state.isTouch) return;
 
         if (

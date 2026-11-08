@@ -27,3 +27,11 @@
   justify-content: flex-start !important;
   text-align: left;
 }
+/* Snackbars are text only, so they never take a touch. A touch used to
+   pause a message's timer for good (the toast library pauses on hover and
+   a tap never "leaves"), and the faded message stayed over the reader's
+   highlight colours, so taps on them did nothing. */
+.folio-snackbar-container,
+.folio-snackbar-container * {
+  pointer-events: none !important;
+}
