@@ -450,6 +450,9 @@ class ConfigUtil {
         "customBackgrounds",
         "customFonts",
         "customDicts",
+        // Drawings, text boxes and sticky notes (utils/reader/inkStore)
+        "folioInk",
+        "folioInkDeleted",
       ];
       for (let i = 0; i < configList.length; i++) {
         let item = configList[i];

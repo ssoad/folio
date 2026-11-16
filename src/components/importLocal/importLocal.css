@@ -178,3 +178,49 @@
   border-right: 4px solid transparent;
   border-left: 4px solid transparent;
 }
+/* New notebook: the paper to start with */
+.import-from-local .more-option-item.more-option-notebook,
+.more-option-item.more-option-notebook {
+  flex-wrap: wrap;
+  row-gap: 6px;
+  height: auto;
+  padding-top: 10px;
+  padding-bottom: 10px;
+  cursor: default;
+}
+.notebook-papers {
+  display: flex;
+  gap: 8px;
+  width: 100%;
+  padding-left: 28px;
+}
+.notebook-paper {
+  width: 30px;
+  height: 40px;
+  padding: 0;
+  border: 1px solid var(--border-strong);
+  border-radius: 5px;
+  background-color: #fff;
+  cursor: pointer;
+}
+.notebook-paper:hover,
+.notebook-paper:focus-visible {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-soft, transparent);
+}
+.notebook-paper.is-ruled {
+  background-image: repeating-linear-gradient(
+    to bottom,
+    transparent 0 5px,
+    #c7d2ee 5px 6px
+  );
+}
+.notebook-paper.is-grid {
+  background-image: linear-gradient(#c7d2ee 1px, transparent 1px),
+    linear-gradient(90deg, #c7d2ee 1px, transparent 1px);
+  background-size: 6px 6px;
+}
+.notebook-paper.is-dots {
+  background-image: radial-gradient(#9ea8bd 0.8px, transparent 0.9px);
+  background-size: 6px 6px;
+}

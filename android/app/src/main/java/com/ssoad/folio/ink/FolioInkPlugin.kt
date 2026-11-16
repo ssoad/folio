@@ -93,7 +93,14 @@ class FolioInkPlugin : Plugin(), InkOverlay.Listener {
         return rects
     }
 
-    override fun onStroke(id: String, stroke: Stroke, tool: String, offsetX: Float, offsetY: Float) {
+    override fun onStroke(
+        id: String,
+        stroke: Stroke,
+        tool: String,
+        held: Boolean,
+        offsetX: Float,
+        offsetY: Float,
+    ) {
         val density = context.resources.displayMetrics.density
         val inputs = stroke.inputs
         val points = JSONArray()
@@ -110,6 +117,7 @@ class FolioInkPlugin : Plugin(), InkOverlay.Listener {
         val data = JSObject()
         data.put("id", id)
         data.put("tool", tool)
+        data.put("held", held)
         data.put("toolType", toolType)
         data.put("points", points)
         data.put("pressures", pressures)

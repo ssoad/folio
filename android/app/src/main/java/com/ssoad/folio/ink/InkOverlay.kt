@@ -40,7 +40,14 @@ class InkOverlay(
 ) : FrameLayout(context) {
 
     interface Listener {
-        fun onStroke(id: String, stroke: Stroke, tool: String, offsetX: Float, offsetY: Float)
+        fun onStroke(
+            id: String,
+            stroke: Stroke,
+            tool: String,
+            held: Boolean,
+            offsetX: Float,
+            offsetY: Float,
+        )
         fun onErase(points: FloatArray, isStart: Boolean, isEnd: Boolean)
         fun onStylusSeen()
     }
@@ -64,6 +71,12 @@ class InkOverlay(
     private var isIgnoring = false
 
     private val pending = HashMap<String, InProgressStrokeId>()
+    // Strokes that ended with the pen held still: the page turns them into
+    // the shape they look like
+    private val heldStrokes = HashSet<InProgressStrokeId>()
+    private var lastMoveTime = 0L
+    private var lastMoveX = 0f
+    private var lastMoveY = 0f
     private var nextId = 0
 
     init {
@@ -82,6 +95,7 @@ class InkOverlay(
                             id,
                             stroke,
                             tool,
+                            heldStrokes.remove(strokeId),
                             (location[0] - webLocation[0]).toFloat(),
                             (location[1] - webLocation[1]).toFloat(),
                         )
@@ -102,7 +116,7 @@ class InkOverlay(
     private fun brush(): Brush {
         val family = when (tool) {
             "marker" -> StockBrushes.highlighter()
-            "pencil" -> StockBrushes.marker()
+            "ball" -> StockBrushes.marker()
             else -> StockBrushes.pressurePen()
         }
         return Brush.createWithColorIntArgb(family, colorArgb, sizePx, 0.1f)
@@ -180,6 +194,9 @@ class InkOverlay(
             }
             currentPointer = event.getPointerId(0)
             currentId = strokesView.startStroke(event, currentPointer, brush())
+            lastMoveTime = event.eventTime
+            lastMoveX = event.x
+            lastMoveY = event.y
             return true
         }
         if (isIgnoring) return true
@@ -216,6 +233,19 @@ class InkOverlay(
                     listener.onErase(eraserPoints(event, 0), false, false)
                 } else currentId?.let {
                     strokesView.addToStroke(event, currentPointer, it)
+                    val index = event.findPointerIndex(currentPointer)
+                    if (index >= 0) {
+                        val slop = 4 * resources.displayMetrics.density
+                        if (Math.hypot(
+                                (event.getX(index) - lastMoveX).toDouble(),
+                                (event.getY(index) - lastMoveY).toDouble(),
+                            ) > slop
+                        ) {
+                            lastMoveTime = event.eventTime
+                            lastMoveX = event.getX(index)
+                            lastMoveY = event.getY(index)
+                        }
+                    }
                 }
             }
             MotionEvent.ACTION_UP -> {
@@ -223,6 +253,7 @@ class InkOverlay(
                     listener.onErase(FloatArray(0), false, true)
                     isErasing = false
                 } else currentId?.let {
+                    if (event.eventTime - lastMoveTime > HOLD_MS) heldStrokes.add(it)
                     strokesView.finishStroke(event, currentPointer, it)
                 }
                 currentId = null
@@ -238,6 +269,8 @@ class InkOverlay(
     }
 
     companion object {
+        const val HOLD_MS = 450L
+
         fun toolTypeName(input: StrokeInput): String = when (input.toolType) {
             InputToolType.STYLUS -> "stylus"
             InputToolType.TOUCH -> "touch"

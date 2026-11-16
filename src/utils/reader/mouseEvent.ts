@@ -2,7 +2,7 @@ import { ConfigService } from "../../assets/lib/kookit-extra-browser.min";
 import { exitWebReader, isCompact, isTouchDevice } from "../platform";
 import { isElectron } from "react-device-detect";
 import { getIframeDoc, getIframeWin } from "./docUtil";
-import { bindMarkMode, isMarkMode } from "./markMode";
+import { bindMarkMode, isMarkMode, openStickyAt } from "./markMode";
 import {
   handleExitFullScreen,
   handleFullScreen,
@@ -241,6 +241,8 @@ const handleReaderTap = async (
   ) {
     return;
   }
+  // A sticky note opens instead
+  if (openStickyAt(doc, event.clientX, event.clientY)) return;
   // The iframe can be wider than the screen (paginated books), so measure
   // against the app window
   const frame = doc.defaultView?.frameElement;
@@ -634,7 +636,11 @@ export const bindHtmlEvent = (
         }
         lastTouchTap = Date.now();
         handleReaderTap(
-          { clientX: touch.clientX, target: event.target } as MouseEvent,
+          {
+            clientX: touch.clientX,
+            clientY: touch.clientY,
+            target: event.target,
+          } as MouseEvent,
           rendition,
           doc,
           readerMode,

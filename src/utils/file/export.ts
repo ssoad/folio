@@ -3,7 +3,7 @@ import DictHistory from "../../models/DictHistory";
 import Note from "../../models/Note";
 import BookUtil from "./bookUtil";
 import JSZip from "jszip";
-import { saveAs } from "file-saver";
+import { saveAs } from "./saveFile";
 import {
   ConfigService,
   HighlightUtil,

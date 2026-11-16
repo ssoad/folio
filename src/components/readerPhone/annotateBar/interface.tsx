@@ -24,4 +24,6 @@ export interface AnnotateBarState {
   // Last colour used with each text style
   textColors: Record<string, string>;
   hint: string;
+  // Ink strokes selected with the lasso
+  lassoCount: number;
 }

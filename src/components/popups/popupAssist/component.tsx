@@ -15,7 +15,7 @@ import DOMPurify from "dompurify";
 import { Trans } from "react-i18next";
 import { handleContextMenu } from "../../../utils/common";
 import toast from "react-hot-toast";
-import { saveAs } from "file-saver";
+import { saveAs } from "../../../utils/file/saveFile";
 import { streamChat } from "../../../utils/ai";
 import {
   isSpoilerProtectionOn,

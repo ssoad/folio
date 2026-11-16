@@ -1,7 +1,7 @@
 import React from "react";
 import "./imageViewer.css";
 import { ImageViewerProps, ImageViewerStates } from "./interface";
-import { saveAs } from "file-saver";
+import { saveAs } from "../../utils/file/saveFile";
 import { getIframeDoc } from "../../utils/reader/docUtil";
 import {
   getShortcutConfig,

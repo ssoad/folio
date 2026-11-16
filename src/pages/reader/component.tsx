@@ -28,6 +28,8 @@ import SettingDialog from "../../components/dialogs/settingDialog";
 import SpeechDialog from "../../components/dialogs/speechDialog";
 import AnnotationDialog from "../../components/dialogs/annotationDialog";
 import AnnotateBar from "../../components/readerPhone/annotateBar";
+import toast from "react-hot-toast";
+import InkTextSheet from "../../components/readerPhone/inkTextSheet";
 import DisplaySheet from "../../components/readerPhone/displaySheet";
 import PhoneIcon from "../../components/readerPhone/phoneIcons";
 import {
@@ -140,6 +142,7 @@ class Reader extends React.Component<ReaderProps, ReaderState> {
       isDisplaySheetOpen: false,
       isNearEdge: false,
       isMarking: false,
+      modeBookKey: "",
     };
   }
   componentDidMount() {
@@ -224,6 +227,8 @@ class Reader extends React.Component<ReaderProps, ReaderState> {
           : ConfigService.getReaderConfig("readerMode") || "double";
       this.props.handleReaderMode(effectiveReaderMode(readerMode));
       this.props.handleReadingBook(book);
+      // The book renders once its layout is known (see render)
+      this.setState({ modeBookKey: book.key });
       // Start event-driven reading-time tracking
       this.readingTimeUtil.start(book.key);
       // Initialise UI duration from persisted total
@@ -429,6 +434,20 @@ class Reader extends React.Component<ReaderProps, ReaderState> {
     !!this.props.currentBook &&
     isReadingRawPDF(this.props.currentBook) &&
     (this.props.currentBook.description || "").includes("scanned");
+  // The PDF with its drawings, text boxes and sticky notes in it
+  handleExportAnnotated = async () => {
+    this.closeToolPopovers();
+    toast.loading(this.props.t("Exporting..."), { id: "export-annotated" });
+    try {
+      const { exportAnnotatedPdf } =
+        await import("../../utils/file/exportAnnotated");
+      await exportAnnotatedPdf(this.props.currentBook);
+      toast.dismiss("export-annotated");
+    } catch (error) {
+      console.error(error);
+      toast.error(this.props.t("Failed to export"), { id: "export-annotated" });
+    }
+  };
   // Mark mode (phones): a drag over text highlights it
   // (the bar turns the tools on and off as it opens and closes)
   handleToggleMarking = (isMarking = !this.state.isMarking) => {
@@ -793,6 +812,20 @@ class Reader extends React.Component<ReaderProps, ReaderState> {
               </div>
             )}
 
+          {isReadingRawPDF(this.props.currentBook) && (
+            <div
+              className="reader-setting-icon-container"
+              role="button"
+              aria-label={this.props.t("Export with annotations")}
+              title={this.props.t("Export with annotations")}
+              onClick={this.handleExportAnnotated}
+            >
+              <span
+                className="icon-share reader-setting-icon"
+                style={{ fontSize: 22 }}
+              ></span>
+            </div>
+          )}
           {this.props.currentBook.format === "PDF" && (
             <div
               className="reader-setting-icon-container"
@@ -1179,7 +1212,8 @@ class Reader extends React.Component<ReaderProps, ReaderState> {
               <PhoneIcon name="pen" />
             </button>
           )}
-          {!this.canDraw() && (
+          {/* Every book (on scanned PDFs too, beside the engine's own pen) */}
+          {
             <button
               type="button"
               aria-label={this.props.t("Annotate")}
@@ -1191,7 +1225,7 @@ class Reader extends React.Component<ReaderProps, ReaderState> {
             >
               <PhoneIcon name="annotate" />
             </button>
-          )}
+          }
           <button
             type="button"
             aria-label={this.props.t("Listen")}
@@ -1227,7 +1261,13 @@ class Reader extends React.Component<ReaderProps, ReaderState> {
           } as any)}
         />
 
-        {this.props.currentBook.key && <Viewer {...(renditionProps as any)} />}
+        {/* Rendered once this book's reading mode is set: the store can
+            still hold another book's (or the two-page default), which
+            laid PDFs out as narrow columns after a cold start */}
+        {this.props.currentBook.key &&
+          this.state.modeBookKey === this.props.currentBook.key && (
+            <Viewer {...(renditionProps as any)} />
+          )}
         {this.props.isConvertOpen && <ConvertDialog />}
         {this.props.isPdfCropOpen && <PdfCropDialog />}
         {this.props.isOpenPopupOptionDialog && <PopupOptionDialog />}
@@ -1245,6 +1285,7 @@ class Reader extends React.Component<ReaderProps, ReaderState> {
           </div>
         }
         {this.props.isAnnotationOpen && <AnnotationDialog />}
+        {isCompact() && <InkTextSheet />}
         {this.state.isMarking && (
           <AnnotateBar
             {...({ onDone: () => this.handleToggleMarking(false) } as any)}

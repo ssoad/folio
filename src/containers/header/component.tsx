@@ -21,6 +21,7 @@ import {
 import toast from "react-hot-toast";
 import { Trans } from "react-i18next";
 import { SyncHelper } from "../../assets/lib/kookit-extra-browser.min";
+import { syncInkData } from "../../utils/reader/inkSync";
 import ConfigUtil from "../../utils/file/configUtil";
 import DatabaseService from "../../utils/storage/databaseService";
 import CoverUtil from "../../utils/file/coverUtil";
@@ -565,6 +566,9 @@ class Header extends React.Component<HeaderProps, HeaderState> {
         );
         return;
       }
+      // Ink (drawings, text boxes, sticky notes) merges separately, so two
+      // devices' drawings both stay; a failure here doesn't fail the sync
+      await syncInkData().catch((error) => console.error("Ink sync", error));
       if (ConfigService.getReaderConfig("hideSyncProgress") !== "yes") {
         toast.loading(this.props.t("Almost finished"), {
           id: "syncing",

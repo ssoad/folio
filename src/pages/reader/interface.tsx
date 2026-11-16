@@ -54,6 +54,7 @@ export interface ReaderState {
   isDisplaySheetOpen: boolean;
   isNearEdge: boolean;
   isMarking: boolean;
+  modeBookKey: string;
   totalDuration: number;
   currentDuration: number;
 }

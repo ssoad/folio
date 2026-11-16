@@ -2,7 +2,7 @@ import React from "react";
 import "./moreAction.css";
 import { Trans } from "react-i18next";
 import { MoreActionProps, MoreActionState } from "./interface";
-import { saveAs } from "file-saver";
+import { saveAs } from "../../../utils/file/saveFile";
 import toast from "react-hot-toast";
 import BookUtil from "../../../utils/file/bookUtil";
 import CoverUtil from "../../../utils/file/coverUtil";

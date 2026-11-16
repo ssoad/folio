@@ -1,3 +1,4 @@
+import type { NotebookPaper } from "../../utils/file/notebook";
 import React from "react";
 import "./importLocal.css";
 import BookModel from "../../models/Book";
@@ -67,6 +68,13 @@ const getComicImageExt = (name: string) => {
   const ext = name.split(".").pop()?.toLowerCase() || "png";
   return ext === "jpg" ? "jpeg" : ext;
 };
+
+const NOTEBOOK_PAPERS: { value: NotebookPaper; label: string }[] = [
+  { value: "blank", label: "Blank" },
+  { value: "ruled", label: "Ruled" },
+  { value: "grid", label: "Squared" },
+  { value: "dots", label: "Dotted" },
+];
 
 class ImportLocal extends React.Component<ImportLocalProps, ImportLocalState> {
   resizeHandler: (() => void) | null = null;
@@ -294,6 +302,15 @@ class ImportLocal extends React.Component<ImportLocalProps, ImportLocalState> {
     }
   };
 
+  handleNewNotebook = async (paper: NotebookPaper) => {
+    const { createNotebook } = await import("../../utils/file/notebook");
+    const date = new Date();
+    const pad = (n: number) => String(n).padStart(2, "0");
+    const name =
+      this.props.t("Notebook") +
+      ` ${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}.${pad(date.getMinutes())}`;
+    await this.getMd5WithBrowser(await createNotebook(paper, name));
+  };
   getMd5WithBrowser = async (file: File) => {
     return new Promise<void>(async (resolve) => {
       const md5 = await calculateFileMD5(file);
@@ -996,6 +1013,32 @@ class ImportLocal extends React.Component<ImportLocalProps, ImportLocalState> {
                         : {}
                     }
                   >
+                    {/* A notebook: empty pages to write and draw on */}
+                    <div
+                      className="more-option-item more-option-notebook"
+                      onClick={(event) => event.stopPropagation()}
+                    >
+                      <ImportIcon name="file" className="more-option-icon" />
+                      <span className="more-option-text">
+                        <Trans>New notebook</Trans>
+                      </span>
+                      <span className="notebook-papers">
+                        {NOTEBOOK_PAPERS.map((paper) => (
+                          <button
+                            type="button"
+                            key={paper.value}
+                            className={"notebook-paper is-" + paper.value}
+                            aria-label={this.props.t(paper.label)}
+                            title={this.props.t(paper.label)}
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              this.toggleMoreOptions();
+                              this.handleNewNotebook(paper.value);
+                            }}
+                          />
+                        ))}
+                      </span>
+                    </div>
                     {/* Same picker as the main button; single or several books */}
                     <div
                       className="more-option-item"

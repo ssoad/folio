@@ -97,3 +97,42 @@
 .annotate-bar-switch input:checked::after {
   transform: translateX(16px);
 }
+/* Pen type: fountain (follows pressure) or ball (even) */
+.annotate-bar-kinds {
+  display: flex;
+  gap: 4px;
+  padding: 3px;
+  border-radius: 999px;
+  background: var(--subtle-bg, rgba(127, 127, 127, 0.12));
+}
+.annotate-bar-kinds button {
+  flex: 1;
+  height: 30px;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text-muted, var(--text));
+  font-size: 13px;
+  font-weight: 500;
+}
+.annotate-bar-kinds button.is-active {
+  background: var(--surface-raised);
+  color: var(--text);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+}
+.annotate-bar-delete {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 34px;
+  border-radius: 999px;
+  background: var(--danger-soft, rgba(220, 38, 38, 0.1));
+  color: var(--danger, #dc2626);
+  font-size: 13.5px;
+  font-weight: 500;
+}
+/* Up to eleven tools on a 360px phone */
+.annotate-bar .annotation-phone-tool,
+.annotate-bar .annotation-phone-color {
+  width: min(36px, calc((100vw - 34px) / 11.4));
+}

@@ -14,6 +14,9 @@
 
 import { ConfigService } from "../../assets/lib/kookit-extra-browser.min";
 import { Capacitor, registerPlugin } from "@capacitor/core";
+import { recognizeShape } from "./shapeRecognizer";
+import { STICKY_SIZE } from "./inkConstants";
+import { InkBook, Stroke, changePage, loadBookInk } from "./inkStore";
 
 export const MARK_EVENT = "folio-mark-text";
 export const MARK_MODE_EVENT = "folio-mark-mode";
@@ -27,7 +30,13 @@ export interface MarkEventDetail {
 
 export type TextTool = "background" | "underline" | "strikethrough" | "wavy";
 export type InkTool = "pen" | "marker";
-export type AnnotateTool = TextTool | InkTool | "eraser";
+export type InsertTool = "text" | "sticky";
+export type AnnotateTool = TextTool | InkTool | InsertTool | "eraser" | "lasso";
+export const isInsertTool = (tool: AnnotateTool | null): tool is InsertTool =>
+  tool === "text" || tool === "sticky";
+// The stroke eraser removes whole strokes; the pixel eraser only the part
+// it passes over
+export type EraserKind = "stroke" | "pixel";
 
 export const TEXT_TOOLS: TextTool[] = [
   "background",
@@ -44,19 +53,30 @@ export interface InkStyle {
   color: string;
   // Fraction of the page width
   width: number;
+  // Pen: "fountain" follows pen pressure, "ball" is even
+  kind?: PenKind;
 }
+export type PenKind = "fountain" | "ball";
 
-interface Stroke {
-  id: string;
-  tool: InkTool;
-  color: string;
-  width: number;
-  // Flat list of x, y pairs, each 0..1 of the page
-  points: number[];
-  // Stylus pressure (0..1) at each point
-  pressures?: number[];
-}
-type InkBook = Record<string, Stroke[]>;
+// A stroke that ended with the pen held still becomes the shape it looks
+// like (line, circle, rectangle...). Points are matched in page pixels so
+// the page's proportions don't skew them.
+const HOLD_MS = 450;
+const applyShape = (stroke: Stroke, pageWidth: number, pageHeight: number) => {
+  const px: number[] = [];
+  for (let i = 0; i < stroke.points.length; i += 2) {
+    px.push(stroke.points[i] * pageWidth, stroke.points[i + 1] * pageHeight);
+  }
+  const shape = recognizeShape(px);
+  if (!shape) return stroke;
+  const points: number[] = [];
+  for (let i = 0; i < shape.points.length; i += 2) {
+    points.push(shape.points[i] / pageWidth, shape.points[i + 1] / pageHeight);
+  }
+  return { ...stroke, points, pressures: undefined };
+};
+
+// Strokes, text boxes and sticky notes, and how they're stored: inkStore
 
 // Undo history: ink is handled here; highlights by the toolbar (it has the
 // book's renderer and the store)
@@ -69,7 +89,17 @@ export type HistoryEntry =
       added: boolean;
       group?: number;
     }
-  | { kind: "note"; note: any; added: boolean; group?: number };
+  | { kind: "note"; note: any; added: boolean; group?: number }
+  // Strokes changed (moved, recoloured, partly erased): "added" means the
+  // change is in place
+  | {
+      kind: "replace";
+      page: number;
+      before: Stroke[];
+      after: Stroke[];
+      added: boolean;
+      group?: number;
+    };
 export interface EraseNoteDetail {
   key: string;
   group: number;
@@ -99,7 +129,7 @@ html.${MARKING_CLASS}.folio-text-tool, html.${MARKING_CLASS}.folio-text-tool bod
 let tool: AnnotateTool | null = null;
 let bookKey = "";
 const inkStyles: Record<InkTool, InkStyle> = {
-  pen: { color: "#1f2937", width: 0.004 },
+  pen: { color: "#1f2937", width: 0.004, kind: "fountain" },
   marker: { color: "#facc15", width: 0.022 },
 };
 const boundDocs = new WeakSet<Document>();
@@ -135,6 +165,7 @@ const applyMarkMode = (doc: Document) => {
 };
 
 export const setAnnotateTool = (next: AnnotateTool | null, key?: string) => {
+  if (next !== "lasso" && lasso) clearLasso();
   tool = next;
   if (key !== undefined) bookKey = key;
   if (!next) {
@@ -203,6 +234,18 @@ const applyEntry = (
   entry: HistoryEntry,
   exists: boolean
 ): HistoryEntry | null => {
+  if (entry.kind === "replace") {
+    const [from, to] = exists
+      ? [entry.before, entry.after]
+      : [entry.after, entry.before];
+    replaceStrokes(
+      entry.page,
+      from.map((s) => s.id),
+      to
+    );
+    if (lasso && lasso.page === entry.page) clearLasso();
+    return null;
+  }
   if (entry.kind === "ink") {
     if (exists) addStroke(entry.page, entry.stroke);
     else removeStroke(entry.page, entry.stroke.id);
@@ -214,25 +257,22 @@ const applyEntry = (
 /* ---------- ink storage ---------- */
 
 let inkVersion = 0;
-const INK_CONFIG = "folioInk";
-const loadInk = (): InkBook =>
-  bookKey ? ConfigService.getObjectConfig(bookKey, INK_CONFIG, {}) || {} : {};
-const saveInk = (ink: InkBook) => {
+const loadInk = (): InkBook => loadBookInk(bookKey);
+// Swaps strokes for others in the same place in the drawing order
+const replaceStrokes = (page: number, removeIds: string[], add: Stroke[]) => {
   if (!bookKey) return;
-  ConfigService.setObjectConfig(bookKey, ink, INK_CONFIG);
+  changePage(bookKey, page, removeIds, add);
   inkVersion++;
-};
-const addStroke = (page: number, stroke: Stroke) => {
-  const ink = loadInk();
-  ink[page] = [...(ink[page] || []).filter((s) => s.id !== stroke.id), stroke];
-  saveInk(ink);
   redrawAll();
 };
-const removeStroke = (page: number, id: string) => {
-  const ink = loadInk();
-  ink[page] = (ink[page] || []).filter((s) => s.id !== id);
-  if (!ink[page].length) delete ink[page];
-  saveInk(ink);
+const addStroke = (page: number, stroke: Stroke) =>
+  replaceStrokes(page, [stroke.id], [stroke]);
+const removeStroke = (page: number, id: string) =>
+  replaceStrokes(page, [id], []);
+
+// Ink changed elsewhere (a sync): draw it again
+export const refreshInk = () => {
+  inkVersion++;
   redrawAll();
 };
 
@@ -276,6 +316,174 @@ const visibleInk = (color: string) => {
   )}%)`;
 };
 
+/* ---------- text boxes and sticky notes ---------- */
+
+export const INK_TEXT_EDIT_EVENT = "folio-ink-text-edit";
+export interface InkTextEdit {
+  page: number;
+  item: Stroke;
+  isNew: boolean;
+  // The page's size in CSS pixels (to lay text out)
+  pageWidth: number;
+  pageHeight: number;
+}
+export { STICKY_SIZE };
+export const TEXT_FONT = '"Inter", system-ui, -apple-system, sans-serif';
+const LINE_HEIGHT = 1.3;
+
+// Words wrapped to the box's width (and long words broken)
+export const layoutText = (
+  ctx: CanvasRenderingContext2D,
+  text: string,
+  maxWidth: number
+) => {
+  const lines: string[] = [];
+  for (const paragraph of text.split("\n")) {
+    let line = "";
+    for (const word of paragraph.split(/(\s+)/)) {
+      const next = line + word;
+      if (ctx.measureText(next).width <= maxWidth || !line.trim()) {
+        line = next;
+        while (ctx.measureText(line).width > maxWidth && line.length > 1) {
+          let cut = line.length - 1;
+          while (
+            cut > 1 &&
+            ctx.measureText(line.slice(0, cut)).width > maxWidth
+          )
+            cut--;
+          lines.push(line.slice(0, cut));
+          line = line.slice(cut);
+        }
+      } else {
+        lines.push(line.trimEnd());
+        line = word.trimStart();
+      }
+    }
+    lines.push(line.trimEnd());
+  }
+  return lines;
+};
+
+// A text box's height, a fraction of the page height, for its text
+export const measureTextHeight = (
+  item: Stroke,
+  pageWidth: number,
+  pageHeight: number
+) => {
+  const ctx = document.createElement("canvas").getContext("2d");
+  if (!ctx || !pageHeight) return 0.05;
+  const fontPx = (item.fontSize || 0.03) * pageWidth;
+  ctx.font = `${fontPx}px ${TEXT_FONT}`;
+  const lines = layoutText(
+    ctx,
+    item.text || " ",
+    (item.width || 0.4) * pageWidth
+  );
+  return (lines.length * fontPx * LINE_HEIGHT + fontPx * 0.4) / pageHeight;
+};
+
+const drawTextItem = (
+  ctx: CanvasRenderingContext2D,
+  item: Stroke,
+  w: number,
+  h: number
+) => {
+  const x = item.points[0] * w;
+  const y = item.points[1] * h;
+  if (item.tool === "sticky") {
+    // A folded note
+    const size = STICKY_SIZE * w;
+    const fold = size * 0.28;
+    ctx.fillStyle = item.color || "#fde68a";
+    ctx.strokeStyle = "rgba(0, 0, 0, 0.25)";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    ctx.lineTo(x + size, y);
+    ctx.lineTo(x + size, y + size - fold);
+    ctx.lineTo(x + size - fold, y + size);
+    ctx.lineTo(x, y + size);
+    ctx.closePath();
+    ctx.shadowColor = "rgba(0, 0, 0, 0.18)";
+    ctx.shadowBlur = 4;
+    ctx.shadowOffsetY = 1;
+    ctx.fill();
+    ctx.shadowColor = "transparent";
+    ctx.stroke();
+    ctx.fillStyle = "rgba(0, 0, 0, 0.12)";
+    ctx.beginPath();
+    ctx.moveTo(x + size, y + size - fold);
+    ctx.lineTo(x + size - fold, y + size - fold);
+    ctx.lineTo(x + size - fold, y + size);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = "rgba(0, 0, 0, 0.35)";
+    for (let i = 1; i <= 3; i++) {
+      const ly = y + (size * i) / 4.6;
+      ctx.beginPath();
+      ctx.moveTo(x + size * 0.18, ly);
+      ctx.lineTo(x + size * (i === 3 ? 0.5 : 0.78), ly);
+      ctx.stroke();
+    }
+    return;
+  }
+  const fontPx = (item.fontSize || 0.03) * w;
+  ctx.font = `${fontPx}px ${TEXT_FONT}`;
+  ctx.textBaseline = "top";
+  ctx.fillStyle = visibleInk(item.color);
+  const lines = layoutText(ctx, item.text || "", (item.width || 0.4) * w);
+  lines.forEach((line, i) =>
+    ctx.fillText(line, x, y + fontPx * 0.2 + i * fontPx * LINE_HEIGHT)
+  );
+};
+
+// The box a text box or sticky note takes on the page (normalised)
+const itemBox = (item: Stroke, aspect: number) => {
+  const x = item.points[0];
+  const y = item.points[1];
+  if (item.tool === "sticky") {
+    return { x, y, w: STICKY_SIZE, h: STICKY_SIZE * aspect };
+  }
+  return { x, y, w: item.width || 0.4, h: item.height || 0.05 };
+};
+const isTextItem = (s: Stroke) => s.tool === "text" || s.tool === "sticky";
+
+// The topmost text box or sticky note at a point of the page
+const textItemAt = (page: number, nx: number, ny: number, aspect: number) => {
+  const items = (loadInk()[page] || []).filter(isTextItem);
+  for (let i = items.length - 1; i >= 0; i--) {
+    const b = itemBox(items[i], aspect);
+    const pad = 0.01;
+    if (
+      nx >= b.x - pad &&
+      nx <= b.x + b.w + pad &&
+      ny >= b.y - pad &&
+      ny <= b.y + b.h + pad
+    ) {
+      return items[i];
+    }
+  }
+  return null;
+};
+
+const requestTextEdit = (detail: InkTextEdit) =>
+  window.dispatchEvent(new CustomEvent(INK_TEXT_EDIT_EVENT, { detail }));
+
+// Saves a text box or sticky note from the editor (one undo step)
+export const saveTextItem = (page: number, item: Stroke, isNew: boolean) => {
+  const before = isNew
+    ? []
+    : (loadInk()[page] || []).filter((s) => s.id === item.id);
+  replaceStrokes(page, [item.id], [item]);
+  pushHistory({ kind: "replace", page, before, after: [item], added: true });
+};
+export const deleteTextItem = (page: number, item: Stroke) => {
+  const before = (loadInk()[page] || []).filter((s) => s.id === item.id);
+  if (!before.length) return;
+  replaceStrokes(page, [item.id], []);
+  pushHistory({ kind: "replace", page, before, after: [], added: true });
+};
+
 const drawStroke = (
   ctx: CanvasRenderingContext2D,
   stroke: Stroke,
@@ -284,6 +492,12 @@ const drawStroke = (
 ) => {
   const pts = stroke.points;
   if (pts.length < 2) return;
+  if (isTextItem(stroke)) {
+    ctx.save();
+    drawTextItem(ctx, stroke, w, h);
+    ctx.restore();
+    return;
+  }
   ctx.save();
   const color = stroke.tool === "pen" ? visibleInk(stroke.color) : stroke.color;
   ctx.strokeStyle = color;
@@ -324,6 +538,8 @@ const drawStroke = (
 };
 
 const drawPage = (doc: Document, extra?: Stroke) => {
+  const overrides =
+    lasso && lasso.doc === doc && lasso.preview ? lasso.preview : null;
   const canvas = inkCanvasOf(doc);
   const page = pageIndexOf(doc);
   if (!canvas || page === undefined) return;
@@ -341,8 +557,11 @@ const drawPage = (doc: Document, extra?: Stroke) => {
   ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
   ctx.clearRect(0, 0, w, h);
   const strokes = loadInk()[page] || [];
-  strokes.forEach((stroke) => drawStroke(ctx, stroke, w, h));
+  strokes.forEach((stroke) =>
+    drawStroke(ctx, overrides?.get(stroke.id) || stroke, w, h)
+  );
   if (extra) drawStroke(ctx, extra, w, h);
+  if (lasso && lasso.doc === doc) drawLasso(ctx, w, h);
   canvas.dataset.version = inkStamp(w, h);
 };
 
@@ -440,6 +659,72 @@ const selectBetween = (doc: Document, from: Caret, to: Caret) => {
 /* ---------- erasing ---------- */
 
 const ERASER_RADIUS = 14;
+let eraserKind: EraserKind = "stroke";
+export const getEraserKind = () => eraserKind;
+export const setEraserKind = (kind: EraserKind) => {
+  eraserKind = kind;
+};
+
+let pieceCount = 0;
+// The pixel eraser: the stroke without the points within the eraser's
+// reach of (x, y), as one stroke per run of points left. The line is
+// filled in every couple of pixels first, so the cut is clean.
+const splitStroke = (
+  stroke: Stroke,
+  x: number,
+  y: number,
+  radius: number,
+  rect: DOMRect
+): Stroke[] => {
+  const src = stroke.points;
+  const pressures = stroke.pressures;
+  const dense: { x: number; y: number; p?: number }[] = [];
+  for (let i = 0; i < src.length; i += 2) {
+    const a = { x: src[i], y: src[i + 1], p: pressures?.[i / 2] };
+    if (i + 2 >= src.length) {
+      dense.push(a);
+      break;
+    }
+    const b = { x: src[i + 2], y: src[i + 3], p: pressures?.[i / 2 + 1] };
+    const length = Math.hypot(
+      (b.x - a.x) * rect.width,
+      (b.y - a.y) * rect.height
+    );
+    const n = Math.max(1, Math.ceil(length / 2));
+    for (let k = 0; k < n; k++) {
+      const t = k / n;
+      dense.push({
+        x: a.x + (b.x - a.x) * t,
+        y: a.y + (b.y - a.y) * t,
+        p: a.p !== undefined && b.p !== undefined ? a.p + (b.p - a.p) * t : a.p,
+      });
+    }
+  }
+  const reach = radius + (stroke.width * rect.width) / 2;
+  const pieces: Stroke[] = [];
+  let run: typeof dense = [];
+  const flush = () => {
+    if (run.length >= 2) {
+      pieces.push({
+        ...stroke,
+        id: `${stroke.id.split("~")[0]}~${(pieceCount++).toString(36)}`,
+        points: run.flatMap((p) => [p.x, p.y]),
+        pressures: pressures ? run.map((p) => p.p ?? 0.5) : undefined,
+      });
+    }
+    run = [];
+  };
+  for (const p of dense) {
+    const away = Math.hypot(
+      rect.left + p.x * rect.width - x,
+      rect.top + p.y * rect.height - y
+    );
+    if (away <= reach) flush();
+    else run.push(p);
+  }
+  flush();
+  return pieces;
+};
 
 // Distance from a point to a line segment
 const segmentDistance = (
@@ -503,6 +788,24 @@ const eraseAt = (doc: Document, x: number, y: number, erased: Set<string>) => {
   const strokes = loadInk()[page] || [];
   for (const stroke of strokes) {
     if (erased.has(stroke.id)) continue;
+    if (isTextItem(stroke)) {
+      // Text boxes and notes go whole, whichever eraser
+      const b = itemBox(stroke, rect.width / rect.height);
+      const px = (x - rect.left) / rect.width;
+      const py = (y - rect.top) / rect.height;
+      if (px >= b.x && px <= b.x + b.w && py >= b.y && py <= b.y + b.h) {
+        erased.add(stroke.id);
+        removeStroke(page, stroke.id);
+        pushHistory({
+          kind: "ink",
+          page,
+          stroke,
+          added: false,
+          group: eraseGroup,
+        });
+      }
+      continue;
+    }
     const reach = ERASER_RADIUS + (stroke.width * rect.width) / 2;
     const pts = stroke.points;
     for (let i = 0; i < pts.length; i += 2) {
@@ -518,6 +821,20 @@ const eraseAt = (doc: Document, x: number, y: number, erased: Set<string>) => {
       );
       if (distance <= reach) {
         erased.add(stroke.id);
+        if (eraserKind === "pixel") {
+          // Only the part under the eraser goes
+          const pieces = splitStroke(stroke, x, y, ERASER_RADIUS, rect);
+          replaceStrokes(page, [stroke.id], pieces);
+          pushHistory({
+            kind: "replace",
+            page,
+            before: [stroke],
+            after: pieces,
+            added: true,
+            group: eraseGroup,
+          });
+          break;
+        }
         removeStroke(page, stroke.id);
         pushHistory({
           kind: "ink",
@@ -535,6 +852,79 @@ const eraseAt = (doc: Document, x: number, y: number, erased: Set<string>) => {
 /* ---------- touch input ---------- */
 
 const MIN_DRAG = 8;
+
+const pageGeometry = (doc: Document, x: number, y: number) => {
+  const canvas = inkCanvasOf(doc);
+  const page = pageIndexOf(doc);
+  if (!canvas || page === undefined) return null;
+  const rect = canvas.getBoundingClientRect();
+  if (!rect.width || !rect.height) return null;
+  return {
+    page,
+    rect,
+    nx: (x - rect.left) / rect.width,
+    ny: (y - rect.top) / rect.height,
+    aspect: rect.width / rect.height,
+  };
+};
+
+// A tap with the text or sticky-note tool: edit the one there, or add one
+const placeTextItem = (doc: Document, x: number, y: number) => {
+  const g = pageGeometry(doc, x, y);
+  if (!g || g.nx < 0 || g.nx > 1 || g.ny < 0 || g.ny > 1) return;
+  const existing = textItemAt(g.page, g.nx, g.ny, g.aspect);
+  if (existing) {
+    requestTextEdit({
+      page: g.page,
+      item: existing,
+      isNew: false,
+      pageWidth: g.rect.width,
+      pageHeight: g.rect.height,
+    });
+    return;
+  }
+  const isSticky = tool === "sticky";
+  const width = isSticky ? STICKY_SIZE : 0.45;
+  const item: Stroke = {
+    id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+    tool: isSticky ? "sticky" : "text",
+    color: isSticky ? "#fde68a" : inkStyles.pen.color,
+    width,
+    // Kept on the page
+    points: [Math.min(g.nx, 1 - width), g.ny],
+    text: "",
+    fontSize: 0.032,
+  };
+  requestTextEdit({
+    page: g.page,
+    item,
+    isNew: true,
+    pageWidth: g.rect.width,
+    pageHeight: g.rect.height,
+  });
+};
+
+// Reading: a tap on a sticky note opens it (from the reader's tap handler,
+// utils/reader/mouseEvent); true when it did
+export const openStickyAt = (doc: Document, x: number, y: number) => {
+  const hit = stickyAt(doc, x, y);
+  if (hit) requestTextEdit(hit);
+  return !!hit;
+};
+
+const stickyAt = (doc: Document, x: number, y: number): InkTextEdit | null => {
+  const g = pageGeometry(doc, x, y);
+  if (!g) return null;
+  const item = textItemAt(g.page, g.nx, g.ny, g.aspect);
+  if (!item || item.tool !== "sticky") return null;
+  return {
+    page: g.page,
+    item,
+    isNew: false,
+    pageWidth: g.rect.width,
+    pageHeight: g.rect.height,
+  };
+};
 
 export const bindMarkMode = (doc: Document) => {
   if (!doc?.documentElement) return;
@@ -559,8 +949,12 @@ export const bindMarkMode = (doc: Document) => {
   // A touch with a tool isn't a tap on a highlight (which would open its
   // note sheet) or on the page: the engine's handlers don't see it
   let lastErase: { x: number; y: number } | null = null;
+  let lastInkMove: { x: number; y: number; time: number } | null = null;
+  let tapPoint: { x: number; y: number } | null = null;
   const swallow = (event: Event) => {
-    if (!tool) return;
+    if (!tool) {
+      return;
+    }
     event.stopPropagation();
     if (event.type === "click") event.preventDefault();
   };
@@ -576,6 +970,18 @@ export const bindMarkMode = (doc: Document) => {
       stroke = null;
       erased = new Set();
       if (!tool || event.touches.length !== 1) return;
+      if (tool === "lasso") {
+        const touch = event.touches[0];
+        startPoint = { x: touch.clientX, y: touch.clientY };
+        lassoStart(doc, touch.clientX, touch.clientY);
+        return;
+      }
+      if (isInsertTool(tool)) {
+        const touch = event.touches[0];
+        startPoint = { x: touch.clientX, y: touch.clientY };
+        tapPoint = { x: touch.clientX, y: touch.clientY };
+        return;
+      }
       // Pen and marker strokes come from the native layer
       if (isNativeInkTool()) return;
       const touch = event.touches[0];
@@ -620,6 +1026,11 @@ export const bindMarkMode = (doc: Document) => {
         return;
       }
       isDragging = true;
+      if (isInsertTool(tool)) return;
+      if (tool === "lasso") {
+        lassoMove(doc, touch.clientX, touch.clientY);
+        return;
+      }
       if (isTextTool(tool)) {
         const here = caretAt(doc, touch.clientX, touch.clientY);
         if (!here) return;
@@ -631,6 +1042,19 @@ export const bindMarkMode = (doc: Document) => {
         const point = inkPoint(touch.clientX, touch.clientY);
         if (!point) return;
         stroke.points.push(point[0], point[1]);
+        if (
+          !lastInkMove ||
+          Math.hypot(
+            touch.clientX - lastInkMove.x,
+            touch.clientY - lastInkMove.y
+          ) > 4
+        ) {
+          lastInkMove = {
+            x: touch.clientX,
+            y: touch.clientY,
+            time: Date.now(),
+          };
+        }
         if (!frame) {
           frame = requestAnimationFrame(() => {
             frame = 0;
@@ -656,11 +1080,26 @@ export const bindMarkMode = (doc: Document) => {
       isDragging = false;
       stroke = null;
       if (!tool) return;
+      if (tool === "lasso") {
+        lassoEnd(doc);
+        return;
+      }
+      if (isInsertTool(tool)) {
+        if (!wasDragging && tapPoint)
+          placeTextItem(doc, tapPoint.x, tapPoint.y);
+        tapPoint = null;
+        return;
+      }
       if (done) {
         const page = pageIndexOf(doc);
         if (page === undefined) return;
-        addStroke(page, done);
-        pushHistory({ kind: "ink", page, stroke: done, added: true });
+        const held = !!lastInkMove && Date.now() - lastInkMove.time > HOLD_MS;
+        lastInkMove = null;
+        const rect = inkCanvasOf(doc)?.getBoundingClientRect();
+        const finished =
+          held && rect ? applyShape(done, rect.width, rect.height) : done;
+        addStroke(page, finished);
+        pushHistory({ kind: "ink", page, stroke: finished, added: true });
         return;
       }
       if (!isTextTool(tool) || !wasDragging) return;
@@ -676,6 +1115,311 @@ export const bindMarkMode = (doc: Document) => {
   );
 };
 
+/* ---------- lasso ---------- */
+
+// Draw a loop around ink to select it; then drag inside the box to move
+// it, drag the corner handle to resize it, or recolour or delete it from
+// the toolbar. Each change is one undo step.
+
+export const LASSO_EVENT = "folio-lasso";
+const LASSO_COLOR = "#4f5bd5";
+const HANDLE_RADIUS = 9;
+
+interface Lasso {
+  doc: Document;
+  page: number;
+  // The loop being drawn, normalised page points
+  path: number[];
+  ids: string[];
+  box: { x: number; y: number; w: number; h: number } | null;
+  // While dragging: the strokes as they were, and as they look now
+  drag: {
+    mode: "move" | "resize";
+    x: number;
+    y: number;
+    before: Stroke[];
+  } | null;
+  preview: Map<string, Stroke> | null;
+}
+let lasso: Lasso | null = null;
+
+const emitLasso = () =>
+  window.dispatchEvent(
+    new CustomEvent(LASSO_EVENT, { detail: { count: lasso?.ids.length || 0 } })
+  );
+export const clearLasso = () => {
+  const doc = lasso?.doc;
+  lasso = null;
+  if (doc?.defaultView) drawPage(doc);
+  emitLasso();
+};
+export const getLassoCount = () => lasso?.ids.length || 0;
+
+const selectedStrokes = () => {
+  if (!lasso) return [];
+  const ids = lasso.ids;
+  return (loadInk()[lasso.page] || []).filter((s) => ids.includes(s.id));
+};
+
+const boxOf = (strokes: Stroke[]) => {
+  let minX = Infinity;
+  let minY = Infinity;
+  let maxX = -Infinity;
+  let maxY = -Infinity;
+  const rect = lasso ? inkCanvasOf(lasso.doc)?.getBoundingClientRect() : null;
+  const aspect = rect && rect.height ? rect.width / rect.height : 0.77;
+  for (const s of strokes) {
+    if (isTextItem(s)) {
+      const b = itemBox(s, aspect);
+      minX = Math.min(minX, b.x);
+      minY = Math.min(minY, b.y);
+      maxX = Math.max(maxX, b.x + b.w);
+      maxY = Math.max(maxY, b.y + b.h);
+      continue;
+    }
+    const pad = s.width / 2;
+    for (let i = 0; i < s.points.length; i += 2) {
+      minX = Math.min(minX, s.points[i] - pad);
+      maxX = Math.max(maxX, s.points[i] + pad);
+      minY = Math.min(minY, s.points[i + 1] - pad);
+      maxY = Math.max(maxY, s.points[i + 1] + pad);
+    }
+  }
+  return isFinite(minX)
+    ? { x: minX, y: minY, w: maxX - minX, h: maxY - minY }
+    : null;
+};
+
+const insidePolygon = (x: number, y: number, poly: number[]) => {
+  let inside = false;
+  for (let i = 0, j = poly.length - 2; i < poly.length; j = i, i += 2) {
+    const xi = poly[i];
+    const yi = poly[i + 1];
+    const xj = poly[j];
+    const yj = poly[j + 1];
+    if (yi > y !== yj > y && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) {
+      inside = !inside;
+    }
+  }
+  return inside;
+};
+
+const transformed = (
+  strokes: Stroke[],
+  map: (x: number, y: number) => [number, number],
+  scale = 1
+) =>
+  strokes.map((s) => {
+    const points: number[] = [];
+    for (let i = 0; i < s.points.length; i += 2) {
+      points.push(...map(s.points[i], s.points[i + 1]));
+    }
+    return {
+      ...s,
+      points,
+      width: s.width * scale,
+      fontSize: s.fontSize !== undefined ? s.fontSize * scale : undefined,
+      height: s.height !== undefined ? s.height * scale : undefined,
+    };
+  });
+
+const drawLasso = (ctx: CanvasRenderingContext2D, w: number, h: number) => {
+  if (!lasso) return;
+  ctx.save();
+  ctx.strokeStyle = LASSO_COLOR;
+  ctx.lineWidth = 1.5;
+  ctx.setLineDash([6, 5]);
+  const path = lasso.path;
+  if (path.length >= 4) {
+    ctx.beginPath();
+    ctx.moveTo(path[0] * w, path[1] * h);
+    for (let i = 2; i < path.length; i += 2) {
+      ctx.lineTo(path[i] * w, path[i + 1] * h);
+    }
+    ctx.stroke();
+  }
+  let box = lasso.box;
+  if (box && lasso.preview) {
+    box = boxOf(Array.from(lasso.preview.values())) || box;
+  }
+  if (box) {
+    const pad = 6;
+    const x = box.x * w - pad;
+    const y = box.y * h - pad;
+    const bw = box.w * w + pad * 2;
+    const bh = box.h * h + pad * 2;
+    ctx.fillStyle = "rgba(79, 91, 213, 0.06)";
+    ctx.fillRect(x, y, bw, bh);
+    ctx.strokeRect(x, y, bw, bh);
+    // The resize handle, bottom right
+    ctx.setLineDash([]);
+    ctx.fillStyle = "#fff";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(x + bw, y + bh, HANDLE_RADIUS, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+  }
+  ctx.restore();
+};
+
+const lassoStart = (doc: Document, x: number, y: number) => {
+  const canvas = inkCanvasOf(doc);
+  const page = pageIndexOf(doc);
+  if (!canvas || page === undefined) return;
+  const rect = canvas.getBoundingClientRect();
+  const nx = (x - rect.left) / rect.width;
+  const ny = (y - rect.top) / rect.height;
+  if (lasso && lasso.doc === doc && lasso.box) {
+    const b = lasso.box;
+    const pad = 6;
+    const hx = rect.left + (b.x + b.w) * rect.width + pad;
+    const hy = rect.top + (b.y + b.h) * rect.height + pad;
+    const before = selectedStrokes();
+    if (Math.hypot(x - hx, y - hy) <= HANDLE_RADIUS + 14) {
+      lasso.drag = { mode: "resize", x: nx, y: ny, before };
+      return;
+    }
+    const m = pad / rect.width;
+    if (
+      nx >= b.x - m &&
+      nx <= b.x + b.w + m &&
+      ny >= b.y - m &&
+      ny <= b.y + b.h + m
+    ) {
+      lasso.drag = { mode: "move", x: nx, y: ny, before };
+      return;
+    }
+  }
+  // A new loop
+  const old = lasso?.doc;
+  lasso = {
+    doc,
+    page,
+    path: [nx, ny],
+    ids: [],
+    box: null,
+    drag: null,
+    preview: null,
+  };
+  if (old && old !== doc && old.defaultView) drawPage(old);
+  emitLasso();
+};
+
+const lassoMove = (doc: Document, x: number, y: number) => {
+  if (!lasso || lasso.doc !== doc) return;
+  const rect = inkCanvasOf(doc)?.getBoundingClientRect();
+  if (!rect) return;
+  const nx = (x - rect.left) / rect.width;
+  const ny = (y - rect.top) / rect.height;
+  const drag = lasso.drag;
+  if (drag && lasso.box) {
+    let next: Stroke[];
+    if (drag.mode === "move") {
+      // Kept on the page
+      const b = lasso.box;
+      const dx = Math.max(-b.x, Math.min(1 - b.x - b.w, nx - drag.x));
+      const dy = Math.max(-b.y, Math.min(1 - b.y - b.h, ny - drag.y));
+      next = transformed(drag.before, (px, py) => [px + dx, py + dy]);
+    } else {
+      // Resized from the top-left corner, keeping its proportions
+      const b = lasso.box;
+      const aspect = rect.height / rect.width;
+      const from = Math.hypot(b.w, b.h * aspect);
+      const to = Math.hypot(
+        Math.max(0.01, nx - b.x),
+        Math.max(0.01, ny - b.y) * aspect
+      );
+      const scale = Math.max(0.1, to / Math.max(from, 0.001));
+      next = transformed(
+        drag.before,
+        (px, py) => [b.x + (px - b.x) * scale, b.y + (py - b.y) * scale],
+        scale
+      );
+    }
+    lasso.preview = new Map(next.map((s) => [s.id, s]));
+  } else {
+    lasso.path.push(nx, ny);
+  }
+  drawPage(doc);
+};
+
+const lassoEnd = (doc: Document) => {
+  if (!lasso || lasso.doc !== doc) return;
+  if (lasso.drag) {
+    const before = lasso.drag.before;
+    const after = lasso.preview ? Array.from(lasso.preview.values()) : null;
+    lasso.drag = null;
+    lasso.preview = null;
+    if (after && after.length) {
+      replaceStrokes(
+        lasso.page,
+        before.map((s) => s.id),
+        after
+      );
+      pushHistory({
+        kind: "replace",
+        page: lasso.page,
+        before,
+        after,
+        added: true,
+      });
+      lasso.box = boxOf(after);
+    }
+    drawPage(doc);
+    return;
+  }
+  // Select strokes with most of their points inside the loop
+  const path = lasso.path;
+  const strokes = loadInk()[lasso.page] || [];
+  const ids =
+    path.length >= 6
+      ? strokes
+          .filter((s) => {
+            let inside = 0;
+            for (let i = 0; i < s.points.length; i += 2) {
+              if (insidePolygon(s.points[i], s.points[i + 1], path)) inside++;
+            }
+            return inside * 2 >= s.points.length / 2;
+          })
+          .map((s) => s.id)
+      : [];
+  if (!ids.length) {
+    clearLasso();
+    return;
+  }
+  lasso.ids = ids;
+  lasso.path = [];
+  lasso.box = boxOf(strokes.filter((s) => ids.includes(s.id)));
+  drawPage(doc);
+  emitLasso();
+};
+
+const changeSelection = (change: (strokes: Stroke[]) => Stroke[]) => {
+  if (!lasso) return;
+  const before = selectedStrokes();
+  if (!before.length) return;
+  const after = change(before);
+  replaceStrokes(
+    lasso.page,
+    before.map((s) => s.id),
+    after
+  );
+  pushHistory({
+    kind: "replace",
+    page: lasso.page,
+    before,
+    after,
+    added: true,
+  });
+};
+export const recolorSelection = (color: string) =>
+  changeSelection((strokes) => strokes.map((s) => ({ ...s, color })));
+export const deleteSelection = () => {
+  changeSelection(() => []);
+  clearLasso();
+};
+
 /* ---------- native ink (Android) ---------- */
 
 // The native layer (android/.../ink) draws pen and marker strokes with very
@@ -685,6 +1429,8 @@ export const bindMarkMode = (doc: Document) => {
 interface NativeStroke {
   id: string;
   tool: string;
+  // Ended with the pen held still (shape recognition)
+  held: boolean;
   toolType: string;
   // x, y pairs in CSS pixels of the app's viewport
   points: number[];
@@ -830,7 +1576,8 @@ export const syncNativeInk = () => {
   });
   const config = {
     active: true,
-    tool,
+    // The ball pen is the pen with an even line
+    tool: tool === "pen" && style.kind === "ball" ? "ball" : tool,
     color: argb,
     size: Math.max(1, style.width * (page?.width || window.innerWidth)),
     drawWithFinger,
@@ -862,18 +1609,27 @@ const bindNativeInk = () => {
       );
     }
     const style = inkStyles[tool];
-    const stroke: Stroke = {
+    let stroke: Stroke = {
       id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
       tool,
       color: style.color,
       width: style.width,
       points,
-      // Only a real pen's pressure shapes the line
+      // Only a real pen's pressure shapes the line (fountain pen)
       pressures:
-        data.toolType === "stylus" && tool === "pen"
+        data.toolType === "stylus" && tool === "pen" && style.kind !== "ball"
           ? data.pressures
           : undefined,
     };
+    // Drawn mostly off the pages (the gap below the last one): not kept
+    let inside = 0;
+    for (let i = 0; i < points.length; i += 2) {
+      const x = points[i];
+      const y = points[i + 1];
+      if (x >= 0 && x <= 1 && y >= 0 && y <= 1) inside++;
+    }
+    if (inside < points.length / 4) return release();
+    if (data.held) stroke = applyShape(stroke, frame.width, frame.height);
     addStroke(frame.page, stroke);
     pushHistory({ kind: "ink", page: frame.page, stroke, added: true });
     // The page has painted it: the native copy can go
