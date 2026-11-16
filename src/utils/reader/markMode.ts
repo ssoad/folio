@@ -13,6 +13,7 @@
 // While a tool is on, a drag doesn't scroll, turn the page or open menus.
 
 import { ConfigService } from "../../assets/lib/kookit-extra-browser.min";
+import { Capacitor, registerPlugin } from "@capacitor/core";
 
 export const MARK_EVENT = "folio-mark-text";
 export const MARK_MODE_EVENT = "folio-mark-mode";
@@ -52,6 +53,8 @@ interface Stroke {
   width: number;
   // Flat list of x, y pairs, each 0..1 of the page
   points: number[];
+  // Stylus pressure (0..1) at each point
+  pressures?: number[];
 }
 type InkBook = Record<string, Stroke[]>;
 
@@ -104,11 +107,15 @@ const markedDocs = new Set<Document>();
 const undoStack: HistoryEntry[] = [];
 const redoStack: HistoryEntry[] = [];
 
-export const isMarkMode = () => tool !== null;
+// With the native ink layer and stylus-only drawing, fingers still scroll
+// and turn pages while a pen is picked
+export const isMarkMode = () =>
+  tool !== null && !(isNativeInkTool() && !drawWithFinger);
 export const getAnnotateTool = () => tool;
 export const getInkStyle = (inkTool: InkTool) => inkStyles[inkTool];
 export const setInkStyle = (inkTool: InkTool, style: Partial<InkStyle>) => {
   inkStyles[inkTool] = { ...inkStyles[inkTool], ...style };
+  syncNativeInk();
 };
 
 const applyMarkMode = (doc: Document) => {
@@ -119,7 +126,11 @@ const applyMarkMode = (doc: Document) => {
     style.textContent = MARKING_STYLE;
     (doc.head || doc.documentElement).appendChild(style);
   }
-  doc.documentElement.classList.toggle(MARKING_CLASS, tool !== null);
+  // The native layer takes the pen's touches; the page keeps the rest
+  doc.documentElement.classList.toggle(
+    MARKING_CLASS,
+    tool !== null && !isNativeInkTool()
+  );
   doc.documentElement.classList.toggle("folio-text-tool", isTextTool(tool));
 };
 
@@ -140,6 +151,7 @@ export const setAnnotateTool = (next: AnnotateTool | null, key?: string) => {
     if (!isTextTool(next)) doc.getSelection()?.removeAllRanges();
   });
   window.dispatchEvent(new CustomEvent(MARK_MODE_EVENT, { detail: next }));
+  syncNativeInk();
 };
 
 /* ---------- history ---------- */
@@ -280,7 +292,19 @@ const drawStroke = (
   ctx.lineCap = stroke.tool === "marker" ? "butt" : "round";
   ctx.lineJoin = "round";
   ctx.globalAlpha = stroke.tool === "marker" ? 0.38 : 1;
-  if (pts.length === 2) {
+  const pressures = stroke.tool === "pen" ? stroke.pressures : undefined;
+  if (pressures && pressures.length * 2 === pts.length && pts.length > 2) {
+    // Stylus: each segment as wide as the pen was pressed
+    const base = ctx.lineWidth;
+    for (let i = 2; i < pts.length; i += 2) {
+      const p = (pressures[i / 2 - 1] + pressures[i / 2]) / 2;
+      ctx.lineWidth = Math.max(0.6, base * (0.35 + 0.9 * p));
+      ctx.beginPath();
+      ctx.moveTo(pts[i - 2] * w, pts[i - 1] * h);
+      ctx.lineTo(pts[i] * w, pts[i + 1] * h);
+      ctx.stroke();
+    }
+  } else if (pts.length === 2) {
     ctx.beginPath();
     ctx.arc(pts[0] * w, pts[1] * h, ctx.lineWidth / 2, 0, Math.PI * 2);
     ctx.fill();
@@ -417,6 +441,39 @@ const selectBetween = (doc: Document, from: Caret, to: Caret) => {
 
 const ERASER_RADIUS = 14;
 
+// Distance from a point to a line segment
+const segmentDistance = (
+  x: number,
+  y: number,
+  ax: number,
+  ay: number,
+  bx: number,
+  by: number
+) => {
+  const dx = bx - ax;
+  const dy = by - ay;
+  const length = dx * dx + dy * dy;
+  const t = length
+    ? Math.max(0, Math.min(1, ((x - ax) * dx + (y - ay) * dy) / length))
+    : 0;
+  return Math.hypot(x - (ax + t * dx), y - (ay + t * dy));
+};
+
+// The eraser's path between two touch samples, every few pixels, so a fast
+// swipe still erases everything it crossed
+const eraserPath = (
+  from: { x: number; y: number } | null,
+  x: number,
+  y: number
+) => {
+  if (!from) return [{ x, y }];
+  const steps = Math.max(1, Math.ceil(Math.hypot(x - from.x, y - from.y) / 6));
+  return Array.from({ length: steps }, (_, i) => ({
+    x: from.x + ((x - from.x) * (i + 1)) / steps,
+    y: from.y + ((y - from.y) * (i + 1)) / steps,
+  }));
+};
+
 const eraseAt = (doc: Document, x: number, y: number, erased: Set<string>) => {
   // Highlights under the eraser
   doc.querySelectorAll<HTMLElement>(".kookit-note").forEach((note) => {
@@ -447,10 +504,19 @@ const eraseAt = (doc: Document, x: number, y: number, erased: Set<string>) => {
   for (const stroke of strokes) {
     if (erased.has(stroke.id)) continue;
     const reach = ERASER_RADIUS + (stroke.width * rect.width) / 2;
-    for (let i = 0; i < stroke.points.length; i += 2) {
-      const px = rect.left + stroke.points[i] * rect.width;
-      const py = rect.top + stroke.points[i + 1] * rect.height;
-      if (Math.hypot(px - x, py - y) <= reach) {
+    const pts = stroke.points;
+    for (let i = 0; i < pts.length; i += 2) {
+      // Each point, and the line to the next one
+      const j = Math.min(i + 2, pts.length - 2);
+      const distance = segmentDistance(
+        x,
+        y,
+        rect.left + pts[i] * rect.width,
+        rect.top + pts[i + 1] * rect.height,
+        rect.left + pts[j] * rect.width,
+        rect.top + pts[j + 1] * rect.height
+      );
+      if (distance <= reach) {
         erased.add(stroke.id);
         removeStroke(page, stroke.id);
         pushHistory({
@@ -492,6 +558,7 @@ export const bindMarkMode = (doc: Document) => {
 
   // A touch with a tool isn't a tap on a highlight (which would open its
   // note sheet) or on the page: the engine's handlers don't see it
+  let lastErase: { x: number; y: number } | null = null;
   const swallow = (event: Event) => {
     if (!tool) return;
     event.stopPropagation();
@@ -509,6 +576,8 @@ export const bindMarkMode = (doc: Document) => {
       stroke = null;
       erased = new Set();
       if (!tool || event.touches.length !== 1) return;
+      // Pen and marker strokes come from the native layer
+      if (isNativeInkTool()) return;
       const touch = event.touches[0];
       startPoint = { x: touch.clientX, y: touch.clientY };
       if (isTextTool(tool)) {
@@ -528,6 +597,7 @@ export const bindMarkMode = (doc: Document) => {
         }
       } else if (tool === "eraser") {
         eraseGroup++;
+        lastErase = { x: touch.clientX, y: touch.clientY };
         eraseAt(doc, touch.clientX, touch.clientY, erased);
       }
     },
@@ -568,7 +638,10 @@ export const bindMarkMode = (doc: Document) => {
           });
         }
       } else if (tool === "eraser") {
-        eraseAt(doc, touch.clientX, touch.clientY, erased);
+        for (const p of eraserPath(lastErase, touch.clientX, touch.clientY)) {
+          eraseAt(doc, p.x, p.y, erased);
+        }
+        lastErase = { x: touch.clientX, y: touch.clientY };
       }
     },
     { passive: false, capture: true }
@@ -601,4 +674,237 @@ export const bindMarkMode = (doc: Document) => {
     },
     { passive: true, capture: true }
   );
+};
+
+/* ---------- native ink (Android) ---------- */
+
+// The native layer (android/.../ink) draws pen and marker strokes with very
+// little lag, and hands each finished stroke here to be stored and drawn
+// in the page. Elsewhere (web, desktop) the page draws them itself.
+
+interface NativeStroke {
+  id: string;
+  tool: string;
+  toolType: string;
+  // x, y pairs in CSS pixels of the app's viewport
+  points: number[];
+  pressures: number[];
+}
+interface NativeErase {
+  points: number[];
+  start: boolean;
+  end: boolean;
+}
+interface FolioInkPlugin {
+  configure(options: {
+    active: boolean;
+    tool?: string;
+    color?: string;
+    size?: number;
+    drawWithFinger?: boolean;
+    passThrough?: {
+      left: number;
+      top: number;
+      right: number;
+      bottom: number;
+    }[];
+  }): Promise<void>;
+  release(options: { ids: string[] }): Promise<void>;
+  addListener(
+    event: "stroke",
+    fn: (data: NativeStroke) => void
+  ): Promise<unknown>;
+  addListener(
+    event: "erase",
+    fn: (data: NativeErase) => void
+  ): Promise<unknown>;
+  addListener(event: "stylus", fn: () => void): Promise<unknown>;
+}
+
+const FolioInk = registerPlugin<FolioInkPlugin>("FolioInk");
+export const hasNativeInk = () =>
+  Capacitor.getPlatform() === "android" &&
+  Capacitor.isPluginAvailable("FolioInk");
+
+export const STYLUS_SEEN_EVENT = "folio-stylus-seen";
+const FINGER_CONFIG = "folioDrawWithFinger";
+let drawWithFinger = ConfigService.getReaderConfig(FINGER_CONFIG) !== "no";
+export const getDrawWithFinger = () => drawWithFinger;
+export const setDrawWithFinger = (on: boolean) => {
+  drawWithFinger = on;
+  ConfigService.setReaderConfig(FINGER_CONFIG, on ? "yes" : "no");
+  markedDocs.forEach((doc) => doc.defaultView && applyMarkMode(doc));
+  syncNativeInk();
+};
+
+const isNativeInkTool = () => isInkTool(tool) && hasNativeInk();
+
+// The PDF pages, with where their ink canvas sits in the app's viewport
+const pageFrames = () => {
+  const outer = document.querySelector<HTMLIFrameElement>("#page-area iframe");
+  const outerRect = outer?.getBoundingClientRect();
+  if (!outer?.contentDocument || !outerRect) return [];
+  return Array.from(outer.contentDocument.querySelectorAll("iframe"))
+    .map((frame) => {
+      const doc = (frame as HTMLIFrameElement).contentDocument;
+      const canvas = doc && inkCanvasOf(doc);
+      const page = doc ? pageIndexOf(doc) : undefined;
+      if (!doc || !canvas || page === undefined) return null;
+      const frameRect = frame.getBoundingClientRect();
+      const rect = canvas.getBoundingClientRect();
+      // Pages can be scaled as a whole (zoom)
+      const scale =
+        frameRect.width / (doc.documentElement.clientWidth || frameRect.width);
+      const left = outerRect.left + frameRect.left + rect.left * scale;
+      const top = outerRect.top + frameRect.top + rect.top * scale;
+      return {
+        doc,
+        page,
+        scale,
+        frameLeft: outerRect.left + frameRect.left,
+        frameTop: outerRect.top + frameRect.top,
+        left,
+        top,
+        width: rect.width * scale,
+        height: rect.height * scale,
+      };
+    })
+    .filter((f): f is NonNullable<typeof f> => !!f && f.width > 0);
+};
+
+const pageAt = (x: number, y: number) => {
+  const frames = pageFrames();
+  return (
+    frames.find(
+      (f) =>
+        x >= f.left &&
+        x <= f.left + f.width &&
+        y >= f.top &&
+        y <= f.top + f.height
+    ) ||
+    // Nearest page by its centre (a stroke that starts in the gap)
+    frames.sort(
+      (a, b) =>
+        Math.hypot(a.left + a.width / 2 - x, a.top + a.height / 2 - y) -
+        Math.hypot(b.left + b.width / 2 - x, b.top + b.height / 2 - y)
+    )[0]
+  );
+};
+
+// Any CSS colour as #rrggbb (the native layer takes hex)
+const toHex = (color: string) => {
+  const ctx = document.createElement("canvas").getContext("2d");
+  if (!ctx) return color;
+  ctx.fillStyle = color;
+  return ctx.fillStyle as string;
+};
+
+// Re-sent when the tool, its style, the theme or the toolbar changes
+let lastConfig = "";
+export const syncNativeInk = () => {
+  if (!hasNativeInk()) return;
+  bindNativeInk();
+  const active = isInkTool(tool) && pageFrames().length > 0;
+  if (!active || !isInkTool(tool)) {
+    if (lastConfig !== "off") {
+      lastConfig = "off";
+      FolioInk.configure({ active: false });
+    }
+    return;
+  }
+  const style = inkStyles[tool];
+  const page = pageFrames()[0];
+  const color = toHex(tool === "pen" ? visibleInk(style.color) : style.color);
+  // The marker is see-through, as on the page
+  const argb = tool === "marker" ? "#61" + color.slice(1) : color;
+  const passThrough = Array.from(
+    document.querySelectorAll<HTMLElement>(".annotate-bar > *")
+  ).map((el) => {
+    const r = el.getBoundingClientRect();
+    return {
+      left: r.left - 6,
+      top: r.top - 6,
+      right: r.right + 6,
+      bottom: r.bottom + 6,
+    };
+  });
+  const config = {
+    active: true,
+    tool,
+    color: argb,
+    size: Math.max(1, style.width * (page?.width || window.innerWidth)),
+    drawWithFinger,
+    passThrough,
+  };
+  const key = JSON.stringify(config);
+  if (key === lastConfig) return;
+  lastConfig = key;
+  FolioInk.configure(config);
+};
+
+let isNativeBound = false;
+let nativeErased = new Set<string>();
+let nativeLastErase: { x: number; y: number } | null = null;
+const bindNativeInk = () => {
+  if (isNativeBound) return;
+  isNativeBound = true;
+  FolioInk.addListener("stroke", (data) => {
+    const ids = [data.id];
+    const release = () => FolioInk.release({ ids });
+    if (!isInkTool(tool) || data.points.length < 2) return release();
+    const frame = pageAt(data.points[0], data.points[1]);
+    if (!frame) return release();
+    const points: number[] = [];
+    for (let i = 0; i < data.points.length; i += 2) {
+      points.push(
+        (data.points[i] - frame.left) / frame.width,
+        (data.points[i + 1] - frame.top) / frame.height
+      );
+    }
+    const style = inkStyles[tool];
+    const stroke: Stroke = {
+      id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+      tool,
+      color: style.color,
+      width: style.width,
+      points,
+      // Only a real pen's pressure shapes the line
+      pressures:
+        data.toolType === "stylus" && tool === "pen"
+          ? data.pressures
+          : undefined,
+    };
+    addStroke(frame.page, stroke);
+    pushHistory({ kind: "ink", page: frame.page, stroke, added: true });
+    // The page has painted it: the native copy can go
+    requestAnimationFrame(() => requestAnimationFrame(release));
+  });
+  FolioInk.addListener("erase", (data) => {
+    if (data.start) {
+      eraseGroup++;
+      nativeErased = new Set();
+      nativeLastErase = null;
+    }
+    for (let i = 0; i < data.points.length; i += 2) {
+      const x = data.points[i];
+      const y = data.points[i + 1];
+      for (const p of eraserPath(nativeLastErase, x, y)) {
+        const frame = pageAt(p.x, p.y);
+        if (!frame) continue;
+        // Into the page's own coordinates
+        eraseAt(
+          frame.doc,
+          (p.x - frame.frameLeft) / frame.scale,
+          (p.y - frame.frameTop) / frame.scale,
+          nativeErased
+        );
+      }
+      nativeLastErase = { x, y };
+    }
+  });
+  FolioInk.addListener("stylus", () => {
+    // A real pen: draw with it, and let fingers scroll, as notes apps do
+    if (drawWithFinger) setDrawWithFinger(false);
+    window.dispatchEvent(new CustomEvent(STYLUS_SEEN_EVENT));
+  });
 };

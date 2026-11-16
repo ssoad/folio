@@ -19,13 +19,18 @@ import {
   TextTool,
   canRedo,
   canUndo,
+  STYLUS_SEEN_EVENT,
+  getDrawWithFinger,
+  hasNativeInk,
   getInkStyle,
   isInkTool,
   isTextTool,
   pushHistory,
   redo,
   setAnnotateTool,
+  setDrawWithFinger,
   setInkStyle,
+  syncNativeInk,
   undo,
 } from "../../../utils/reader/markMode";
 import { isReadingRawPDF } from "../../../utils/common";
@@ -89,11 +94,23 @@ class AnnotateBar extends React.Component<AnnotateBarProps, AnnotateBarState> {
   componentDidMount() {
     window.addEventListener(ANNOTATE_HISTORY_EVENT, this.handleHistory);
     window.addEventListener(ERASE_NOTE_EVENT, this.handleEraseNote);
+    window.addEventListener(STYLUS_SEEN_EVENT, this.handleStylusSeen);
     this.selectTool("background", true);
   }
+  componentDidUpdate() {
+    // The native ink layer lets touches on the bar through to it
+    syncNativeInk();
+  }
+  handleStylusSeen = () => {
+    toast(
+      this.props.t("Pen detected: draw with the pen, scroll with a finger")
+    );
+    this.forceUpdate();
+  };
   componentWillUnmount() {
     window.removeEventListener(ANNOTATE_HISTORY_EVENT, this.handleHistory);
     window.removeEventListener(ERASE_NOTE_EVENT, this.handleEraseNote);
+    window.removeEventListener(STYLUS_SEEN_EVENT, this.handleStylusSeen);
     setAnnotateTool(null);
   }
   isPDF = () => isReadingRawPDF(this.props.currentBook);
@@ -255,6 +272,20 @@ class AnnotateBar extends React.Component<AnnotateBarProps, AnnotateBarState> {
               </button>
             ))}
           </div>
+          {hasNativeInk() && (
+            <label className="annotate-bar-switch">
+              <span>{t("Draw with finger")}</span>
+              <input
+                type="checkbox"
+                role="switch"
+                checked={getDrawWithFinger()}
+                onChange={(event) => {
+                  setDrawWithFinger(event.target.checked);
+                  this.forceUpdate();
+                }}
+              />
+            </label>
+          )}
         </div>
       );
     }

@@ -9,6 +9,7 @@ import {
   bindMarkMode,
   isMarkMode,
   syncInk,
+  syncNativeInk,
 } from "../../utils/reader/markMode";
 import Background from "../../components/background";
 import StyleUtil from "../../utils/reader/styleUtil";
@@ -112,6 +113,8 @@ const syncPdfInversion = (bookKey: string) => {
         if (page && page.style.filter !== filter) page.style.filter = filter;
       });
   });
+  // The native ink layer follows the theme and page size
+  syncNativeInk();
 };
 
 class Viewer extends React.Component<ViewerProps, ViewerState> {
